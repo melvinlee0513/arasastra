@@ -3,7 +3,8 @@ import { Navigate } from "react-router-dom";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X } from "lucide-react";
+import { useSidebarState } from "@/hooks/useSidebarState";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +16,7 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const { isAdmin, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (isLoading) {
@@ -66,7 +67,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
+      <AdminSidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       
       <main
         className={`

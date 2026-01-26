@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Play, Clock, Video, ChevronRight, BookOpen } from "lucide-react";
+import { Play, Clock, ChevronRight, BookOpen, Calendar } from "lucide-react";
+import { format, isAfter, isBefore, addMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,13 +9,25 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import owlMascot from "@/assets/owl-mascot.png";
+import { Link } from "react-router-dom";
 
 interface LiveClass {
   id: string;
   title: string;
   live_url: string | null;
+  scheduled_at: string;
+  duration_minutes: number;
   subject?: { name: string } | null;
   tutor?: { name: string; avatar_url: string | null } | null;
+}
+
+interface UpcomingClass {
+  id: string;
+  title: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  subject?: { name: string; icon?: string | null } | null;
+  tutor?: { name: string } | null;
 }
 
 interface EnrolledSubject {
@@ -31,6 +44,7 @@ interface EnrolledSubject {
 export function StudentDashboard() {
   const { profile } = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
+  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [enrolledSubjects, setEnrolledSubjects] = useState<EnrolledSubject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,27 +57,62 @@ export function StudentDashboard() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Fetch live classes
-      const { data: liveData } = await supabase
+      const now = new Date();
+
+      // Fetch classes that are currently live OR scheduled to be live now
+      const { data: allClasses } = await supabase
         .from("classes")
-        .select("id, title, live_url, subject:subjects(name), tutor:tutors(name, avatar_url)")
-        .eq("is_live", true)
-        .eq("is_published", true);
+        .select("id, title, live_url, scheduled_at, duration_minutes, is_live, subject:subjects(name), tutor:tutors(name, avatar_url)")
+        .eq("is_published", true)
+        .order("scheduled_at", { ascending: true });
 
-      setLiveClasses(liveData || []);
+      // Determine truly live classes (either marked live OR within scheduled time)
+      const liveNow: LiveClass[] = [];
+      const upcoming: UpcomingClass[] = [];
 
-      // Fetch enrolled subjects
+      (allClasses || []).forEach((classItem) => {
+        const start = new Date(classItem.scheduled_at);
+        const end = addMinutes(start, classItem.duration_minutes || 60);
+        const isCurrentlyLive = classItem.is_live || (isAfter(now, start) && isBefore(now, end));
+
+        if (isCurrentlyLive && classItem.live_url) {
+          liveNow.push(classItem);
+        } else if (isAfter(start, now)) {
+          upcoming.push(classItem);
+        }
+      });
+
+      setLiveClasses(liveNow);
+      setUpcomingClasses(upcoming.slice(0, 5)); // Show only next 5
+
+      // Fetch enrolled subjects with progress calculation
       const { data: enrollmentData } = await supabase
         .from("enrollments")
         .select("id, subject:subjects(id, name, icon, color)")
         .eq("student_id", profile!.id)
         .eq("is_active", true);
 
-      // Calculate progress for each subject (mock for now)
-      const subjectsWithProgress = (enrollmentData || []).map((enrollment) => ({
-        ...enrollment,
-        progress: Math.floor(Math.random() * 100), // Mock progress
-      }));
+      // Fetch progress for enrolled subjects
+      const { data: progressData } = await supabase
+        .from("progress")
+        .select("class_id, completed, classes(subject_id)")
+        .eq("student_id", profile!.id);
+
+      // Calculate progress per subject
+      const subjectsWithProgress = (enrollmentData || []).map((enrollment) => {
+        const subjectId = enrollment.subject?.id;
+        const subjectProgress = (progressData || []).filter(
+          (p) => (p.classes as { subject_id: string | null } | null)?.subject_id === subjectId
+        );
+        const completedCount = subjectProgress.filter((p) => p.completed).length;
+        const totalCount = subjectProgress.length || 1;
+        const progressPercent = Math.round((completedCount / totalCount) * 100);
+
+        return {
+          ...enrollment,
+          progress: subjectProgress.length > 0 ? progressPercent : 0,
+        };
+      });
 
       setEnrolledSubjects(subjectsWithProgress);
     } catch (error) {
@@ -199,18 +248,76 @@ export function StudentDashboard() {
         )}
       </section>
 
-      {/* Upcoming Classes - Placeholder */}
+      {/* Upcoming Classes */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-foreground">Upcoming Classes</h2>
-        <Card className="p-6 bg-card border-border">
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <Clock className="w-8 h-8" />
-            <div>
-              <p className="font-medium">No upcoming classes</p>
-              <p className="text-sm">Check back later for scheduled classes</p>
+        {upcomingClasses.length === 0 ? (
+          <Card className="p-6 bg-card border-border">
+            <div className="flex items-center gap-4 text-muted-foreground">
+              <Clock className="w-8 h-8" />
+              <div>
+                <p className="font-medium">No upcoming classes</p>
+                <p className="text-sm">Check back later for scheduled classes</p>
+              </div>
             </div>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {upcomingClasses.map((classItem) => (
+              <Card key={classItem.id} className="p-4 bg-card border-border hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-foreground truncate">{classItem.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {classItem.subject?.name} • {classItem.tutor?.name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-accent">
+                      {format(new Date(classItem.scheduled_at), "MMM d")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(classItem.scheduled_at), "h:mm a")}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
-        </Card>
+        )}
+      </section>
+
+      {/* Quick Links */}
+      <section className="grid grid-cols-2 gap-4">
+        <Link to="/dashboard/replays">
+          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Play className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">Replay Library</h3>
+                <p className="text-xs text-muted-foreground">Watch past classes</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+        <Link to="/dashboard/notes">
+          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">Notes Bank</h3>
+                <p className="text-xs text-muted-foreground">Download materials</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
       </section>
     </div>
   );
