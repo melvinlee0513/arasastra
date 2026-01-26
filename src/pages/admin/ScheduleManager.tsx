@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
-import { Calendar, Clock, Plus, Edit, Trash2, Video } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, addMinutes } from "date-fns";
+import { Plus, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -52,17 +52,24 @@ interface Tutor {
   name: string;
 }
 
+interface TutorConflict {
+  tutorId: string;
+  tutorName: string;
+  conflictingClass: ClassItem;
+}
+
 export function ScheduleManager() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Partial<ClassItem> | null>(null);
+  const [conflict, setConflict] = useState<TutorConflict | null>(null);
   const { toast } = useToast();
 
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   useEffect(() => {
@@ -100,6 +107,53 @@ export function ScheduleManager() {
     }
   };
 
+  // Check for tutor conflicts
+  const checkTutorConflict = useMemo(() => {
+    return (tutorId: string | null | undefined, scheduledAt: string | undefined, duration: number, excludeId?: string): TutorConflict | null => {
+      if (!tutorId || !scheduledAt) return null;
+
+      const newStart = new Date(scheduledAt);
+      const newEnd = addMinutes(newStart, duration);
+
+      for (const existingClass of classes) {
+        if (existingClass.id === excludeId) continue;
+        if (existingClass.tutor_id !== tutorId) continue;
+
+        const existingStart = new Date(existingClass.scheduled_at);
+        const existingEnd = addMinutes(existingStart, existingClass.duration_minutes);
+
+        const hasOverlap =
+          (newStart >= existingStart && newStart < existingEnd) ||
+          (newEnd > existingStart && newEnd <= existingEnd) ||
+          (newStart <= existingStart && newEnd >= existingEnd);
+
+        if (hasOverlap) {
+          const tutor = tutors.find((t) => t.id === tutorId);
+          return {
+            tutorId,
+            tutorName: tutor?.name || "Unknown",
+            conflictingClass: existingClass,
+          };
+        }
+      }
+      return null;
+    };
+  }, [classes, tutors]);
+
+  useEffect(() => {
+    if (editingClass?.tutor_id && editingClass?.scheduled_at) {
+      const detected = checkTutorConflict(
+        editingClass.tutor_id,
+        editingClass.scheduled_at,
+        editingClass.duration_minutes || 60,
+        editingClass.id
+      );
+      setConflict(detected);
+    } else {
+      setConflict(null);
+    }
+  }, [editingClass?.tutor_id, editingClass?.scheduled_at, editingClass?.duration_minutes, checkTutorConflict, editingClass?.id]);
+
   const saveClass = async () => {
     if (!editingClass?.title || !editingClass?.scheduled_at) {
       toast({
@@ -110,9 +164,35 @@ export function ScheduleManager() {
       return;
     }
 
+    const tempId = editingClass.id || `temp-${Date.now()}`;
+    const optimisticClass: ClassItem = {
+      id: tempId,
+      title: editingClass.title,
+      description: editingClass.description || null,
+      subject_id: editingClass.subject_id || null,
+      tutor_id: editingClass.tutor_id || null,
+      scheduled_at: editingClass.scheduled_at,
+      duration_minutes: editingClass.duration_minutes || 60,
+      video_url: editingClass.video_url || null,
+      live_url: editingClass.live_url || null,
+      is_live: editingClass.is_live || false,
+      is_published: editingClass.is_published ?? true,
+      subject: subjects.find((s) => s.id === editingClass.subject_id) || null,
+      tutor: tutors.find((t) => t.id === editingClass.tutor_id) || null,
+    };
+
+    if (editingClass.id) {
+      setClasses((prev) => prev.map((c) => (c.id === editingClass.id ? optimisticClass : c)));
+    } else {
+      setClasses((prev) => [...prev, optimisticClass]);
+    }
+    
+    setIsDialogOpen(false);
+    setEditingClass(null);
+    setConflict(null);
+
     try {
       if (editingClass.id) {
-        // Update
         const { error } = await supabase
           .from("classes")
           .update({
@@ -132,8 +212,7 @@ export function ScheduleManager() {
         if (error) throw error;
         toast({ title: "Success", description: "Class updated successfully" });
       } else {
-        // Create
-        const { error } = await supabase.from("classes").insert({
+        const { data, error } = await supabase.from("classes").insert({
           title: editingClass.title,
           description: editingClass.description,
           subject_id: editingClass.subject_id,
@@ -144,17 +223,16 @@ export function ScheduleManager() {
           live_url: editingClass.live_url,
           is_live: editingClass.is_live || false,
           is_published: editingClass.is_published ?? true,
-        });
+        }).select("*, subject:subjects(name, color), tutor:tutors(name)").single();
 
         if (error) throw error;
+        
+        setClasses((prev) => prev.map((c) => (c.id === tempId ? data : c)));
         toast({ title: "Success", description: "Class created successfully" });
       }
-
-      setIsDialogOpen(false);
-      setEditingClass(null);
-      fetchData();
     } catch (error) {
       console.error("Error saving class:", error);
+      fetchData();
       toast({
         title: "Error",
         description: "Failed to save class",
@@ -164,13 +242,18 @@ export function ScheduleManager() {
   };
 
   const deleteClass = async (id: string) => {
+    const deletedClass = classes.find((c) => c.id === id);
+    setClasses((prev) => prev.filter((c) => c.id !== id));
+
     try {
       const { error } = await supabase.from("classes").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Success", description: "Class deleted" });
-      fetchData();
     } catch (error) {
       console.error("Error deleting class:", error);
+      if (deletedClass) {
+        setClasses((prev) => [...prev, deletedClass]);
+      }
       toast({
         title: "Error",
         description: "Failed to delete class",
@@ -191,6 +274,7 @@ export function ScheduleManager() {
       is_live: false,
       is_published: true,
     });
+    setConflict(null);
     setIsDialogOpen(true);
   };
 
@@ -204,6 +288,21 @@ export function ScheduleManager() {
         <Button onClick={() => openNewClassDialog()}>
           <Plus className="w-4 h-4 mr-2" />
           Add Class
+        </Button>
+      </div>
+
+      {/* Week Navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Previous
+        </Button>
+        <span className="text-lg font-semibold text-foreground">
+          {format(weekStart, "MMM d")} - {format(addDays(weekStart, 6), "MMM d, yyyy")}
+        </span>
+        <Button variant="outline" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
+          Next
+          <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
 
@@ -268,6 +367,18 @@ export function ScheduleManager() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {/* Conflict Warning */}
+            {conflict && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Scheduling Conflict:</strong> {conflict.tutorName} is already teaching "
+                  {conflict.conflictingClass.title}" at{" "}
+                  {format(new Date(conflict.conflictingClass.scheduled_at), "MMM d, HH:mm")}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label>Title *</Label>
               <Input
