@@ -1,14 +1,27 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, RefreshCw, GripVertical, Edit, Zap } from "lucide-react";
+import { RefreshCw, Edit, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentSectionDrawer } from "@/components/admin/ContentSectionDrawer";
+import { SortableSectionCard } from "@/components/admin/SortableSectionCard";
 import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface ContentSection {
   id: string;
@@ -26,6 +39,17 @@ export function ContentCMS() {
   const [selectedSection, setSelectedSection] = useState<ContentSection | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { toast } = useToast();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchSections();
@@ -82,6 +106,52 @@ export function ContentCMS() {
     successMessage: "Visibility updated",
   });
 
+  // Handle drag end - update order
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sections.findIndex((s) => s.id === active.id);
+    const newIndex = sections.findIndex((s) => s.id === over.id);
+
+    // Optimistically update UI
+    const newSections = arrayMove(sections, oldIndex, newIndex).map((s, i) => ({
+      ...s,
+      display_order: i,
+    }));
+    setSections(newSections);
+
+    // Persist to database
+    try {
+      const updates = newSections.map((s) => ({
+        id: s.id,
+        display_order: s.display_order,
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("content_sections")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Order Updated",
+        description: "Section order has been saved",
+      });
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save order. Refreshing...",
+        variant: "destructive",
+      });
+      fetchSections(); // Rollback by refetching
+    }
+  };
+
   const handleVisibilityToggle = (section: ContentSection, checked: boolean) => {
     visibilityMutation.mutate({ id: section.id, is_visible: checked });
   };
@@ -95,26 +165,6 @@ export function ContentCMS() {
   const openEditor = (section: ContentSection) => {
     setSelectedSection(section);
     setIsDrawerOpen(true);
-  };
-
-  const getSectionLabel = (key: string): string => {
-    const labels: Record<string, string> = {
-      hero: "Hero Section",
-      subjects: "Subjects Section",
-      tutors: "Tutors Section",
-      testimonials: "Testimonials Section",
-    };
-    return labels[key] || key;
-  };
-
-  const getSectionIcon = (key: string): string => {
-    const icons: Record<string, string> = {
-      hero: "🎯",
-      subjects: "📚",
-      tutors: "👨‍🏫",
-      testimonials: "💬",
-    };
-    return icons[key] || "📄";
   };
 
   if (isLoading) {
@@ -137,7 +187,7 @@ export function ContentCMS() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Content Management</h1>
           <p className="text-muted-foreground">
-            Wix-style editor for landing page sections
+            Drag sections to reorder • Click edit to customize
           </p>
         </div>
         <div className="flex gap-2">
@@ -157,118 +207,35 @@ export function ContentCMS() {
           <div>
             <p className="font-semibold text-foreground">Live Updates Enabled</p>
             <p className="text-sm text-muted-foreground">
-              Changes are saved instantly and reflect on the public site in real-time.
+              Drag and drop to reorder. Changes save instantly.
             </p>
           </div>
         </div>
       </Card>
 
-      {/* Section Manager */}
-      <div className="space-y-4">
-        {sections.map((section, index) => (
-          <Card
-            key={section.id}
-            className="p-6 bg-card border-border hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-start gap-4">
-              {/* Drag Handle */}
-              <div className="mt-2 cursor-grab text-muted-foreground hover:text-foreground transition-colors">
-                <GripVertical className="w-5 h-5" />
-              </div>
-
-              {/* Section Icon */}
-              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-2xl">
-                {getSectionIcon(section.section_key)}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {getSectionLabel(section.section_key)}
-                      </h3>
-                      <Badge
-                        variant={section.is_visible ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {section.is_visible ? "Published" : "Draft"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                      {section.title || "No title set"} • {section.subtitle || "No subtitle"}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-3">
-                    {/* Visibility Toggle */}
-                    <div className="flex items-center gap-2">
-                      <Label
-                        htmlFor={`visible-${section.id}`}
-                        className="text-sm text-muted-foreground cursor-pointer"
-                      >
-                        {section.is_visible ? (
-                          <Eye className="w-4 h-4" />
-                        ) : (
-                          <EyeOff className="w-4 h-4" />
-                        )}
-                      </Label>
-                      <Switch
-                        id={`visible-${section.id}`}
-                        checked={section.is_visible}
-                        onCheckedChange={(checked) =>
-                          handleVisibilityToggle(section, checked)
-                        }
-                        disabled={visibilityMutation.isPending}
-                      />
-                    </div>
-
-                    {/* Edit Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditor(section)}
-                    >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Preview of Content */}
-                <div className="mt-3 p-3 rounded-lg bg-muted/50">
-                  <p className="text-xs text-muted-foreground mb-1">Content Preview:</p>
-                  <div className="text-sm text-foreground/80">
-                    {section.section_key === "hero" && (
-                      <span>
-                        Tagline: "{String(section.content?.tagline || "Not set")}" | CTA: "
-                        {String(section.content?.cta_text || "Not set")}"
-                      </span>
-                    )}
-                    {section.section_key === "tutors" && (
-                      <span>
-                        Featured: {String(section.content?.featured_tutor || "Not set")}
-                      </span>
-                    )}
-                    {section.section_key === "subjects" && (
-                      <span>
-                        Featured: {String(section.content?.featured_subjects || "Not set")}
-                      </span>
-                    )}
-                    {section.section_key === "testimonials" && (
-                      <span>
-                        Quote by: {String(section.content?.student_name || "Not set")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {/* Section Manager with Drag & Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sections.map((s) => s.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-4">
+            {sections.map((section) => (
+              <SortableSectionCard
+                key={section.id}
+                section={section}
+                onVisibilityToggle={handleVisibilityToggle}
+                onEdit={openEditor}
+                isPending={visibilityMutation.isPending}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Empty State */}
       {sections.length === 0 && (

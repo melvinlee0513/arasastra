@@ -1,4 +1,4 @@
-import { FileText, Download, Search, Filter } from "lucide-react";
+import { FileText, Download, Search, Filter, ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,64 +11,94 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/shared/EmptyState";
 
-interface NoteItem {
+interface Note {
   id: string;
   title: string;
-  subject: string;
-  type: string;
-  size: string;
-  date: string;
+  description: string | null;
+  subject_id: string | null;
+  file_url: string;
+  file_name: string;
+  file_size: number | null;
+  file_type: string | null;
+  created_at: string | null;
 }
 
-// Mock data for notes
-const mockNotes: NoteItem[] = [
-  {
-    id: "1",
-    title: "Chapter 1 - Introduction to Algebra",
-    subject: "Mathematics",
-    type: "PDF",
-    size: "2.4 MB",
-    date: "2024-01-15",
-  },
-  {
-    id: "2",
-    title: "Physics Formulas Summary",
-    subject: "Physics",
-    type: "PDF",
-    size: "1.8 MB",
-    date: "2024-01-10",
-  },
-  {
-    id: "3",
-    title: "Chemistry Lab Report Template",
-    subject: "Chemistry",
-    type: "DOCX",
-    size: "0.5 MB",
-    date: "2024-01-08",
-  },
-  {
-    id: "4",
-    title: "Biology Cell Structure Notes",
-    subject: "Biology",
-    type: "PDF",
-    size: "3.2 MB",
-    date: "2024-01-05",
-  },
-];
+interface Subject {
+  id: string;
+  name: string;
+}
 
 export function NotesBank() {
-  const [notes, setNotes] = useState<NoteItem[]>(mockNotes);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const { toast } = useToast();
 
-  const subjects = [...new Set(mockNotes.map((n) => n.subject))];
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [notesRes, subjectsRes] = await Promise.all([
+        supabase.from("notes").select("*").order("created_at", { ascending: false }),
+        supabase.from("subjects").select("id, name").eq("is_active", true),
+      ]);
+
+      if (notesRes.error) throw notesRes.error;
+      if (subjectsRes.error) throw subjectsRes.error;
+
+      setNotes(notesRes.data || []);
+      setSubjects(subjectsRes.data || []);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load notes",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredNotes = notes.filter((note) => {
     const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = selectedSubject === "all" || note.subject === selectedSubject;
+    const matchesSubject = selectedSubject === "all" || note.subject_id === selectedSubject;
     return matchesSearch && matchesSubject;
   });
+
+  const formatFileSize = (bytes: number | null): string => {
+    if (!bytes) return "Unknown";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getSubjectName = (subjectId: string | null): string => {
+    if (!subjectId) return "General";
+    return subjects.find((s) => s.id === subjectId)?.name || "Unknown";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-16 bg-muted rounded" />
+          <div className="h-20 bg-muted rounded" />
+          <div className="h-20 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -97,8 +127,8 @@ export function NotesBank() {
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
               {subjects.map((subject) => (
-                <SelectItem key={subject} value={subject}>
-                  {subject}
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -108,14 +138,16 @@ export function NotesBank() {
 
       {/* Notes List */}
       {filteredNotes.length === 0 ? (
-        <Card className="p-12 text-center bg-card border-border">
-          <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No notes found</h3>
-          <p className="text-muted-foreground">
-            {searchQuery || selectedSubject !== "all"
-              ? "Try adjusting your filters"
-              : "Notes will appear here when added by tutors"}
-          </p>
+        <Card className="bg-card border-border">
+          <EmptyState
+            type="notes"
+            title="No notes found"
+            description={
+              notes.length === 0
+                ? "Notes will appear here when uploaded by tutors"
+                : "Try adjusting your filters"
+            }
+          />
         </Card>
       ) : (
         <div className="space-y-3">
@@ -130,18 +162,25 @@ export function NotesBank() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground truncate">{note.title}</h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
-                      {note.subject}
+                      {getSubjectName(note.subject_id)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {note.type} • {note.size}
+                      PDF • {formatFileSize(note.file_size)}
                     </span>
                   </div>
+                  {note.description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                      {note.description}
+                    </p>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="w-4 h-4" />
-                  Download
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <a href={note.file_url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="hidden sm:inline">View</span>
+                  </a>
                 </Button>
               </div>
             </Card>
