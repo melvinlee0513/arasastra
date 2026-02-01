@@ -36,13 +36,18 @@ export function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp } = useAuth();
+  const { user, role, isLoading: authLoading, signIn, signUp } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      navigate("/");
+    // Redirect based on role once authenticated and role is loaded
+    if (user && !authLoading && role) {
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, navigate]);
+  }, [user, role, authLoading, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -69,7 +74,7 @@ export function AuthPage() {
       });
     } else {
       toast({ title: "Welcome back!", description: "Successfully logged in." });
-      navigate("/");
+      // Navigation will be handled by useEffect based on role
     }
   };
 
@@ -91,7 +96,7 @@ export function AuthPage() {
         title: "Account created!",
         description: "Welcome to Arasa A+. You can now start learning.",
       });
-      navigate("/");
+      // Navigation will be handled by useEffect based on role (defaults to student)
     }
   };
 

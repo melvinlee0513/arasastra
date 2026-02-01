@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Layouts
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -86,71 +87,87 @@ const App = () => (
               }
             />
 
-            {/* Student Dashboard Routes */}
+            {/* Student Dashboard Routes - Requires authentication */}
             <Route
               path="/dashboard"
               element={
-                <DashboardLayout>
-                  <StudentDashboard />
-                </DashboardLayout>
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <StudentDashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/dashboard/replays"
               element={
-                <DashboardLayout>
-                  <ReplayLibrary />
-                </DashboardLayout>
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <ReplayLibrary />
+                  </DashboardLayout>
+                </ProtectedRoute>
               }
             />
 
-            {/* Admin Routes */}
+            {/* Admin Routes - Requires admin role */}
             <Route
               path="/admin"
               element={
-                <AdminLayout>
-                  <AdminDashboard />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <AdminDashboard />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/admin/content"
               element={
-                <AdminLayout>
-                  <ContentCMS />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <ContentCMS />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/admin/users"
               element={
-                <AdminLayout>
-                  <UsersManagement />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <UsersManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/admin/schedule"
               element={
-                <AdminLayout>
-                  <ScheduleManager />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <ScheduleManager />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/admin/notes"
               element={
-                <AdminLayout>
-                  <NotesManagement />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <NotesManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/admin/analytics"
               element={
-                <AdminLayout>
-                  <AnalyticsDashboard />
-                </AdminLayout>
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <AnalyticsDashboard />
+                  </AdminLayout>
+                </ProtectedRoute>
               }
             />
 
