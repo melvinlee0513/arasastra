@@ -29,6 +29,7 @@ import { ContentCMS } from "@/pages/admin/ContentCMS";
 import { UsersManagement } from "@/pages/admin/UsersManagement";
 import { ScheduleManager } from "@/pages/admin/ScheduleManager";
 import { AnalyticsDashboard } from "@/pages/admin/AnalyticsDashboard";
+import { NotesManagement } from "@/pages/admin/NotesManagement";
 
 const queryClient = new QueryClient();
 
@@ -133,6 +134,14 @@ const App = () => (
               element={
                 <AdminLayout>
                   <ScheduleManager />
+                </AdminLayout>
+              }
+            />
+            <Route
+              path="/admin/notes"
+              element={
+                <AdminLayout>
+                  <NotesManagement />
                 </AdminLayout>
               }
             />

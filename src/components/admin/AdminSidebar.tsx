@@ -9,7 +9,7 @@ import {
   ChevronRight,
   Home,
   LogOut,
-  Settings
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,7 @@ const navItems = [
   { path: "/admin/content", icon: FileEdit, label: "Content CMS" },
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/schedule", icon: Calendar, label: "Schedule" },
+  { path: "/admin/notes", icon: FileText, label: "Notes Bank" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
 ];
 
