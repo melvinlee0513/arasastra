@@ -18,7 +18,6 @@ import { TimetablePage } from "@/pages/TimetablePage";
 import { ClassesPage } from "@/pages/ClassesPage";
 import { InboxPage } from "@/pages/InboxPage";
 import { AccountPage } from "@/pages/AccountPage";
-import { ClassroomPage } from "@/pages/ClassroomPage";
 import NotFound from "./pages/NotFound";
 
 // Student Dashboard Pages
@@ -87,14 +86,7 @@ const App = () => (
                 </MainLayout>
               }
             />
-            
-            {/* Classroom - Lesson Player */}
-            <Route
-              path="/classroom/:classId"
-              element={
-                <ClassroomPage />
-              }
-            />
+
             {/* Student Dashboard Routes - Requires authentication */}
             <Route
               path="/dashboard"

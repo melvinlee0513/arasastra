@@ -75,7 +75,7 @@ export function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
+          <img src={owlMascot} alt="StudyOwl" className="w-12 h-12 md:hidden" />
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
               {user ? `Welcome back, ${profile?.full_name?.split(" ")[0] || "Student"}!` : "Welcome to Arasa A+"} 👋

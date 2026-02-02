@@ -1,11 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, User } from "lucide-react";
+import { Home, Calendar, BookOpen, Inbox, User, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
-  { path: "/classes", icon: BookOpen, label: "My Classes" },
   { path: "/timetable", icon: Calendar, label: "Schedule" },
+  { path: "/classes", icon: BookOpen, label: "Classes" },
+  { path: "/inbox", icon: Inbox, label: "Inbox" },
   { path: "/account", icon: User, label: "Profile" },
 ];
 

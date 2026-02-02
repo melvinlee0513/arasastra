@@ -1,15 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, Megaphone, User, ChevronLeft, ChevronRight, Video, Shield } from "lucide-react";
+import { Home, Calendar, BookOpen, Inbox, User, ChevronLeft, ChevronRight, Video, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import owlMascot from "@/assets/owl-mascot.png";
-import { LevelBadge } from "@/components/gamification/LevelBadge";
-
 interface DesktopSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
-
 const navItems = [{
   path: "/",
   icon: Home,
@@ -21,11 +18,11 @@ const navItems = [{
 }, {
   path: "/classes",
   icon: BookOpen,
-  label: "My Classes"
+  label: "Classes"
 }, {
   path: "/inbox",
-  icon: Megaphone,
-  label: "Announcements"
+  icon: Inbox,
+  label: "Inbox"
 }, {
   path: "/account",
   icon: User,
@@ -48,8 +45,7 @@ export function DesktopSidebar({
   const location = useLocation();
   const {
     isAdmin,
-    user,
-    profile
+    user
   } = useAuth();
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
@@ -64,13 +60,6 @@ export function DesktopSidebar({
             <p className="text-xs text-secondary-foreground">Learning Platform</p>
           </div>}
       </div>
-      
-      {/* Level Badge */}
-      {user && profile && !collapsed && (
-        <div className="px-4 py-3 border-b border-sidebar-border">
-          <LevelBadge xpPoints={profile.xp_points || 0} showXP />
-        </div>
-      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

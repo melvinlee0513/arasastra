@@ -10,8 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
-import { Leaderboard } from "@/components/gamification/Leaderboard";
-import { LevelBadge } from "@/components/gamification/LevelBadge";
 
 interface LiveClass {
   id: string;
@@ -126,20 +124,15 @@ export function StudentDashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Welcome Header with Level Badge */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Welcome back, {profile?.full_name?.split(" ")[0]}! 👋
-            </h1>
-            <p className="text-muted-foreground">Ready to learn something new today?</p>
-          </div>
+      {/* Welcome Header */}
+      <div className="flex items-center gap-3">
+        <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            Welcome back, {profile?.full_name?.split(" ")[0]}! 👋
+          </h1>
+          <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
-        {profile && (
-          <LevelBadge xpPoints={profile.xp_points || 0} showXP />
-        )}
       </div>
 
       {/* Live Now Section */}
@@ -297,43 +290,35 @@ export function StudentDashboard() {
         )}
       </section>
 
-      {/* Two Column Layout for Quick Links and Leaderboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Links */}
-        <section className="lg:col-span-2 grid grid-cols-2 gap-4">
-          <Link to="/dashboard/replays">
-            <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Play className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Replay Library</h3>
-                  <p className="text-xs text-muted-foreground">Watch past classes</p>
-                </div>
+      {/* Quick Links */}
+      <section className="grid grid-cols-2 gap-4">
+        <Link to="/dashboard/replays">
+          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Play className="w-5 h-5 text-accent" />
               </div>
-            </Card>
-          </Link>
-          <Link to="/dashboard/notes">
-            <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Notes Bank</h3>
-                  <p className="text-xs text-muted-foreground">Download materials</p>
-                </div>
+              <div>
+                <h3 className="font-medium text-foreground">Replay Library</h3>
+                <p className="text-xs text-muted-foreground">Watch past classes</p>
               </div>
-            </Card>
-          </Link>
-        </section>
-
-        {/* Leaderboard Widget */}
-        <section className="lg:col-span-1">
-          <Leaderboard />
-        </section>
-      </div>
+            </div>
+          </Card>
+        </Link>
+        <Link to="/dashboard/notes">
+          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">Notes Bank</h3>
+                <p className="text-xs text-muted-foreground">Download materials</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+      </section>
     </div>
   );
 }
