@@ -88,9 +88,9 @@ export function InboxPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Inbox</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Announcements</h1>
           <p className="text-muted-foreground">
-            {unreadCount > 0 ? `${unreadCount} unread messages` : "All caught up!"}
+            {unreadCount > 0 ? `${unreadCount} unread announcements` : "All caught up!"}
           </p>
         </div>
         {unreadCount > 0 && (

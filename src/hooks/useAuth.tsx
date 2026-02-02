@@ -23,6 +23,7 @@ interface Profile {
   avatar_url: string | null;
   form_year: string | null;
   phone: string | null;
+  xp_points: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
