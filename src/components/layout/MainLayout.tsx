@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { WhatsAppFAB } from "@/components/shared/WhatsAppFAB";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -35,6 +36,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       
       {/* Mobile Bottom Navigation */}
       {isMobile && <MobileBottomNav />}
+      
+      {/* WhatsApp Support FAB */}
+      <WhatsAppFAB />
     </div>
   );
 }

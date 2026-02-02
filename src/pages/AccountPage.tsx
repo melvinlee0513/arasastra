@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { RenewalModal } from "@/components/modals/RenewalModal";
 
 const userProfile = {
   name: "Ahmad Ibrahim",
@@ -78,9 +79,11 @@ export function AccountPage() {
                 </p>
               </div>
             </div>
-            <Button variant="gold" size="sm">
-              Renew
-            </Button>
+            <RenewalModal>
+              <Button variant="gold" size="sm">
+                Renew
+              </Button>
+            </RenewalModal>
           </div>
         </Card>
       </section>
@@ -175,7 +178,7 @@ export function AccountPage() {
 
       {/* Version */}
       <p className="text-center text-xs text-muted-foreground">
-        StudyOwl LMS v1.0.0
+        Arasa A+ LMS v2.0.0 • © 2026 Arasa A+ Education Group
       </p>
     </div>
   );
