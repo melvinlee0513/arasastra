@@ -53,7 +53,7 @@ export function DesktopSidebar({
   };
   return <aside className={cn("fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-40", "transition-all duration-300 ease-in-out flex flex-col", collapsed ? "w-16" : "w-64")}>
       {/* Logo Section */}
-      <div className="flex items-center gap-3 p-4 border-b border-sidebar-border bg-primary-foreground">
+      <div className="flex items-center gap-3 p-4 border-b bg-primary-foreground border-primary-foreground">
         <img src={owlMascot} alt="Arasa A+" className="w-10 h-10 rounded-xl object-contain" />
         {!collapsed && <div className="animate-fade-up">
             <h1 className="font-bold text-lg text-primary">Arasa A+</h1>
