@@ -11,12 +11,16 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { usePaymentSubmissions } from "@/hooks/usePaymentSubmissions";
 import { useToast } from "@/hooks/use-toast";
+import { PaymentStatusTracker } from "@/components/subscription/PaymentStatusTracker";
+import { SubscriptionRenewalCard } from "@/components/subscription/SubscriptionRenewalCard";
 
 export function AccountPage() {
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
-  const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining } = useSubscription();
+  const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
+  const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
   
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
@@ -37,7 +41,19 @@ export function AccountPage() {
     navigate("/");
   };
 
+  const handlePaymentSuccess = () => {
+    refetchPayments();
+    refetchSubscription();
+  };
+
   const isLoading = authLoading || subLoading;
+
+  // Determine payment status for tracker
+  const getPaymentStatus = (): "submitted" | "verifying" | "activated" => {
+    if (isActive) return "activated";
+    if (latestPending) return "verifying";
+    return "submitted";
+  };
 
   // Guest View - Limited Access
   if (!user && !authLoading) {
@@ -126,8 +142,16 @@ export function AccountPage() {
     ? format(new Date(profile.created_at), "MMMM yyyy") 
     : "Recently";
 
+  const showRenewalCard = !isActive || isExpired || subscription?.status === "inactive";
+  const showStatusTracker = latestPending && !isActive;
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
+      {/* Payment Status Tracker (shown when pending) */}
+      {showStatusTracker && (
+        <PaymentStatusTracker status={getPaymentStatus()} />
+      )}
+
       {/* Profile Header */}
       <Card className="p-6 bg-card border border-border">
         <div className="flex items-center gap-4">
@@ -152,12 +176,14 @@ export function AccountPage() {
         </div>
       </Card>
 
-      {/* Subscription */}
+      {/* Subscription Section */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Crown className="w-5 h-5 text-accent" />
           Subscription
         </h2>
+        
+        {/* Current Subscription Status */}
         <Card className="p-5 bg-gradient-to-br from-navy to-navy-light border-0">
           <div className="flex items-start justify-between">
             <div>
@@ -186,7 +212,7 @@ export function AccountPage() {
                     </p>
                   </>
                 )}
-                {subscription?.status === "inactive" && (
+                {subscription?.status === "inactive" && !latestPending && (
                   <p className="text-primary-foreground/80 text-sm">
                     Upgrade to access premium features
                   </p>
@@ -196,18 +222,37 @@ export function AccountPage() {
                     Your subscription has expired
                   </p>
                 )}
-                {subscription?.status === "pending" && (
+                {latestPending && (
                   <p className="text-primary-foreground/80 text-sm">
-                    Payment verification pending
+                    🕐 Payment verification pending...
                   </p>
                 )}
               </div>
             </div>
-            <Button variant="gold" size="sm">
-              {isActive ? "Renew" : "Upgrade"}
-            </Button>
           </div>
         </Card>
+
+        {/* Renewal Card (shown when not active) */}
+        {showRenewalCard && !latestPending && (
+          <SubscriptionRenewalCard onSuccess={handlePaymentSuccess} />
+        )}
+
+        {/* Pending Message */}
+        {latestPending && (
+          <Card className="p-5 bg-accent/10 border-accent/20">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+                <Crown className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h4 className="font-medium text-foreground">Receipt Uploaded!</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Our team is verifying your payment. This usually takes up to 24 hours. We'll notify you once your subscription is activated!
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
       </section>
 
       {/* Settings */}

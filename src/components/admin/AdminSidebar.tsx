@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Home,
   LogOut,
-  FileText
+  FileText,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,7 @@ const navItems = [
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/schedule", icon: Calendar, label: "Schedule" },
   { path: "/admin/notes", icon: FileText, label: "Notes Bank" },
+  { path: "/admin/payments", icon: CreditCard, label: "Payments" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
 ];
 
