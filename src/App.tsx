@@ -31,6 +31,7 @@ import { UsersManagement } from "@/pages/admin/UsersManagement";
 import { ScheduleManager } from "@/pages/admin/ScheduleManager";
 import { AnalyticsDashboard } from "@/pages/admin/AnalyticsDashboard";
 import { NotesManagement } from "@/pages/admin/NotesManagement";
+import { PaymentVerification } from "@/pages/admin/PaymentVerification";
 
 const queryClient = new QueryClient();
 
@@ -156,6 +157,16 @@ const App = () => (
                 <ProtectedRoute adminOnly>
                   <AdminLayout>
                     <NotesManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/payments"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <PaymentVerification />
                   </AdminLayout>
                 </ProtectedRoute>
               }
