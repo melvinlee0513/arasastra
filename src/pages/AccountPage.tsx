@@ -1,29 +1,25 @@
 import { useState } from "react";
-import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-
-const userProfile = {
-  name: "Ahmad Ibrahim",
-  email: "ahmad@student.edu.my",
-  level: "Form 4",
-  avatar: "",
-  memberSince: "September 2025",
-};
-
-const subscription = {
-  plan: "Monthly Premium",
-  expiryDate: "February 25, 2026",
-  daysRemaining: 31,
-  isActive: true,
-};
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useToast } from "@/hooks/use-toast";
 
 export function AccountPage() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const navigate = useNavigate();
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining } = useSubscription();
+  const { toast } = useToast();
+  
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [classReminders, setClassReminders] = useState(true);
 
@@ -32,24 +28,124 @@ export function AccountPage() {
     document.documentElement.classList.toggle("dark");
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been successfully signed out.",
+    });
+    navigate("/");
+  };
+
+  const isLoading = authLoading || subLoading;
+
+  // Guest View - Limited Access
+  if (!user && !authLoading) {
+    return (
+      <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
+        <Card className="p-8 text-center bg-card border border-border">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+            <UserPlus className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">Limited Access</h1>
+          <p className="text-muted-foreground mb-6">
+            Sign in to view your profile, manage your subscription, and track your learning progress.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/auth">
+              <Button variant="gold" size="lg">
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/auth">
+              <Button variant="outline" size="lg">
+                Create Account
+              </Button>
+            </Link>
+          </div>
+        </Card>
+
+        {/* Settings still available for guests */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Settings
+          </h2>
+          <Card className="bg-card border border-border divide-y divide-border">
+            <div className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isDarkMode ? (
+                  <Moon className="w-5 h-5 text-accent" />
+                ) : (
+                  <Sun className="w-5 h-5 text-accent" />
+                )}
+                <div>
+                  <p className="font-medium text-foreground">Dark Mode</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isDarkMode ? "Dark theme active" : "Light theme active"}
+                  </p>
+                </div>
+              </div>
+              <Switch checked={isDarkMode} onCheckedChange={toggleTheme} />
+            </div>
+          </Card>
+        </section>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Arasa A+ v1.0.0
+        </p>
+      </div>
+    );
+  }
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
+        <Card className="p-6 bg-card border border-border">
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-20 h-20 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-4 w-32" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-28" />
+              </div>
+            </div>
+          </div>
+        </Card>
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Student";
+  const memberSince = profile?.created_at 
+    ? format(new Date(profile.created_at), "MMMM yyyy") 
+    : "Recently";
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
       {/* Profile Header */}
       <Card className="p-6 bg-card border border-border">
         <div className="flex items-center gap-4">
           <Avatar className="w-20 h-20 border-4 border-accent/20">
-            <AvatarImage src={userProfile.avatar} />
+            <AvatarImage src={profile?.avatar_url || undefined} />
             <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
-              {userProfile.name.split(' ').map(n => n[0]).join('')}
+              {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground">{userProfile.name}</h1>
-            <p className="text-muted-foreground">{userProfile.email}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="secondary">{userProfile.level}</Badge>
+            <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
+            <p className="text-muted-foreground">{user?.email}</p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {profile?.form_year && (
+                <Badge variant="secondary">{profile.form_year}</Badge>
+              )}
               <Badge variant="outline" className="text-xs">
-                Member since {userProfile.memberSince}
+                Member since {memberSince}
               </Badge>
             </div>
           </div>
@@ -65,21 +161,50 @@ export function AccountPage() {
         <Card className="p-5 bg-gradient-to-br from-navy to-navy-light border-0">
           <div className="flex items-start justify-between">
             <div>
-              <Badge className="bg-accent text-accent-foreground mb-3">
-                {subscription.plan}
+              <Badge 
+                className={`mb-3 ${
+                  isActive 
+                    ? "bg-accent text-accent-foreground" 
+                    : isExpired 
+                      ? "bg-destructive text-destructive-foreground" 
+                      : "bg-secondary text-secondary-foreground"
+                }`}
+              >
+                {subscription?.plan_name || "Free Tier"}
               </Badge>
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-primary-foreground/80">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm">Expires: {subscription.expiryDate}</span>
-                </div>
-                <p className="text-primary-foreground font-medium">
-                  {subscription.daysRemaining} days remaining
-                </p>
+                {subscription?.status === "active" && subscription.expires_at && (
+                  <>
+                    <div className="flex items-center gap-2 text-primary-foreground/80">
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-sm">
+                        Expires: {format(new Date(subscription.expires_at), "MMMM d, yyyy")}
+                      </span>
+                    </div>
+                    <p className="text-primary-foreground font-medium">
+                      {getDaysRemaining()} days remaining
+                    </p>
+                  </>
+                )}
+                {subscription?.status === "inactive" && (
+                  <p className="text-primary-foreground/80 text-sm">
+                    Upgrade to access premium features
+                  </p>
+                )}
+                {subscription?.status === "expired" && (
+                  <p className="text-primary-foreground/80 text-sm">
+                    Your subscription has expired
+                  </p>
+                )}
+                {subscription?.status === "pending" && (
+                  <p className="text-primary-foreground/80 text-sm">
+                    Payment verification pending
+                  </p>
+                )}
               </div>
             </div>
             <Button variant="gold" size="sm">
-              Renew
+              {isActive ? "Renew" : "Upgrade"}
             </Button>
           </div>
         </Card>
@@ -163,7 +288,10 @@ export function AccountPage() {
 
           <Separator />
 
-          <button className="w-full p-4 flex items-center justify-between hover:bg-destructive/5 transition-colors text-destructive">
+          <button 
+            onClick={handleSignOut}
+            className="w-full p-4 flex items-center justify-between hover:bg-destructive/5 transition-colors text-destructive"
+          >
             <div className="flex items-center gap-3">
               <LogOut className="w-5 h-5" />
               <span className="font-medium">Sign Out</span>
@@ -175,7 +303,7 @@ export function AccountPage() {
 
       {/* Version */}
       <p className="text-center text-xs text-muted-foreground">
-        StudyOwl LMS v1.0.0
+        Arasa A+ v1.0.0
       </p>
     </div>
   );

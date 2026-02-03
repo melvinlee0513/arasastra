@@ -236,6 +236,7 @@ export type Database = {
           phone: string | null
           updated_at: string | null
           user_id: string
+          xp_points: number
         }
         Insert: {
           avatar_url?: string | null
@@ -246,6 +247,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string | null
           user_id: string
+          xp_points?: number
         }
         Update: {
           avatar_url?: string | null
@@ -256,6 +258,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string | null
           user_id?: string
+          xp_points?: number
         }
         Relationships: []
       }
@@ -328,6 +331,39 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan_name: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

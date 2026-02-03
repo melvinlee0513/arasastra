@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Clock, TrendingUp, ChevronRight, Video } from "lucide-react";
+import { Play, Clock, TrendingUp, ChevronRight, Video, UserPlus } from "lucide-react";
 import { addMinutes, isAfter, isBefore } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProgress } from "@/hooks/useUserProgress";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
 
@@ -23,14 +24,15 @@ interface LiveClass {
 
 // Fallback subjects for non-logged in users
 const defaultSubjects = [
-  { id: 1, name: "Mathematics", icon: "📐", tutor: "Dr. Sarah Chen", nextClass: "Today, 3:00 PM", progress: 75 },
-  { id: 2, name: "Physics", icon: "⚛️", tutor: "Prof. James Wilson", nextClass: "Tomorrow, 10:00 AM", progress: 60 },
-  { id: 3, name: "Chemistry", icon: "🧪", tutor: "Ms. Emily Brown", nextClass: "Wed, 2:00 PM", progress: 45 },
-  { id: 4, name: "Biology", icon: "🧬", tutor: "Dr. Michael Lee", nextClass: "Thu, 11:00 AM", progress: 80 },
+  { id: 1, name: "Mathematics", icon: "📐", tutor: "Dr. Sarah Chen", nextClass: "Today, 3:00 PM", progress: 0 },
+  { id: 2, name: "Physics", icon: "⚛️", tutor: "Prof. James Wilson", nextClass: "Tomorrow, 10:00 AM", progress: 0 },
+  { id: 3, name: "Chemistry", icon: "🧪", tutor: "Ms. Emily Brown", nextClass: "Wed, 2:00 PM", progress: 0 },
+  { id: 4, name: "Biology", icon: "🧬", tutor: "Dr. Michael Lee", nextClass: "Thu, 11:00 AM", progress: 0 },
 ];
 
 export function HomePage() {
   const { user, profile } = useAuth();
+  const { progress: weeklyProgress, isAuthenticated } = useUserProgress();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,28 +66,24 @@ export function HomePage() {
     }
   };
 
-  const weeklyProgress = {
-    hoursWatched: 12.5,
-    streak: 7,
-    completedLessons: 24,
-  };
+  const displayName = profile?.full_name?.split(" ")[0] || "Guest";
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={owlMascot} alt="StudyOwl" className="w-12 h-12 md:hidden" />
+          <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {user ? `Welcome back, ${profile?.full_name?.split(" ")[0] || "Student"}!` : "Welcome to Arasa A+"} 👋
+              {isAuthenticated ? `Welcome back, ${displayName}!` : "Welcome to Arasa A+"} 👋
             </h1>
             <p className="text-muted-foreground">
-              {user ? "Ready to learn something new today?" : "Your gateway to academic excellence"}
+              {isAuthenticated ? "Ready to learn something new today?" : "Your gateway to academic excellence"}
             </p>
           </div>
         </div>
-        {!user && (
+        {!isAuthenticated && (
           <Link to="/auth">
             <Button variant="gold">Get Started</Button>
           </Link>
@@ -179,22 +177,34 @@ export function HomePage() {
             <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-accent/10 flex items-center justify-center">
               <Clock className="w-5 h-5 text-accent" />
             </div>
-            <p className="text-2xl font-bold text-foreground">{weeklyProgress.hoursWatched}</p>
-            <p className="text-xs text-muted-foreground">Hours Watched</p>
+            <p className="text-2xl font-bold text-foreground">
+              {isAuthenticated ? weeklyProgress.hoursWatched : "–"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isAuthenticated ? "Hours Watched" : "Sign in to track"}
+            </p>
           </Card>
           <Card className="p-4 text-center bg-card border border-border hover:shadow-md transition-shadow">
             <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-accent/10 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-accent" />
             </div>
-            <p className="text-2xl font-bold text-foreground">{weeklyProgress.streak}🔥</p>
-            <p className="text-xs text-muted-foreground">Day Streak</p>
+            <p className="text-2xl font-bold text-foreground">
+              {isAuthenticated ? `${weeklyProgress.streak}🔥` : "–"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isAuthenticated ? "Day Streak" : "Sign in to track"}
+            </p>
           </Card>
           <Card className="p-4 text-center bg-card border border-border hover:shadow-md transition-shadow">
             <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-accent/10 flex items-center justify-center">
               <Play className="w-5 h-5 text-accent" />
             </div>
-            <p className="text-2xl font-bold text-foreground">{weeklyProgress.completedLessons}</p>
-            <p className="text-xs text-muted-foreground">Lessons Done</p>
+            <p className="text-2xl font-bold text-foreground">
+              {isAuthenticated ? weeklyProgress.completedLessons : "–"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isAuthenticated ? "Lessons Done" : "Sign in to track"}
+            </p>
           </Card>
         </div>
       </section>
@@ -203,7 +213,7 @@ export function HomePage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Featured Subjects</h2>
-          {user && (
+          {isAuthenticated && (
             <Link to="/dashboard">
               <Button variant="ghost" size="sm" className="text-accent">
                 See All <ChevronRight className="w-4 h-4" />
@@ -241,7 +251,7 @@ export function HomePage() {
       </section>
 
       {/* CTA for non-logged in users */}
-      {!user && (
+      {!isAuthenticated && (
         <section className="py-8">
           <Card className="p-8 bg-gradient-to-br from-navy to-navy-light border-0 text-center">
             <h2 className="text-2xl font-bold text-primary-foreground mb-2">
