@@ -177,6 +177,37 @@ export function useAdminPaymentSubmissions() {
 
     if (subError) throw subError;
 
+    // AUTO-ENROLLMENT: Get user's profile ID and enroll them in all active subjects
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileData?.id) {
+      // Get all active subjects
+      const { data: subjects } = await supabase
+        .from("subjects")
+        .select("id")
+        .eq("is_active", true);
+
+      // Create enrollments for each subject (ignore duplicates)
+      if (subjects && subjects.length > 0) {
+        const enrollments = subjects.map((subject) => ({
+          student_id: profileData.id,
+          subject_id: subject.id,
+          is_active: true,
+        }));
+
+        await supabase
+          .from("enrollments")
+          .upsert(enrollments, { 
+            onConflict: "student_id,subject_id",
+            ignoreDuplicates: true 
+          });
+      }
+    }
+
     await fetchAllSubmissions();
   };
 
