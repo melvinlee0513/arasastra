@@ -40,6 +40,7 @@ export function ContentSectionDrawer({
 }: ContentSectionDrawerProps) {
   const [editedSection, setEditedSection] = useState<ContentSection | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,6 +61,42 @@ export function ContentSectionDrawer({
         ...editedSection,
         content: { ...editedSection.content, [key]: value },
       });
+    }
+  };
+
+  const handleImageUpload = async (contentKey: string, file: File) => {
+    if (!editedSection) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${editedSection.section_key}/${contentKey}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("cms-assets")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("cms-assets")
+        .getPublicUrl(fileName);
+
+      updateContent(contentKey, urlData.publicUrl);
+
+      toast({
+        title: "Image uploaded",
+        description: "The image has been uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -84,8 +121,8 @@ export function ContentSectionDrawer({
       onSave(editedSection);
       
       toast({
-        title: "Changes Saved",
-        description: `${getSectionLabel(editedSection.section_key)} updated successfully`,
+        title: "Live Site Updated 🟢",
+        description: `${getSectionLabel(editedSection.section_key)} changes are now live!`,
       });
       
       onOpenChange(false);
@@ -109,6 +146,53 @@ export function ContentSectionDrawer({
       testimonials: "Testimonials Section",
     };
     return labels[key] || key;
+  };
+
+  const ImageUploadField = ({ label, contentKey }: { label: string; contentKey: string }) => {
+    const currentUrl = String(editedSection?.content?.[contentKey] || "");
+
+    return (
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <Image className="w-4 h-4" />
+          {label}
+        </Label>
+        <div className="space-y-3">
+          {currentUrl && (
+            <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
+              <img
+                src={currentUrl}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={currentUrl}
+              onChange={(e) => updateContent(contentKey, e.target.value)}
+              placeholder="https://... or upload below"
+              className="flex-1"
+            />
+          </div>
+          <label className="flex items-center justify-center w-full h-12 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(contentKey, file);
+              }}
+              disabled={isUploading}
+            />
+            <span className="text-sm text-muted-foreground">
+              {isUploading ? "Uploading..." : "Click to upload image"}
+            </span>
+          </label>
+        </div>
+      </div>
+    );
   };
 
   const renderContentFields = () => {
@@ -140,17 +224,7 @@ export function ContentSectionDrawer({
                 placeholder="Get Started"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                Hero Image URL
-              </Label>
-              <Input
-                value={String(editedSection.content?.hero_image || "")}
-                onChange={(e) => updateContent("hero_image", e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
+            <ImageUploadField label="Hero Image" contentKey="hero_image" />
           </div>
         );
 
@@ -174,14 +248,7 @@ export function ContentSectionDrawer({
                 rows={4}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Tutor Avatar URL</Label>
-              <Input
-                value={String(editedSection.content?.tutor_avatar || "")}
-                onChange={(e) => updateContent("tutor_avatar", e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
+            <ImageUploadField label="Tutor Avatar" contentKey="tutor_avatar" />
           </div>
         );
 
@@ -316,7 +383,7 @@ export function ContentSectionDrawer({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isUploading}
             className="flex-1"
           >
             <Save className="w-4 h-4 mr-2" />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Clock, TrendingUp, ChevronRight, Video, UserPlus } from "lucide-react";
+import { Play, Clock, TrendingUp, ChevronRight, UserPlus } from "lucide-react";
 import { addMinutes, isAfter, isBefore } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { useContentSections } from "@/hooks/useContentSections";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
 
@@ -33,6 +34,7 @@ const defaultSubjects = [
 export function HomePage() {
   const { user, profile } = useAuth();
   const { progress: weeklyProgress, isAuthenticated } = useUserProgress();
+  const { getContentValue, getSectionByKey } = useContentSections();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +68,13 @@ export function HomePage() {
     }
   };
 
+  // Dynamic content from CMS with fallbacks
+  const heroSection = getSectionByKey("hero");
+  const heroTitle = heroSection?.title || "Welcome to Arasa A+";
+  const heroSubtitle = heroSection?.subtitle || "Your gateway to academic excellence";
+  const heroTagline = getContentValue("hero", "tagline", "Master your SPM subjects with Malaysia's top tutors");
+  const ctaText = getContentValue("hero", "cta_text", "Get Started");
+
   const displayName = profile?.full_name?.split(" ")[0] || "Guest";
 
   return (
@@ -76,16 +85,16 @@ export function HomePage() {
           <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {isAuthenticated ? `Welcome back, ${displayName}!` : "Welcome to Arasa A+"} 👋
+              {isAuthenticated ? `Welcome back, ${displayName}!` : heroTitle} 👋
             </h1>
             <p className="text-muted-foreground">
-              {isAuthenticated ? "Ready to learn something new today?" : "Your gateway to academic excellence"}
+              {isAuthenticated ? "Ready to learn something new today?" : heroSubtitle}
             </p>
           </div>
         </div>
         {!isAuthenticated && (
           <Link to="/auth">
-            <Button variant="gold">Get Started</Button>
+            <Button variant="gold">{ctaText}</Button>
           </Link>
         )}
       </div>
@@ -212,7 +221,9 @@ export function HomePage() {
       {/* Featured Subjects */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Featured Subjects</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {getSectionByKey("subjects")?.title || "Featured Subjects"}
+          </h2>
           {isAuthenticated && (
             <Link to="/dashboard">
               <Button variant="ghost" size="sm" className="text-accent">
@@ -255,7 +266,7 @@ export function HomePage() {
         <section className="py-8">
           <Card className="p-8 bg-gradient-to-br from-navy to-navy-light border-0 text-center">
             <h2 className="text-2xl font-bold text-primary-foreground mb-2">
-              Ready to Start Learning?
+              {heroTagline}
             </h2>
             <p className="text-primary-foreground/80 mb-6">
               Join thousands of students excelling with Arasa A+

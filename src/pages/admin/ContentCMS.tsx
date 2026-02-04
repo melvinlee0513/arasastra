@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { RefreshCw, Edit, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentSectionDrawer } from "@/components/admin/ContentSectionDrawer";
 import { SortableSectionCard } from "@/components/admin/SortableSectionCard";
-import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
+import { useContentSections, ContentSection } from "@/hooks/useContentSections";
 import {
   DndContext,
   closestCenter,
@@ -23,22 +23,23 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-interface ContentSection {
-  id: string;
-  section_key: string;
-  title: string | null;
-  subtitle: string | null;
-  content: Record<string, unknown>;
-  is_visible: boolean;
-  display_order: number;
-}
-
 export function ContentCMS() {
-  const [sections, setSections] = useState<ContentSection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { sections: fetchedSections, isLoading, refetch } = useContentSections();
+  const [localSections, setLocalSections] = useState<ContentSection[]>([]);
   const [selectedSection, setSelectedSection] = useState<ContentSection | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+
+  // Sync local sections with fetched sections when fetch completes
+  useEffect(() => {
+    if (fetchedSections.length > 0 && localSections.length === 0) {
+      setLocalSections(fetchedSections);
+    }
+  }, [fetchedSections, localSections.length]);
+
+  // Use local sections for display if available, otherwise use fetched
+  const sections = localSections.length > 0 ? localSections : fetchedSections;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -51,60 +52,43 @@ export function ContentCMS() {
     })
   );
 
-  useEffect(() => {
-    fetchSections();
-  }, []);
-
-  const fetchSections = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("content_sections")
-        .select("*")
-        .order("display_order", { ascending: true });
-
-      if (error) throw error;
-      const typedData = (data || []).map((section) => ({
-        ...section,
-        content:
-          typeof section.content === "object" && section.content !== null
-            ? (section.content as Record<string, unknown>)
-            : {},
-      }));
-      setSections(typedData);
-    } catch (error) {
-      console.error("Error fetching sections:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load content sections",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleRefresh = () => {
+    setLocalSections([]);
+    refetch();
   };
 
-  // Optimistic visibility toggle
-  const visibilityMutation = useOptimisticMutation<{ id: string; is_visible: boolean }>({
-    mutationFn: async ({ id, is_visible }) => {
+  // Handle visibility toggle
+  const handleVisibilityToggle = async (section: ContentSection, checked: boolean) => {
+    // Optimistic update
+    setLocalSections((prev) =>
+      prev.map((s) => (s.id === section.id ? { ...s, is_visible: checked } : s))
+    );
+
+    try {
       const { error } = await supabase
         .from("content_sections")
-        .update({ is_visible })
-        .eq("id", id);
+        .update({ is_visible: checked })
+        .eq("id", section.id);
+
       if (error) throw error;
-    },
-    onOptimisticUpdate: ({ id, is_visible }) => {
-      setSections((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, is_visible } : s))
+
+      toast({
+        title: "Visibility updated",
+        description: `Section is now ${checked ? "visible" : "hidden"}`,
+      });
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      // Rollback
+      setLocalSections((prev) =>
+        prev.map((s) => (s.id === section.id ? { ...s, is_visible: !checked } : s))
       );
-    },
-    onRollback: ({ id, is_visible }) => {
-      setSections((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, is_visible: !is_visible } : s))
-      );
-    },
-    successMessage: "Visibility updated",
-  });
+      toast({
+        title: "Error",
+        description: "Failed to update visibility",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Handle drag end - update order
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -120,9 +104,10 @@ export function ContentCMS() {
       ...s,
       display_order: i,
     }));
-    setSections(newSections);
+    setLocalSections(newSections);
 
     // Persist to database
+    setIsUpdating(true);
     try {
       const updates = newSections.map((s) => ({
         id: s.id,
@@ -148,16 +133,14 @@ export function ContentCMS() {
         description: "Failed to save order. Refreshing...",
         variant: "destructive",
       });
-      fetchSections(); // Rollback by refetching
+      handleRefresh();
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleVisibilityToggle = (section: ContentSection, checked: boolean) => {
-    visibilityMutation.mutate({ id: section.id, is_visible: checked });
-  };
-
   const handleSectionUpdate = (updatedSection: ContentSection) => {
-    setSections((prev) =>
+    setLocalSections((prev) =>
       prev.map((s) => (s.id === updatedSection.id ? updatedSection : s))
     );
   };
@@ -167,7 +150,7 @@ export function ContentCMS() {
     setIsDrawerOpen(true);
   };
 
-  if (isLoading) {
+  if (isLoading && sections.length === 0) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
@@ -191,8 +174,8 @@ export function ContentCMS() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchSections} disabled={isLoading}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={handleRefresh} disabled={isLoading || isUpdating}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -230,7 +213,7 @@ export function ContentCMS() {
                 section={section}
                 onVisibilityToggle={handleVisibilityToggle}
                 onEdit={openEditor}
-                isPending={visibilityMutation.isPending}
+                isPending={isUpdating}
               />
             ))}
           </div>
