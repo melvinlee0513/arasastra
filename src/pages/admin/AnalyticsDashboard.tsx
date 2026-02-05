@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, Users, BookOpen, Video } from "lucide-react";
+import { TrendingUp, Users, BookOpen, Video, CreditCard, RefreshCw, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import {
   BarChart,
   Bar,
@@ -12,8 +15,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,28 +23,36 @@ interface EnrollmentBySubject {
   count: number;
 }
 
+interface AnalyticsStats {
+  totalUsers: number;
+  totalEnrollments: number;
+  totalClasses: number;
+  totalNotes: number;
+  pendingPayments: number;
+  activeSubscriptions: number;
+}
+
+interface WeeklyEnrollment {
+  week: string;
+  enrollments: number;
+}
+
 const COLORS = ["hsl(43, 90%, 55%)", "hsl(220, 45%, 22%)", "hsl(25, 50%, 35%)", "hsl(40, 30%, 96%)", "hsl(220, 40%, 28%)"];
 
 export function AnalyticsDashboard() {
   const [enrollmentsBySubject, setEnrollmentsBySubject] = useState<EnrollmentBySubject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Mock data for demonstration
-  const weeklyEnrollments = [
-    { week: "Week 1", enrollments: 12 },
-    { week: "Week 2", enrollments: 19 },
-    { week: "Week 3", enrollments: 15 },
-    { week: "Week 4", enrollments: 28 },
-  ];
-
-  const classAttendance = [
-    { month: "Jan", attendance: 85 },
-    { month: "Feb", attendance: 88 },
-    { month: "Mar", attendance: 92 },
-    { month: "Apr", attendance: 87 },
-    { month: "May", attendance: 90 },
-    { month: "Jun", attendance: 94 },
-  ];
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [stats, setStats] = useState<AnalyticsStats>({
+    totalUsers: 0,
+    totalEnrollments: 0,
+    totalClasses: 0,
+    totalNotes: 0,
+    pendingPayments: 0,
+    activeSubscriptions: 0,
+  });
+  const [weeklyEnrollments, setWeeklyEnrollments] = useState<WeeklyEnrollment[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchAnalytics();
@@ -52,13 +61,61 @@ export function AnalyticsDashboard() {
   const fetchAnalytics = async () => {
     setIsLoading(true);
     try {
-      // Fetch enrollments grouped by subject
-      const { data: subjects } = await supabase
-        .from("subjects")
-        .select("id, name");
+      // Fetch all stats in parallel
+      const [
+        profilesRes,
+        enrollmentsRes,
+        classesRes,
+        notesRes,
+        pendingPaymentsRes,
+        activeSubsRes,
+        subjectsRes,
+      ] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("enrollments").select("id, enrolled_at", { count: "exact" }),
+        supabase.from("classes").select("id", { count: "exact", head: true }),
+        supabase.from("notes").select("id", { count: "exact", head: true }),
+        supabase.from("payment_submissions").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("subjects").select("id, name"),
+      ]);
 
+      setStats({
+        totalUsers: profilesRes.count || 0,
+        totalEnrollments: enrollmentsRes.count || 0,
+        totalClasses: classesRes.count || 0,
+        totalNotes: notesRes.count || 0,
+        pendingPayments: pendingPaymentsRes.count || 0,
+        activeSubscriptions: activeSubsRes.count || 0,
+      });
+
+      // Calculate weekly enrollments from last 4 weeks
+      const enrollmentsData = enrollmentsRes.data || [];
+      const now = new Date();
+      const weeklyData: WeeklyEnrollment[] = [];
+      
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - (i + 1) * 7);
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() - i * 7);
+        
+        const count = enrollmentsData.filter((e) => {
+          const enrolledAt = new Date(e.enrolled_at || "");
+          return enrolledAt >= weekStart && enrolledAt < weekEnd;
+        }).length;
+        
+        weeklyData.push({
+          week: `Week ${4 - i}`,
+          enrollments: count,
+        });
+      }
+      setWeeklyEnrollments(weeklyData);
+
+      // Fetch enrollments grouped by subject
+      const subjects = subjectsRes.data || [];
       const subjectEnrollments = await Promise.all(
-        (subjects || []).map(async (subject) => {
+        subjects.map(async (subject) => {
           const { count } = await supabase
             .from("enrollments")
             .select("id", { count: "exact", head: true })
@@ -79,11 +136,58 @@ export function AnalyticsDashboard() {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAnalytics();
+    setIsRefreshing(false);
+    toast({
+      title: "✅ Refreshed",
+      description: "Analytics data has been updated",
+    });
+  };
+
+  const statCards = [
+    { label: "Total Users", value: stats.totalUsers, icon: Users, color: "text-primary" },
+    { label: "Active Subscriptions", value: stats.activeSubscriptions, icon: CreditCard, color: "text-accent" },
+    { label: "Total Enrollments", value: stats.totalEnrollments, icon: BookOpen, color: "text-primary" },
+    { label: "Total Classes", value: stats.totalClasses, icon: Video, color: "text-accent" },
+    { label: "Notes Uploaded", value: stats.totalNotes, icon: FileText, color: "text-primary" },
+    { label: "Pending Payments", value: stats.pendingPayments, icon: TrendingUp, color: "text-destructive" },
+  ];
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
-        <p className="text-muted-foreground">Track enrollment and engagement metrics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
+          <p className="text-muted-foreground">Track enrollment and engagement metrics</p>
+        </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {isLoading ? (
+          Array(6).fill(0).map((_, i) => (
+            <Card key={i} className="p-4 bg-card border-border">
+              <Skeleton className="h-8 w-16 mb-2" />
+              <Skeleton className="h-4 w-24" />
+            </Card>
+          ))
+        ) : (
+          statCards.map((stat) => (
+            <Card key={stat.label} className="p-4 bg-card border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                <span className="text-2xl font-bold text-foreground">{stat.value}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Charts Grid */}
@@ -159,43 +263,21 @@ export function AnalyticsDashboard() {
             </div>
           )}
         </Card>
-
-        {/* Class Attendance Trend */}
-        <Card className="p-6 bg-card border-border lg:col-span-2">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Class Attendance Trend</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={classAttendance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value) => [`${value}%`, "Attendance"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="attendance"
-                  stroke="hsl(220, 45%, 22%)"
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(43, 90%, 55%)", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
       </div>
 
       {/* Info Card */}
-      <Card className="p-4 bg-accent/10 border-accent/30">
-        <p className="text-sm text-foreground">
-          <strong>📊 Note:</strong> Analytics data is based on actual enrollments and class records.
-          Some charts show sample data for demonstration purposes.
-        </p>
+      <Card className="p-4 bg-gradient-to-r from-accent/10 to-primary/10 border-accent/30">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">Real-time Analytics</p>
+            <p className="text-sm text-muted-foreground">
+              All data is synced directly from the database. Click refresh for the latest stats.
+            </p>
+          </div>
+        </div>
       </Card>
     </div>
   );

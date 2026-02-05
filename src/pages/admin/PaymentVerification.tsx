@@ -48,6 +48,7 @@ export function PaymentVerification() {
   const [rejectReason, setRejectReason] = useState("");
   const [notifyStudent, setNotifyStudent] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   const filteredSubmissions = submissions.filter((s) => {
@@ -138,6 +139,16 @@ export function PaymentVerification() {
 
   const isPDF = (url: string) => url.toLowerCase().includes(".pdf");
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+    toast({
+      title: "✅ Refreshed",
+      description: "Payment submissions have been updated",
+    });
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -146,8 +157,8 @@ export function PaymentVerification() {
           <h1 className="text-2xl font-bold text-foreground">Payment Verification</h1>
           <p className="text-muted-foreground">Review and approve student payment submissions</p>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2">
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
@@ -289,25 +300,36 @@ export function PaymentVerification() {
                   <Label className="text-muted-foreground">Receipt</Label>
                   <div className="border border-border rounded-lg overflow-hidden">
                     {isPDF(selectedSubmission.receipt_url) ? (
-                      <div className="p-8 text-center bg-secondary/30">
-                        <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground mb-3">PDF Receipt</p>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={selectedSubmission.receipt_url} target="_blank" rel="noopener noreferrer">
-                            Open in New Tab
-                          </a>
-                        </Button>
+                      <div className="flex flex-col">
+                        <iframe
+                          src={selectedSubmission.receipt_url}
+                          className="w-full h-96 border-0"
+                          title="PDF Receipt"
+                        />
+                        <div className="p-3 bg-secondary/30 text-center">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={selectedSubmission.receipt_url} target="_blank" rel="noopener noreferrer">
+                              Open in New Tab
+                            </a>
+                          </Button>
+                        </div>
                       </div>
                     ) : (
-                      <a href={selectedSubmission.receipt_url} target="_blank" rel="noopener noreferrer">
+                      <a href={selectedSubmission.receipt_url} target="_blank" rel="noopener noreferrer" className="block">
                         <img
                           src={selectedSubmission.receipt_url}
                           alt="Payment receipt"
-                          className="w-full h-auto"
+                          className="w-full h-auto max-h-96 object-contain"
                         />
                       </a>
                     )}
                   </div>
+                  <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                    <a href={selectedSubmission.receipt_url} target="_blank" rel="noopener noreferrer">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Full Receipt
+                    </a>
+                  </Button>
                 </div>
 
                 {/* Notify Toggle */}
