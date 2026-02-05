@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Edit, Trash2, Shield, User } from "lucide-react";
+import { Search, Edit, Shield, User, ChevronDown, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -57,6 +63,8 @@ export function UsersManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,6 +108,66 @@ export function UsersManagement() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchUsers();
+    setIsRefreshing(false);
+    toast({
+      title: "✅ Refreshed",
+      description: "User list has been updated",
+    });
+  };
+
+  const updateUserRole = async (userId: string, newRole: "admin" | "student") => {
+    setUpdatingRoleId(userId);
+    try {
+      // Check if user already has a role entry
+      const { data: existingRole } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+
+      if (existingRole) {
+        // Update existing role
+        const { error } = await supabase
+          .from("user_roles")
+          .update({ role: newRole })
+          .eq("user_id", userId);
+
+        if (error) throw error;
+      } else {
+        // Insert new role
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: newRole });
+
+        if (error) throw error;
+      }
+
+      // Update local state
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === userId ? { ...u, role: newRole } : u
+        )
+      );
+
+      toast({
+        title: "Role Updated",
+        description: `User role changed to ${newRole}`,
+      });
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingRoleId(null);
     }
   };
 
@@ -148,6 +216,10 @@ export function UsersManagement() {
           <h1 className="text-3xl font-bold text-foreground">User Management</h1>
           <p className="text-muted-foreground">Manage students and tutors</p>
         </div>
+        <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Search */}
@@ -199,17 +271,47 @@ export function UsersManagement() {
                   <TableCell>{user.form_year || "-"}</TableCell>
                   <TableCell>{user.phone || "-"}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={user.role === "admin" ? "default" : "secondary"}
-                      className="gap-1"
-                    >
-                      {user.role === "admin" ? (
-                        <Shield className="w-3 h-3" />
-                      ) : (
-                        <User className="w-3 h-3" />
-                      )}
-                      {user.role}
-                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 hover:bg-transparent"
+                          disabled={updatingRoleId === user.user_id}
+                        >
+                          <Badge
+                            variant={user.role === "admin" ? "default" : "secondary"}
+                            className="gap-1 cursor-pointer hover:opacity-80"
+                          >
+                            {user.role === "admin" ? (
+                              <Shield className="w-3 h-3" />
+                            ) : (
+                              <User className="w-3 h-3" />
+                            )}
+                            {updatingRoleId === user.user_id ? "..." : user.role}
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          </Badge>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onClick={() => updateUserRole(user.user_id, "student")}
+                          className="gap-2"
+                        >
+                          <User className="w-4 h-4" />
+                          Student
+                          {user.role === "student" && <span className="ml-auto text-accent">✓</span>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => updateUserRole(user.user_id, "admin")}
+                          className="gap-2"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Admin
+                          {user.role === "admin" && <span className="ml-auto text-accent">✓</span>}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString()}

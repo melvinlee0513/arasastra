@@ -66,6 +66,7 @@ export function NotesManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+ const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Form state
   const [uploadForm, setUploadForm] = useState({
@@ -103,6 +104,16 @@ export function NotesManagement() {
       setIsLoading(false);
     }
   };
+
+ const handleRefresh = async () => {
+   setIsRefreshing(true);
+   await fetchData();
+   setIsRefreshing(false);
+   toast({
+     title: "✅ Refreshed",
+     description: "Notes list has been updated",
+   });
+ };
 
   const filteredNotes = notes.filter((note) => {
     const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -268,8 +279,8 @@ export function NotesManagement() {
           <p className="text-muted-foreground">Upload and manage study materials</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+         <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+           <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button onClick={() => setIsUploadOpen(true)}>
