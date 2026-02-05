@@ -12,6 +12,7 @@ import { useUserProgress } from "@/hooks/useUserProgress";
 import { useContentSections } from "@/hooks/useContentSections";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 interface LiveClass {
   id: string;
@@ -23,13 +24,21 @@ interface LiveClass {
   tutor?: { name: string; avatar_url: string | null } | null;
 }
 
-// Fallback subjects for non-logged in users
-const defaultSubjects = [
-  { id: 1, name: "Mathematics", icon: "📐", tutor: "Dr. Sarah Chen", nextClass: "Today, 3:00 PM", progress: 0 },
-  { id: 2, name: "Physics", icon: "⚛️", tutor: "Prof. James Wilson", nextClass: "Tomorrow, 10:00 AM", progress: 0 },
-  { id: 3, name: "Chemistry", icon: "🧪", tutor: "Ms. Emily Brown", nextClass: "Wed, 2:00 PM", progress: 0 },
-  { id: 4, name: "Biology", icon: "🧬", tutor: "Dr. Michael Lee", nextClass: "Thu, 11:00 AM", progress: 0 },
-];
+interface Subject {
+  id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+  color: string | null;
+}
+
+interface Tutor {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  specialization: string | null;
+  bio: string | null;
+}
 
 export function HomePage() {
   const { user, profile } = useAuth();
@@ -38,6 +47,44 @@ export function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch subjects from database
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["public-subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as Subject[];
+    },
+    staleTime: 0,
+  });
+
+  // Fetch tutors from database
+  const { data: tutors = [] } = useQuery({
+    queryKey: ["public-tutors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tutors")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as Tutor[];
+    },
+    staleTime: 0,
+  });
+
+  // Map tutors to subjects by specialization
+  const getSubjectTutor = (subjectName: string): string => {
+    const tutor = tutors.find((t) => 
+      t.specialization?.toLowerCase() === subjectName.toLowerCase()
+    );
+    return tutor?.name || "Expert Tutor";
+  };
 
   useEffect(() => {
     fetchLiveClasses();
@@ -221,9 +268,14 @@ export function HomePage() {
       {/* Featured Subjects */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">
-            {getSectionByKey("subjects")?.title || "Featured Subjects"}
-          </h2>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {getSectionByKey("subjects")?.title || "Featured Subjects"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {getSectionByKey("subjects")?.subtitle || ""}
+            </p>
+          </div>
           {isAuthenticated && (
             <Link to="/dashboard">
               <Button variant="ghost" size="sm" className="text-accent">
@@ -232,32 +284,42 @@ export function HomePage() {
             </Link>
           )}
         </div>
-        
+      
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {defaultSubjects.slice(0, 4).map((subject) => (
-            <Card 
-              key={subject.id} 
-              className="p-4 bg-card border border-border hover:shadow-md hover:border-accent/30 transition-all duration-200 cursor-pointer group"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                  {subject.icon}
+          {subjects.length > 0 ? (
+            subjects.slice(0, 6).map((subject) => (
+              <Card 
+                key={subject.id} 
+                className="p-4 bg-card border border-border hover:shadow-md hover:border-accent/30 transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-start gap-3">
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"
+                    style={{ backgroundColor: subject.color ? `${subject.color}20` : undefined }}
+                  >
+                    {subject.icon || "📚"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{subject.name}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{getSubjectTutor(subject.name)}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{subject.description || ""}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground truncate">{subject.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">{subject.tutor}</p>
-                  <p className="text-xs text-accent mt-1">{subject.nextClass}</p>
+              </Card>
+            ))
+          ) : (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-4 bg-card border border-border animate-pulse">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Progress</span>
-                  <span className="font-medium text-foreground">{subject.progress}%</span>
-                </div>
-                <Progress value={subject.progress} className="h-2" />
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )}
         </div>
       </section>
 
