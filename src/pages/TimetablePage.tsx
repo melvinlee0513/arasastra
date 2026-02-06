@@ -1,69 +1,87 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Bell, BellOff, Clock, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react";
+import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
-const levels = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5"];
+interface ScheduledClass {
+  id: string;
+  title: string;
+  scheduled_at: string;
+  duration_minutes: number | null;
+  subject?: { name: string; icon: string | null } | null;
+  tutor?: { name: string; avatar_url: string | null } | null;
+}
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const classes = [
-  { id: 1, time: "09:00 AM", subject: "Mathematics", tutor: "Dr. Sarah Chen", duration: "1h", day: 0, level: "Form 4" },
-  { id: 2, time: "11:00 AM", subject: "Physics", tutor: "Prof. James Wilson", duration: "1h 30m", day: 0, level: "Form 4" },
-  { id: 3, time: "02:00 PM", subject: "Chemistry", tutor: "Ms. Emily Brown", duration: "1h", day: 1, level: "Form 4" },
-  { id: 4, time: "10:00 AM", subject: "Biology", tutor: "Dr. Michael Lee", duration: "1h", day: 2, level: "Form 4" },
-  { id: 5, time: "03:00 PM", subject: "English", tutor: "Mrs. Johnson", duration: "1h", day: 3, level: "Form 4" },
-  { id: 6, time: "09:00 AM", subject: "History", tutor: "Mr. Williams", duration: "1h", day: 4, level: "Form 3" },
-  { id: 7, time: "11:00 AM", subject: "Geography", tutor: "Ms. Davis", duration: "1h 30m", day: 5, level: "Form 3" },
-];
-
 export function TimetablePage() {
-  const [selectedLevel, setSelectedLevel] = useState("Form 4");
-  const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [reminders, setReminders] = useState<Record<number, boolean>>({});
+  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    // Convert Sunday=0 to index 6, Mon=1 to 0, etc.
+    return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  });
+  const [classes, setClasses] = useState<ScheduledClass[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const getWeekDates = () => {
-    const dates = [];
-    const start = new Date(currentWeekStart);
-    start.setDate(start.getDate() - start.getDay() + 1);
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      dates.push(date);
-    }
-    return dates;
+    return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   };
 
   const weekDates = getWeekDates();
   const today = new Date();
 
-  const filteredClasses = classes.filter(
-    (c) => c.level === selectedLevel && c.day === selectedDay
+  useEffect(() => {
+    fetchClasses();
+  }, [currentWeekStart]);
+
+  const fetchClasses = async () => {
+    setIsLoading(true);
+    try {
+      const weekEnd = addDays(currentWeekStart, 7);
+
+      const { data, error } = await supabase
+        .from("classes")
+        .select(
+          "id, title, scheduled_at, duration_minutes, subject:subjects(name, icon), tutor:tutors(name, avatar_url)"
+        )
+        .eq("is_published", true)
+        .gte("scheduled_at", currentWeekStart.toISOString())
+        .lt("scheduled_at", weekEnd.toISOString())
+        .order("scheduled_at", { ascending: true });
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error) {
+      console.error("Error fetching timetable:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectedDate = weekDates[selectedDay];
+
+  const filteredClasses = classes.filter((c) =>
+    isSameDay(new Date(c.scheduled_at), selectedDate)
   );
 
   const navigateWeek = (direction: number) => {
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + direction * 7);
-    setCurrentWeekStart(newDate);
+    setCurrentWeekStart((prev) => addDays(prev, direction * 7));
   };
 
-  const toggleReminder = (classId: number) => {
-    setReminders((prev) => ({
-      ...prev,
-      [classId]: !prev[classId],
-    }));
+  const formatDuration = (minutes: number | null) => {
+    if (!minutes) return "1h";
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
   return (
@@ -71,30 +89,18 @@ export function TimetablePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Timetable</h1>
-        <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {levels.map((level) => (
-              <SelectItem key={level} value={level}>
-                {level}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Week Navigation */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon-sm" onClick={() => navigateWeek(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigateWeek(-1)}>
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <span className="font-medium text-foreground">
-            {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {format(weekDates[0], "MMM d")} - {format(weekDates[6], "MMM d, yyyy")}
           </span>
-          <Button variant="ghost" size="icon-sm" onClick={() => navigateWeek(1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigateWeek(1)}>
             <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
@@ -103,9 +109,11 @@ export function TimetablePage() {
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {weekDays.map((day, index) => {
             const date = weekDates[index];
-            const isToday = date.toDateString() === today.toDateString();
+            const isToday = isSameDay(date, today);
             const isSelected = selectedDay === index;
-            const hasClasses = classes.some((c) => c.day === index && c.level === selectedLevel);
+            const hasClasses = classes.some((c) =>
+              isSameDay(new Date(c.scheduled_at), date)
+            );
 
             return (
               <button
@@ -113,11 +121,12 @@ export function TimetablePage() {
                 onClick={() => setSelectedDay(index)}
                 className={`
                   flex flex-col items-center min-w-[56px] px-3 py-2 rounded-xl transition-all duration-200
-                  ${isSelected 
-                    ? 'bg-accent text-accent-foreground shadow-md' 
-                    : isToday 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-card border border-border hover:border-accent/30'
+                  ${
+                    isSelected
+                      ? "bg-accent text-accent-foreground shadow-md"
+                      : isToday
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border hover:border-accent/30"
                   }
                 `}
               >
@@ -138,7 +147,12 @@ export function TimetablePage() {
           {weekDays[selectedDay]}'s Classes
         </h2>
 
-        {filteredClasses.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-8 text-center bg-card border border-border">
+            <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Loading schedule...</p>
+          </Card>
+        ) : filteredClasses.length === 0 ? (
           <Card className="p-8 text-center bg-card border border-border">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary flex items-center justify-center">
               <Clock className="w-8 h-8 text-muted-foreground" />
@@ -148,46 +162,49 @@ export function TimetablePage() {
         ) : (
           <div className="space-y-3">
             {filteredClasses.map((classItem, index) => (
-              <Card 
-                key={classItem.id} 
+              <Card
+                key={classItem.id}
                 className="p-4 bg-card border border-border hover:shadow-md transition-all duration-200"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start gap-4">
                   {/* Time Column */}
                   <div className="text-center min-w-[60px]">
-                    <p className="text-sm font-bold text-foreground">{classItem.time}</p>
+                    <p className="text-sm font-bold text-foreground">
+                      {format(new Date(classItem.scheduled_at), "hh:mm a")}
+                    </p>
                     <Badge variant="secondary" className="mt-1 text-xs">
-                      {classItem.duration}
+                      {formatDuration(classItem.duration_minutes)}
                     </Badge>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground">{classItem.subject}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Avatar className="w-6 h-6">
-                        <AvatarFallback className="bg-secondary text-xs">
-                          {classItem.tutor.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-muted-foreground truncate">
-                        {classItem.tutor}
-                      </span>
+                    <div className="flex items-center gap-2 mb-1">
+                      {classItem.subject?.icon && (
+                        <span className="text-lg">{classItem.subject.icon}</span>
+                      )}
+                      <h3 className="font-semibold text-foreground">
+                        {classItem.subject?.name || classItem.title}
+                      </h3>
                     </div>
-                  </div>
-
-                  {/* Reminder Toggle */}
-                  <div className="flex items-center gap-2">
-                    {reminders[classItem.id] ? (
-                      <Bell className="w-4 h-4 text-accent" />
-                    ) : (
-                      <BellOff className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{classItem.title}</p>
+                    {classItem.tutor && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={classItem.tutor.avatar_url || undefined} />
+                          <AvatarFallback className="bg-secondary text-xs">
+                            {classItem.tutor.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground truncate">
+                          {classItem.tutor.name}
+                        </span>
+                      </div>
                     )}
-                    <Switch
-                      checked={reminders[classItem.id] || false}
-                      onCheckedChange={() => toggleReminder(classItem.id)}
-                    />
                   </div>
                 </div>
               </Card>
