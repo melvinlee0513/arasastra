@@ -1,167 +1,21 @@
-import { useState, useEffect } from "react";
-import { RefreshCw, Edit, Zap } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Calendar, Users, BookOpen, FileText, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { ContentSectionDrawer } from "@/components/admin/ContentSectionDrawer";
-import { SortableSectionCard } from "@/components/admin/SortableSectionCard";
-import { useContentSections, ContentSection } from "@/hooks/useContentSections";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { WeeklyScheduleTab } from "@/components/admin/cms/WeeklyScheduleTab";
+import { TutorProfilesTab } from "@/components/admin/cms/TutorProfilesTab";
+import { ClassCategoriesTab } from "@/components/admin/cms/ClassCategoriesTab";
+import { SiteContentTab } from "@/components/admin/cms/SiteContentTab";
+import { useState } from "react";
 
 export function ContentCMS() {
-  const { sections: fetchedSections, isLoading, refetch } = useContentSections();
-  const [localSections, setLocalSections] = useState<ContentSection[]>([]);
-  const [selectedSection, setSelectedSection] = useState<ContentSection | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-
-  // Sync local sections with fetched sections when fetch completes
-  useEffect(() => {
-    if (fetchedSections.length > 0 && localSections.length === 0) {
-      setLocalSections(fetchedSections);
-    }
-  }, [fetchedSections, localSections.length]);
-
-  // Use local sections for display if available, otherwise use fetched
-  const sections = localSections.length > 0 ? localSections : fetchedSections;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
-    setLocalSections([]);
-    refetch();
+    setRefreshKey((k) => k + 1);
+    toast({ title: "✅ Refreshed", description: "Content data has been updated" });
   };
-
-  // Handle visibility toggle
-  const handleVisibilityToggle = async (section: ContentSection, checked: boolean) => {
-    // Optimistic update
-    setLocalSections((prev) =>
-      prev.map((s) => (s.id === section.id ? { ...s, is_visible: checked } : s))
-    );
-
-    try {
-      const { error } = await supabase
-        .from("content_sections")
-        .update({ is_visible: checked })
-        .eq("id", section.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Visibility updated",
-        description: `Section is now ${checked ? "visible" : "hidden"}`,
-      });
-    } catch (error) {
-      console.error("Error updating visibility:", error);
-      // Rollback
-      setLocalSections((prev) =>
-        prev.map((s) => (s.id === section.id ? { ...s, is_visible: !checked } : s))
-      );
-      toast({
-        title: "Error",
-        description: "Failed to update visibility",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle drag end - update order
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = sections.findIndex((s) => s.id === active.id);
-    const newIndex = sections.findIndex((s) => s.id === over.id);
-
-    // Optimistically update UI
-    const newSections = arrayMove(sections, oldIndex, newIndex).map((s, i) => ({
-      ...s,
-      display_order: i,
-    }));
-    setLocalSections(newSections);
-
-    // Persist to database
-    setIsUpdating(true);
-    try {
-      const updates = newSections.map((s) => ({
-        id: s.id,
-        display_order: s.display_order,
-      }));
-
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("content_sections")
-          .update({ display_order: update.display_order })
-          .eq("id", update.id);
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Order Updated",
-        description: "Section order has been saved",
-      });
-    } catch (error) {
-      console.error("Error updating order:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save order. Refreshing...",
-        variant: "destructive",
-      });
-      handleRefresh();
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleSectionUpdate = (updatedSection: ContentSection) => {
-    setLocalSections((prev) =>
-      prev.map((s) => (s.id === updatedSection.id ? updatedSection : s))
-    );
-  };
-
-  const openEditor = (section: ContentSection) => {
-    setSelectedSection(section);
-    setIsDrawerOpen(true);
-  };
-
-  if (isLoading && sections.length === 0) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-32 bg-muted rounded" />
-          <div className="h-32 bg-muted rounded" />
-          <div className="h-32 bg-muted rounded" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">
@@ -170,78 +24,64 @@ export function ContentCMS() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Content Management</h1>
           <p className="text-muted-foreground">
-            Drag sections to reorder • Click edit to customize
+            Manage all site data, schedules, tutors, classes, and videos
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading || isUpdating}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        <Button variant="outline" onClick={handleRefresh}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
-      {/* Live Update Banner */}
-      <Card className="p-4 bg-gradient-to-r from-accent/10 to-primary/10 border-accent/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <p className="font-semibold text-foreground">Live Updates Enabled</p>
-            <p className="text-sm text-muted-foreground">
-              Drag and drop to reorder. Changes save instantly.
-            </p>
-          </div>
-        </div>
-      </Card>
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="schedule" className="w-full">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 bg-transparent p-0 border-b border-border rounded-none">
+          <TabsTrigger
+            value="schedule"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <Calendar className="w-4 h-4" />
+            Weekly Schedule
+          </TabsTrigger>
+          <TabsTrigger
+            value="tutors"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <Users className="w-4 h-4" />
+            Tutor Profiles
+          </TabsTrigger>
+          <TabsTrigger
+            value="categories"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <BookOpen className="w-4 h-4" />
+            Class Categories
+          </TabsTrigger>
+          <TabsTrigger
+            value="content"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <FileText className="w-4 h-4" />
+            Site Content
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Section Manager with Drag & Drop */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={sections.map((s) => s.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-4">
-            {sections.map((section) => (
-              <SortableSectionCard
-                key={section.id}
-                section={section}
-                onVisibilityToggle={handleVisibilityToggle}
-                onEdit={openEditor}
-                isPending={isUpdating}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+        <TabsContent value="schedule" className="mt-6" key={`schedule-${refreshKey}`}>
+          <WeeklyScheduleTab />
+        </TabsContent>
 
-      {/* Empty State */}
-      {sections.length === 0 && (
-        <Card className="p-12 text-center bg-card border-border">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-            <Edit className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            No content sections
-          </h3>
-          <p className="text-muted-foreground">
-            Content sections will appear here once created in the database.
-          </p>
-        </Card>
-      )}
+        <TabsContent value="tutors" className="mt-6" key={`tutors-${refreshKey}`}>
+          <TutorProfilesTab />
+        </TabsContent>
 
-      {/* Side Drawer Editor */}
-      <ContentSectionDrawer
-        section={selectedSection}
-        open={isDrawerOpen}
-        onOpenChange={setIsDrawerOpen}
-        onSave={handleSectionUpdate}
-      />
+        <TabsContent value="categories" className="mt-6" key={`categories-${refreshKey}`}>
+          <ClassCategoriesTab />
+        </TabsContent>
+
+        <TabsContent value="content" className="mt-6" key={`content-${refreshKey}`}>
+          <SiteContentTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

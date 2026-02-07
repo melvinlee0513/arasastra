@@ -408,8 +408,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          rating: number | null
           specialization: string | null
+          student_count: number | null
           user_id: string | null
+          years_experience: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -418,8 +421,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          rating?: number | null
           specialization?: string | null
+          student_count?: number | null
           user_id?: string | null
+          years_experience?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -428,8 +434,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          rating?: number | null
           specialization?: string | null
+          student_count?: number | null
           user_id?: string | null
+          years_experience?: number | null
         }
         Relationships: []
       }
