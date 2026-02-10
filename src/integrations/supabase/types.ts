@@ -259,6 +259,51 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_plans: {
+        Row: {
+          button_text: string
+          created_at: string
+          features: Json
+          id: string
+          interval: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price: string
+          sort_order: number
+          subtitle: string | null
+          updated_at: string
+        }
+        Insert: {
+          button_text?: string
+          created_at?: string
+          features?: Json
+          id?: string
+          interval?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price: string
+          sort_order?: number
+          subtitle?: string | null
+          updated_at?: string
+        }
+        Update: {
+          button_text?: string
+          created_at?: string
+          features?: Json
+          id?: string
+          interval?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price?: string
+          sort_order?: number
+          subtitle?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

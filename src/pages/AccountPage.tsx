@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
 import { format } from "date-fns";
@@ -15,6 +15,8 @@ import { usePaymentSubmissions } from "@/hooks/usePaymentSubmissions";
 import { useToast } from "@/hooks/use-toast";
 import { PaymentStatusTracker } from "@/components/subscription/PaymentStatusTracker";
 import { SubscriptionRenewalCard } from "@/components/subscription/SubscriptionRenewalCard";
+import { PricingSection } from "@/components/account/PricingSection";
+import { EnrollmentForm } from "@/components/account/EnrollmentForm";
 
 export function AccountPage() {
   const navigate = useNavigate();
@@ -26,6 +28,8 @@ export function AccountPage() {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [classReminders, setClassReminders] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<{ id: string; name: string; price: string; interval: string } | null>(null);
+  const enrollmentRef = useRef<HTMLDivElement>(null);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -175,6 +179,26 @@ export function AccountPage() {
           </div>
         </div>
       </Card>
+
+      {/* Pricing Section */}
+      <PricingSection
+        selectedPlanId={selectedPlan?.id ?? null}
+        onSelectPlan={(plan) => {
+          setSelectedPlan({ id: plan.id, name: plan.name, price: plan.price, interval: plan.interval });
+          setTimeout(() => enrollmentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+        }}
+      />
+
+      {/* Enrollment Form */}
+      <EnrollmentForm
+        ref={enrollmentRef}
+        selectedPlanName={selectedPlan?.name ?? null}
+        selectedPlanPrice={selectedPlan?.price ?? null}
+        selectedPlanInterval={selectedPlan?.interval ?? null}
+        userName={displayName}
+        userEmail={user?.email}
+        userFormYear={profile?.form_year}
+      />
 
       {/* Subscription Section */}
       <section className="space-y-3">
