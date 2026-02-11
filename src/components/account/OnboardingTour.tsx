@@ -22,38 +22,44 @@ export function OnboardingTour({ steps, isActive, onComplete, startAt = 0 }: Onb
   const [currentStep, setCurrentStep] = useState(startAt);
   const [position, setPosition] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
-  const updatePosition = useCallback(() => {
+  const recalcRect = useCallback(() => {
     if (!isActive || currentStep >= steps.length) return;
     const target = document.getElementById(steps[currentStep].targetId);
     if (target) {
       const rect = target.getBoundingClientRect();
-      setPosition({
-        top: rect.top + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-        height: rect.height,
-      });
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      setPosition({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
     }
   }, [currentStep, steps, isActive]);
 
+  const scrollAndMeasure = useCallback(() => {
+    if (!isActive || currentStep >= steps.length) return;
+    const target = document.getElementById(steps[currentStep].targetId);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Measure after scroll settles
+      setTimeout(recalcRect, 400);
+    }
+  }, [currentStep, steps, isActive, recalcRect]);
+
   useEffect(() => {
     if (!isActive) return;
-    // Small delay to allow DOM to settle
-    const timer = setTimeout(updatePosition, 300);
-    window.addEventListener("resize", updatePosition);
+    const timer = setTimeout(scrollAndMeasure, 300);
+    const onScroll = () => recalcRect();
+    window.addEventListener("resize", recalcRect);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("resize", recalcRect);
+      window.removeEventListener("scroll", onScroll, true);
     };
-  }, [updatePosition, isActive]);
+  }, [scrollAndMeasure, recalcRect, isActive]);
 
   if (!isActive || currentStep >= steps.length || !position) return null;
 
   const step = steps[currentStep];
   const isLast = currentStep === steps.length - 1;
 
-  // Position tooltip below the target
+  // Position tooltip below the target (viewport-relative for fixed positioning)
   const tooltipTop = position.top + position.height + 16;
   const tooltipLeft = Math.max(16, Math.min(position.left, window.innerWidth - 340));
 
