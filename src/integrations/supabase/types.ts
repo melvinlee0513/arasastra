@@ -311,7 +311,10 @@ export type Database = {
           form_year: string | null
           full_name: string
           id: string
+          is_registered: boolean
+          parent_name: string | null
           phone: string | null
+          plan_id: string | null
           updated_at: string | null
           user_id: string
           xp_points: number
@@ -322,7 +325,10 @@ export type Database = {
           form_year?: string | null
           full_name: string
           id?: string
+          is_registered?: boolean
+          parent_name?: string | null
           phone?: string | null
+          plan_id?: string | null
           updated_at?: string | null
           user_id: string
           xp_points?: number
@@ -333,12 +339,23 @@ export type Database = {
           form_year?: string | null
           full_name?: string
           id?: string
+          is_registered?: boolean
+          parent_name?: string | null
           phone?: string | null
+          plan_id?: string | null
           updated_at?: string | null
           user_id?: string
           xp_points?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       progress: {
         Row: {

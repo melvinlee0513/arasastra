@@ -13,11 +13,12 @@ import { cn } from "@/lib/utils";
 
 interface SubscriptionRenewalCardProps {
   onSuccess?: () => void;
+  autoFillAmount?: string | null;
 }
 
-export function SubscriptionRenewalCard({ onSuccess }: SubscriptionRenewalCardProps) {
+export function SubscriptionRenewalCard({ onSuccess, autoFillAmount }: SubscriptionRenewalCardProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [amount, setAmount] = useState("99.00");
+  const [amount, setAmount] = useState(autoFillAmount || "99.00");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -150,7 +151,7 @@ export function SubscriptionRenewalCard({ onSuccess }: SubscriptionRenewalCardPr
       </div>
 
       {/* Bank Details */}
-      <div className="bg-secondary/50 rounded-xl p-4 space-y-3">
+      <div id="bank-details-section" className="bg-secondary/50 rounded-xl p-4 space-y-3">
         <h4 className="font-medium text-foreground text-sm">Bank Transfer Details</h4>
         <div className="grid gap-2 text-sm">
           <div className="flex justify-between">
@@ -191,9 +192,10 @@ export function SubscriptionRenewalCard({ onSuccess }: SubscriptionRenewalCardPr
           step="0.01"
           min="0"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => !autoFillAmount && setAmount(e.target.value)}
+          readOnly={!!autoFillAmount}
           placeholder="99.00"
-          className="font-mono"
+          className={cn("font-mono", autoFillAmount && "bg-secondary/50")}
         />
         <p className="text-xs text-muted-foreground">
           Monthly subscription: RM 99.00
@@ -201,7 +203,7 @@ export function SubscriptionRenewalCard({ onSuccess }: SubscriptionRenewalCardPr
       </div>
 
       {/* Receipt Uploader */}
-      <div className="space-y-2">
+      <div id="receipt-upload-section" className="space-y-2">
         <Label>Upload Payment Receipt</Label>
         <ReceiptUploader
           onFileSelect={setSelectedFile}
