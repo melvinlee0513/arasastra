@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import confetti from "canvas-confetti";
 
 interface EnrollmentFormProps {
   selectedPlanName: string | null;
@@ -14,27 +17,60 @@ interface EnrollmentFormProps {
   userName?: string;
   userEmail?: string;
   userFormYear?: string | null;
+  onEnrollmentComplete?: (planPrice: string | null) => void;
 }
 
 export const EnrollmentForm = forwardRef<HTMLDivElement, EnrollmentFormProps>(
-  ({ selectedPlanName, selectedPlanPrice, selectedPlanInterval, userName, userEmail, userFormYear }, ref) => {
+  ({ selectedPlanName, selectedPlanPrice, selectedPlanInterval, userName, userEmail, userFormYear, onEnrollmentComplete }, ref) => {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [studentName, setStudentName] = useState(userName || "");
     const [level, setLevel] = useState(userFormYear || "");
     const [parentName, setParentName] = useState("");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState(userEmail || "");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedPlanName) {
         toast({ title: "Please select a plan", description: "Choose a pricing plan above before enrolling.", variant: "destructive" });
         return;
       }
-      toast({
-        title: "Enrollment Submitted! 🎉",
-        description: `Your registration for the ${selectedPlanName} plan has been received. We'll contact you shortly.`,
-      });
+      if (!user?.id) return;
+
+      setIsSubmitting(true);
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            full_name: studentName,
+            form_year: level,
+            parent_name: parentName,
+            phone: phone,
+            is_registered: true,
+          } as any)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        // Confetti celebration
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, colors: ["#2563EB", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"] });
+        setTimeout(() => confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } }), 200);
+        setTimeout(() => confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } }), 400);
+
+        toast({
+          title: "Registration Complete! 🎉",
+          description: "Welcome aboard! Now complete your payment to unlock classes.",
+        });
+
+        onEnrollmentComplete?.(selectedPlanPrice);
+      } catch (error) {
+        console.error("Enrollment error:", error);
+        toast({ title: "Registration failed", description: "Please try again.", variant: "destructive" });
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     const planDisplay = selectedPlanName
@@ -42,7 +78,7 @@ export const EnrollmentForm = forwardRef<HTMLDivElement, EnrollmentFormProps>(
       : "No plan selected";
 
     return (
-      <Card ref={ref} className="p-6 bg-card border border-border">
+      <Card ref={ref} id="enrollment-form" className="p-6 bg-card border border-border">
         <div className="flex items-center gap-2 mb-1">
           <Zap className="w-5 h-5 text-accent" />
           <h3 className="text-xl font-bold text-foreground">Student Registration</h3>
@@ -120,8 +156,8 @@ export const EnrollmentForm = forwardRef<HTMLDivElement, EnrollmentFormProps>(
             <p className="text-sm font-semibold text-primary">{planDisplay}</p>
           </div>
 
-          <Button type="submit" size="lg" className="w-full">
-            Complete Enrollment
+          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Processing..." : "Complete Enrollment"}
           </Button>
         </form>
       </Card>
