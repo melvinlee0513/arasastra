@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Play, Clock, ChevronRight, BookOpen, Calendar } from "lucide-react";
+import { Play, Clock, ChevronRight, BookOpen, Calendar, Video, CheckCircle } from "lucide-react";
 import { format, isAfter, isBefore, addMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,7 @@ interface LiveClass {
   id: string;
   title: string;
   live_url: string | null;
+  zoom_link: string | null;
   scheduled_at: string;
   duration_minutes: number;
   subject?: { name: string } | null;
@@ -26,6 +27,7 @@ interface UpcomingClass {
   title: string;
   scheduled_at: string;
   duration_minutes: number;
+  zoom_link?: string | null;
   subject?: { name: string; icon?: string | null } | null;
   tutor?: { name: string } | null;
 }
@@ -42,10 +44,11 @@ interface EnrolledSubject {
 }
 
 export function StudentDashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [enrolledSubjects, setEnrolledSubjects] = useState<EnrolledSubject[]>([]);
+  const [attendanceScore, setAttendanceScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export function StudentDashboard() {
       // Fetch classes that are currently live OR scheduled to be live now
       const { data: allClasses } = await supabase
         .from("classes")
-        .select("id, title, live_url, scheduled_at, duration_minutes, is_live, subject:subjects(name), tutor:tutors(name, avatar_url)")
+        .select("id, title, live_url, zoom_link, scheduled_at, duration_minutes, is_live, subject:subjects(name), tutor:tutors(name, avatar_url)")
         .eq("is_published", true)
         .order("scheduled_at", { ascending: true });
 
@@ -75,7 +78,7 @@ export function StudentDashboard() {
         const end = addMinutes(start, classItem.duration_minutes || 60);
         const isCurrentlyLive = classItem.is_live || (isAfter(now, start) && isBefore(now, end));
 
-        if (isCurrentlyLive && classItem.live_url) {
+        if (isCurrentlyLive && (classItem.live_url || classItem.zoom_link)) {
           liveNow.push(classItem);
         } else if (isAfter(start, now)) {
           upcoming.push(classItem);
@@ -115,6 +118,19 @@ export function StudentDashboard() {
       });
 
       setEnrolledSubjects(subjectsWithProgress);
+
+      // Fetch attendance score
+      if (user) {
+        const { data: attendanceData } = await supabase
+          .from("attendance")
+          .select("status")
+          .eq("user_id", user.id);
+
+        if (attendanceData && attendanceData.length > 0) {
+          const present = attendanceData.filter((a) => a.status === "present").length;
+          setAttendanceScore(Math.round((present / attendanceData.length) * 100));
+        }
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -124,15 +140,24 @@ export function StudentDashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Welcome Header */}
+      {/* Attendance Score + Welcome */}
       <div className="flex items-center gap-3">
         <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Welcome back, {profile?.full_name?.split(" ")[0]}! 👋
           </h1>
           <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
+        {attendanceScore !== null && (
+          <Card className="p-3 bg-card border-border hidden md:flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-accent" />
+            <div>
+              <p className="text-xl font-bold text-foreground">{attendanceScore}%</p>
+              <p className="text-xs text-muted-foreground">Attendance</p>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Live Now Section */}
@@ -187,11 +212,14 @@ export function StudentDashboard() {
                     variant="live"
                     size="xl"
                     className="w-full md:w-auto"
-                    onClick={() => liveClass.live_url && window.open(liveClass.live_url, "_blank")}
-                    disabled={!liveClass.live_url}
+                    onClick={() => {
+                      const link = liveClass.zoom_link || liveClass.live_url;
+                      if (link) window.open(link, "_blank");
+                    }}
+                    disabled={!liveClass.live_url && !liveClass.zoom_link}
                   >
-                    <Play className="w-5 h-5" />
-                    Join Class
+                    <Video className="w-5 h-5" />
+                    Join Zoom
                   </Button>
                 </div>
               </Card>

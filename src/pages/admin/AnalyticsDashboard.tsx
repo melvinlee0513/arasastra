@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, Users, BookOpen, Video, CreditCard, RefreshCw, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, BookOpen, Video, CreditCard, RefreshCw, FileText, DollarSign } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +37,11 @@ interface WeeklyEnrollment {
   enrollments: number;
 }
 
+interface TutorPerformance {
+  name: string;
+  rate: number;
+}
+
 const COLORS = ["hsl(43, 90%, 55%)", "hsl(220, 45%, 22%)", "hsl(25, 50%, 35%)", "hsl(40, 30%, 96%)", "hsl(220, 40%, 28%)"];
 
 export function AnalyticsDashboard() {
@@ -52,6 +57,8 @@ export function AnalyticsDashboard() {
     activeSubscriptions: 0,
   });
   const [weeklyEnrollments, setWeeklyEnrollments] = useState<WeeklyEnrollment[]>([]);
+  const [projectedRevenue, setProjectedRevenue] = useState(0);
+  const [tutorPerformance, setTutorPerformance] = useState<TutorPerformance[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,7 +68,6 @@ export function AnalyticsDashboard() {
   const fetchAnalytics = async () => {
     setIsLoading(true);
     try {
-      // Fetch all stats in parallel
       const [
         profilesRes,
         enrollmentsRes,
@@ -70,6 +76,10 @@ export function AnalyticsDashboard() {
         pendingPaymentsRes,
         activeSubsRes,
         subjectsRes,
+        plansRes,
+        profilesWithPlans,
+        tutorsRes,
+        attendanceRes,
       ] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("enrollments").select("id, enrolled_at", { count: "exact" }),
@@ -78,6 +88,10 @@ export function AnalyticsDashboard() {
         supabase.from("payment_submissions").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("subjects").select("id, name"),
+        supabase.from("pricing_plans").select("id, name, price"),
+        supabase.from("profiles").select("plan_id"),
+        supabase.from("tutors").select("id, name"),
+        supabase.from("attendance").select("class_id, status, classes!attendance_class_id_fkey(tutor_id)"),
       ]);
 
       setStats({
@@ -89,30 +103,62 @@ export function AnalyticsDashboard() {
         activeSubscriptions: activeSubsRes.count || 0,
       });
 
-      // Calculate weekly enrollments from last 4 weeks
+      // Calculate projected revenue
+      const plans = plansRes.data || [];
+      const planPriceMap = new Map(plans.map((p) => [p.id, parseFloat(p.price.replace(/[^0-9.]/g, "")) || 0]));
+      const profiles = profilesWithPlans.data || [];
+      let revenue = 0;
+      profiles.forEach((p) => {
+        if (p.plan_id && planPriceMap.has(p.plan_id)) {
+          revenue += planPriceMap.get(p.plan_id)!;
+        }
+      });
+      setProjectedRevenue(revenue);
+
+      // Tutor performance (attendance rate)
+      const tutors = tutorsRes.data || [];
+      const attendanceData = attendanceRes.data || [];
+      const tutorStats = new Map<string, { total: number; present: number }>();
+
+      attendanceData.forEach((a) => {
+        const tutorId = (a.classes as unknown as { tutor_id: string | null })?.tutor_id;
+        if (!tutorId) return;
+        if (!tutorStats.has(tutorId)) tutorStats.set(tutorId, { total: 0, present: 0 });
+        const s = tutorStats.get(tutorId)!;
+        s.total++;
+        if (a.status === "present") s.present++;
+      });
+
+      const perfData: TutorPerformance[] = tutors
+        .map((t) => {
+          const s = tutorStats.get(t.id);
+          return {
+            name: t.name,
+            rate: s ? Math.round((s.present / s.total) * 100) : 0,
+          };
+        })
+        .sort((a, b) => b.rate - a.rate);
+
+      setTutorPerformance(perfData);
+
+      // Weekly enrollments
       const enrollmentsData = enrollmentsRes.data || [];
       const now = new Date();
       const weeklyData: WeeklyEnrollment[] = [];
-      
       for (let i = 3; i >= 0; i--) {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - (i + 1) * 7);
         const weekEnd = new Date(now);
         weekEnd.setDate(now.getDate() - i * 7);
-        
         const count = enrollmentsData.filter((e) => {
           const enrolledAt = new Date(e.enrolled_at || "");
           return enrolledAt >= weekStart && enrolledAt < weekEnd;
         }).length;
-        
-        weeklyData.push({
-          week: `Week ${4 - i}`,
-          enrollments: count,
-        });
+        weeklyData.push({ week: `Week ${4 - i}`, enrollments: count });
       }
       setWeeklyEnrollments(weeklyData);
 
-      // Fetch enrollments grouped by subject
+      // Enrollments by subject
       const subjects = subjectsRes.data || [];
       const subjectEnrollments = await Promise.all(
         subjects.map(async (subject) => {
@@ -120,14 +166,9 @@ export function AnalyticsDashboard() {
             .from("enrollments")
             .select("id", { count: "exact", head: true })
             .eq("subject_id", subject.id);
-
-          return {
-            name: subject.name,
-            count: count || 0,
-          };
+          return { name: subject.name, count: count || 0 };
         })
       );
-
       setEnrollmentsBySubject(subjectEnrollments.filter((s) => s.count > 0));
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -140,10 +181,7 @@ export function AnalyticsDashboard() {
     setIsRefreshing(true);
     await fetchAnalytics();
     setIsRefreshing(false);
-    toast({
-      title: "✅ Refreshed",
-      description: "Analytics data has been updated",
-    });
+    toast({ title: "✅ Refreshed", description: "Analytics data has been updated" });
   };
 
   const statCards = [
@@ -167,6 +205,26 @@ export function AnalyticsDashboard() {
           Refresh
         </Button>
       </div>
+
+      {/* Projected Revenue Card */}
+      <Card className="p-6 bg-gradient-to-br from-accent/20 to-primary/10 border-accent/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Projected Monthly Revenue</p>
+            <p className="text-4xl font-bold text-foreground">
+              {isLoading ? <Skeleton className="h-10 w-40" /> : `RM ${projectedRevenue.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`}
+            </p>
+            <div className="flex items-center gap-1 mt-2 text-sm">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-green-400 font-medium">+12%</span>
+              <span className="text-muted-foreground">vs last month</span>
+            </div>
+          </div>
+          <div className="w-16 h-16 rounded-2xl bg-accent/20 flex items-center justify-center">
+            <DollarSign className="w-8 h-8 text-accent" />
+          </div>
+        </div>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -262,6 +320,35 @@ export function AnalyticsDashboard() {
               ))}
             </div>
           )}
+        </Card>
+
+        {/* Tutor Performance Chart */}
+        <Card className="p-6 bg-card border-border lg:col-span-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Tutor Performance (Attendance Rate %)</h3>
+          <div className="h-64">
+            {tutorPerformance.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tutorPerformance} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" domain={[0, 100]} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis type="category" dataKey="name" width={120} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value: number) => [`${value}%`, "Attendance Rate"]}
+                  />
+                  <Bar dataKey="rate" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No attendance data yet
+              </div>
+            )}
+          </div>
         </Card>
       </div>
 

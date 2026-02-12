@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, addMinutes } from "date-fns";
-import { Plus, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, ChevronLeft, ChevronRight, ClipboardCheck } from "lucide-react";
+import { AttendanceDialog } from "@/components/admin/AttendanceDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ interface ClassItem {
   live_url: string | null;
   is_live: boolean;
   is_published: boolean;
+  zoom_link?: string | null;
   subject?: { name: string; color: string } | null;
   tutor?: { name: string } | null;
 }
@@ -67,6 +69,7 @@ export function ScheduleManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Partial<ClassItem> | null>(null);
   const [conflict, setConflict] = useState<TutorConflict | null>(null);
+  const [attendanceClass, setAttendanceClass] = useState<{ id: string; title: string; date: string } | null>(null);
   const { toast } = useToast();
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -336,11 +339,28 @@ export function ScheduleManager() {
                     <p className="text-muted-foreground">
                       {format(new Date(classItem.scheduled_at), "HH:mm")}
                     </p>
-                    {classItem.is_live && (
-                      <Badge variant="destructive" className="mt-1 text-[10px]">
-                        LIVE
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1 mt-1">
+                      {classItem.is_live && (
+                        <Badge variant="destructive" className="text-[10px]">
+                          LIVE
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1 text-[10px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAttendanceClass({
+                            id: classItem.id,
+                            title: classItem.title,
+                            date: classItem.scheduled_at,
+                          });
+                        }}
+                      >
+                        <ClipboardCheck className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
 
@@ -491,6 +511,17 @@ export function ScheduleManager() {
             </div>
 
             <div className="space-y-2">
+              <Label>Zoom Link</Label>
+              <Input
+                value={(editingClass as any)?.zoom_link || ""}
+                onChange={(e) =>
+                  setEditingClass((prev) => ({ ...prev, zoom_link: e.target.value }))
+                }
+                placeholder="https://zoom.us/j/..."
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Replay URL (YouTube/Vimeo)</Label>
               <Input
                 value={editingClass?.video_url || ""}
@@ -543,6 +574,17 @@ export function ScheduleManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Attendance Dialog */}
+      {attendanceClass && (
+        <AttendanceDialog
+          open={!!attendanceClass}
+          onOpenChange={(open) => !open && setAttendanceClass(null)}
+          classId={attendanceClass.id}
+          classTitle={attendanceClass.title}
+          classDate={attendanceClass.date}
+        />
+      )}
     </div>
   );
 }
