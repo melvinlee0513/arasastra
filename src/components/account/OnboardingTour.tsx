@@ -59,24 +59,30 @@ export function OnboardingTour({ steps, isActive, onComplete, startAt = 0 }: Onb
   const step = steps[currentStep];
   const isLast = currentStep === steps.length - 1;
 
-  // Position tooltip below the target (viewport-relative for fixed positioning)
-  const tooltipTop = position.top + position.height + 16;
-  const tooltipLeft = Math.max(16, Math.min(position.left, window.innerWidth - 340));
+  // Position tooltip to the right of the target; fall back to below if not enough space
+  const spaceRight = window.innerWidth - (position.left + position.width + 16);
+  const placeRight = spaceRight >= 340;
+  const tooltipTop = placeRight
+    ? Math.max(16, position.top)
+    : position.top + position.height + 16;
+  const tooltipLeft = placeRight
+    ? position.left + position.width + 16
+    : Math.max(16, Math.min(position.left, window.innerWidth - 340));
 
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 z-[9998] pointer-events-none">
-        {/* Dark backdrop with cutout */}
-        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
-        {/* Spotlight cutout */}
+      <div className="fixed inset-0 z-[9998]" style={{ pointerEvents: 'none' }}>
+        {/* Semi-transparent backdrop with cutout using box-shadow */}
         <div
-          className="absolute rounded-xl border-2 border-primary shadow-[0_0_0_9999px_hsl(var(--background)/0.7)]"
+          className="absolute rounded-xl border-2 border-primary"
           style={{
             top: position.top - 8,
             left: position.left - 8,
             width: position.width + 16,
             height: position.height + 16,
+            boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
+            zIndex: 1,
           }}
         />
       </div>
