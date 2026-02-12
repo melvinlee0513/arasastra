@@ -10,7 +10,9 @@ import {
   Home,
   LogOut,
   FileText,
-  CreditCard
+  CreditCard,
+  UserCheck,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,11 +25,13 @@ interface AdminSidebarProps {
 
 const navItems = [
   { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
+  { path: "/admin/leads", icon: UserCheck, label: "Leads CRM" },
   { path: "/admin/content", icon: FileEdit, label: "Content CMS" },
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/schedule", icon: Calendar, label: "Schedule" },
   { path: "/admin/notes", icon: FileText, label: "Notes Bank" },
   { path: "/admin/payments", icon: CreditCard, label: "Payments" },
+  { path: "/admin/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
 ];
 

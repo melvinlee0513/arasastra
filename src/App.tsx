@@ -32,6 +32,8 @@ import { ScheduleManager } from "@/pages/admin/ScheduleManager";
 import { AnalyticsDashboard } from "@/pages/admin/AnalyticsDashboard";
 import { NotesManagement } from "@/pages/admin/NotesManagement";
 import { PaymentVerification } from "@/pages/admin/PaymentVerification";
+import { LeadsManagement } from "@/pages/admin/LeadsManagement";
+import { GradingPage } from "@/pages/admin/GradingPage";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +124,16 @@ const App = () => (
               }
             />
             <Route
+              path="/admin/leads"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <LeadsManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/content"
               element={
                 <ProtectedRoute adminOnly>
@@ -177,6 +189,16 @@ const App = () => (
                 <ProtectedRoute adminOnly>
                   <AdminLayout>
                     <AnalyticsDashboard />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/grading"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <GradingPage />
                   </AdminLayout>
                 </ProtectedRoute>
               }
