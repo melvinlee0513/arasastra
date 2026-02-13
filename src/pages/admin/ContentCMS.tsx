@@ -1,4 +1,4 @@
-import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard } from "lucide-react";
+import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard, HelpCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import { TutorProfilesTab } from "@/components/admin/cms/TutorProfilesTab";
 import { ClassCategoriesTab } from "@/components/admin/cms/ClassCategoriesTab";
 import { SiteContentTab } from "@/components/admin/cms/SiteContentTab";
 import { PricingPlansTab } from "@/components/admin/cms/PricingPlansTab";
+import { QuizManagerTab } from "@/components/admin/cms/QuizManagerTab";
 import { useState } from "react";
 
 export function ContentCMS() {
@@ -72,6 +73,13 @@ export function ContentCMS() {
             <CreditCard className="w-4 h-4" />
             Pricing Plans
           </TabsTrigger>
+          <TabsTrigger
+            value="quizzes"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Quizzes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="schedule" className="mt-6" key={`schedule-${refreshKey}`}>
@@ -92,6 +100,10 @@ export function ContentCMS() {
 
         <TabsContent value="pricing" className="mt-6" key={`pricing-${refreshKey}`}>
           <PricingPlansTab />
+        </TabsContent>
+
+        <TabsContent value="quizzes" className="mt-6" key={`quizzes-${refreshKey}`}>
+          <QuizManagerTab />
         </TabsContent>
       </Tabs>
     </div>

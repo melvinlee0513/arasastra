@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Play, Clock, ChevronRight, BookOpen, Calendar, Video, CheckCircle } from "lucide-react";
+import { Play, Clock, ChevronRight, BookOpen, Calendar, Video, CheckCircle, HelpCircle } from "lucide-react";
 import { format, isAfter, isBefore, addMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -319,7 +319,7 @@ export function StudentDashboard() {
       </section>
 
       {/* Quick Links */}
-      <section className="grid grid-cols-2 gap-4">
+      <section className="grid grid-cols-3 gap-4">
         <Link to="/dashboard/replays">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export function StudentDashboard() {
                 <Play className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <h3 className="font-medium text-foreground">Replay Library</h3>
+                <h3 className="font-medium text-foreground">Replays</h3>
                 <p className="text-xs text-muted-foreground">Watch past classes</p>
               </div>
             </div>
@@ -342,6 +342,19 @@ export function StudentDashboard() {
               <div>
                 <h3 className="font-medium text-foreground">Notes Bank</h3>
                 <p className="text-xs text-muted-foreground">Download materials</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+        <Link to="/dashboard/quizzes">
+          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <HelpCircle className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">Quizzes</h3>
+                <p className="text-xs text-muted-foreground">Test your knowledge</p>
               </div>
             </div>
           </Card>
