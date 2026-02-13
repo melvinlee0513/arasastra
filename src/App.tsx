@@ -23,6 +23,8 @@ import NotFound from "./pages/NotFound";
 // Student Dashboard Pages
 import { StudentDashboard } from "@/pages/dashboard/StudentDashboard";
 import { ReplayLibrary } from "@/pages/dashboard/ReplayLibrary";
+import { QuizList } from "@/pages/dashboard/QuizList";
+import { QuizPlay } from "@/pages/quiz/QuizPlay";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -108,6 +110,24 @@ const App = () => (
                   <DashboardLayout>
                     <ReplayLibrary />
                   </DashboardLayout>
+            </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/quizzes"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <QuizList />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quiz/:quizId"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <QuizPlay />
                 </ProtectedRoute>
               }
             />
