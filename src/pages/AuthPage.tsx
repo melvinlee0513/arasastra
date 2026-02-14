@@ -43,6 +43,8 @@ export function AuthPage() {
     if (user && !authLoading && role) {
       if (role === "admin") {
         navigate("/admin");
+      } else if (role === "tutor") {
+        navigate("/tutor");
       } else {
         navigate("/dashboard");
       }

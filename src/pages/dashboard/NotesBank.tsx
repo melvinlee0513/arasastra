@@ -1,4 +1,4 @@
-import { FileText, Download, Search, Filter, ExternalLink } from "lucide-react";
+import { FileText, Download, Search, Filter, ExternalLink, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { useAccess } from "@/hooks/useAccess";
 
 interface Note {
   id: string;
@@ -39,6 +40,7 @@ export function NotesBank() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const { toast } = useToast();
+  const { hasAccess, isLoading: accessLoading } = useAccess();
 
   useEffect(() => {
     fetchData();
@@ -176,11 +178,24 @@ export function NotesBank() {
                     </p>
                   )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <a href={note.file_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4" />
-                    <span className="hidden sm:inline">View</span>
-                  </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!hasAccess(note.subject_id || "")}
+                  asChild={hasAccess(note.subject_id || "")}
+                >
+                  {hasAccess(note.subject_id || "") ? (
+                    <a href={note.file_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4" />
+                      <span className="hidden sm:inline">View</span>
+                    </a>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span className="hidden sm:inline">Locked</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </Card>

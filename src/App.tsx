@@ -24,7 +24,16 @@ import NotFound from "./pages/NotFound";
 import { StudentDashboard } from "@/pages/dashboard/StudentDashboard";
 import { ReplayLibrary } from "@/pages/dashboard/ReplayLibrary";
 import { QuizList } from "@/pages/dashboard/QuizList";
+import { NotesBank } from "@/pages/dashboard/NotesBank";
 import { QuizPlay } from "@/pages/quiz/QuizPlay";
+
+// Tutor Pages
+import { TutorLayout } from "@/components/tutor/TutorLayout";
+import { TutorDashboard } from "@/pages/tutor/TutorDashboard";
+import { TutorClasses } from "@/pages/tutor/TutorClasses";
+import { TutorStudents } from "@/pages/tutor/TutorStudents";
+import { TutorGrading } from "@/pages/tutor/TutorGrading";
+import { TutorNotes } from "@/pages/tutor/TutorNotes";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -128,6 +137,70 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="authenticated">
                   <QuizPlay />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Notes Bank - Requires authentication */}
+            <Route
+              path="/dashboard/notes"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <NotesBank />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Tutor Routes */}
+            <Route
+              path="/tutor"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorDashboard />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/classes"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorClasses />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/students"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorStudents />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/grading"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorGrading />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/notes"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorNotes />
+                  </TutorLayout>
                 </ProtectedRoute>
               }
             />
