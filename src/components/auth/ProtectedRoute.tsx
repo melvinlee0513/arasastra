@@ -4,20 +4,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
-type RequiredRole = "admin" | "student" | "authenticated";
+type RequiredRole = "admin" | "student" | "tutor" | "authenticated";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: RequiredRole;
   adminOnly?: boolean;
+  tutorOnly?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   requiredRole = "authenticated",
-  adminOnly = false 
+  adminOnly = false,
+  tutorOnly = false,
 }: ProtectedRouteProps) {
-  const { user, role, isLoading, isAdmin } = useAuth();
+  const { user, role, isLoading, isAdmin, isTutor } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
 
@@ -40,11 +42,22 @@ export function ProtectedRoute({
 
   // Admin-only route check
   if (adminOnly && !isAdmin) {
-    // Show unauthorized toast
     setTimeout(() => {
       toast({
         title: "Unauthorized",
         description: "You don't have permission to access the admin area.",
+        variant: "destructive",
+      });
+    }, 0);
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Tutor-only route check
+  if (tutorOnly && !isTutor) {
+    setTimeout(() => {
+      toast({
+        title: "Unauthorized",
+        description: "You don't have permission to access the tutor area.",
         variant: "destructive",
       });
     }, 0);

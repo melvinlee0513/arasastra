@@ -386,6 +386,7 @@ export type Database = {
       profiles: {
         Row: {
           admin_remarks: string | null
+          assigned_tutor_id: string | null
           avatar_url: string | null
           created_at: string | null
           email: string | null
@@ -404,6 +405,7 @@ export type Database = {
         }
         Insert: {
           admin_remarks?: string | null
+          assigned_tutor_id?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
@@ -422,6 +424,7 @@ export type Database = {
         }
         Update: {
           admin_remarks?: string | null
+          assigned_tutor_id?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
@@ -439,6 +442,13 @@ export type Database = {
           xp_points?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_assigned_tutor_id_fkey"
+            columns: ["assigned_tutor_id"]
+            isOneToOne: false
+            referencedRelation: "tutors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_plan_id_fkey"
             columns: ["plan_id"]
