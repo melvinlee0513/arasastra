@@ -18,6 +18,7 @@ import { TimetablePage } from "@/pages/TimetablePage";
 import { ClassesPage } from "@/pages/ClassesPage";
 import { InboxPage } from "@/pages/InboxPage";
 import { AccountPage } from "@/pages/AccountPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 // Student Dashboard Pages
@@ -56,8 +57,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Auth Page */}
+            {/* Auth Pages */}
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
 
             {/* Public/Student Pages with MainLayout */}
             <Route
