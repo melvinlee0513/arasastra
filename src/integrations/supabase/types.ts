@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           class_id: string | null
@@ -185,6 +215,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      content_versions: {
+        Row: {
+          created_at: string
+          draft_data: Json
+          draft_subtitle: string | null
+          draft_title: string | null
+          id: string
+          published_data: Json
+          section_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          draft_data?: Json
+          draft_subtitle?: string | null
+          draft_title?: string | null
+          id?: string
+          published_data?: Json
+          section_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          draft_data?: Json
+          draft_subtitle?: string | null
+          draft_title?: string | null
+          id?: string
+          published_data?: Json
+          section_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_versions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "content_sections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollments: {
         Row: {

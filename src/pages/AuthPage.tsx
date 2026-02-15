@@ -165,6 +165,11 @@ export function AuthPage() {
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Login
                 </Button>
+                <div className="text-center">
+                  <a href="/auth/reset-password" className="text-sm text-accent hover:underline">
+                    Forgot your password?
+                  </a>
+                </div>
               </form>
             </Form>
           </TabsContent>
