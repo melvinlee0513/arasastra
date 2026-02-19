@@ -197,3 +197,66 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out forwards;
 }
+
+/* Quiz animations */
+@keyframes score-popup {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-10px);
+  }
+  60% {
+    transform: scale(1) translateY(-30px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-60px);
+  }
+}
+
+@keyframes slide-in-option {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes countdown-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.animate-score-popup {
+  animation: score-popup 1.2s ease-out forwards;
+}
+
+.animate-slide-in-option {
+  animation: slide-in-option 0.3s ease-out both;
+}
+
+.animate-countdown-pulse {
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+.shake-animation {
+  animation: shake 0.4s ease-in-out;
+}
