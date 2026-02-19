@@ -1,0 +1,1 @@
+ALTER TABLE public.quizzes ADD COLUMN sound_theme text NOT NULL DEFAULT 'arcade';

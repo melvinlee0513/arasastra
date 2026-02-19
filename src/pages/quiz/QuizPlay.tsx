@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Timer, Trophy, Zap, ChevronRight, X, Star, Shield, Clock, Flame } from "lucide-react";
+import { Timer, Trophy, Zap, ChevronRight, X, Star, Shield, Clock, Flame, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,12 @@ import confetti from "canvas-confetti";
 import {
   playCorrect, playWrong, playCountdownTick, playTimeWarning,
   playPowerUp, playGameStart, playResults, playStreak, playCombo,
+  setSoundTheme, type SoundTheme,
 } from "@/lib/quiz-sounds";
 import { ScorePopup } from "@/components/quiz/ScorePopup";
 import { QuizOptionButton } from "@/components/quiz/QuizOptionButton";
 import { QuizTimer } from "@/components/quiz/QuizTimer";
+import { ComboCounter } from "@/components/quiz/ComboCounter";
 
 interface Question {
   id: string;
@@ -32,7 +34,7 @@ interface QuizData {
 }
 
 interface PowerUp {
-  id: "double_jeopardy" | "time_freeze" | "fifty_fifty";
+  id: "double_jeopardy" | "time_freeze" | "fifty_fifty" | "skip";
   label: string;
   icon: typeof Shield;
   description: string;
@@ -47,6 +49,7 @@ const INITIAL_POWERUPS: PowerUp[] = [
   { id: "double_jeopardy", label: "2× Points", icon: Flame, description: "Double points for this question", used: false },
   { id: "time_freeze", label: "Freeze", icon: Clock, description: "Freeze the timer for this question", used: false },
   { id: "fifty_fifty", label: "50/50", icon: Shield, description: "Remove two wrong answers", used: false },
+  { id: "skip", label: "Skip", icon: SkipForward, description: "Skip this question without penalty", used: false },
 ];
 
 export function QuizPlay() {
@@ -84,6 +87,10 @@ export function QuizPlay() {
   const [leaderboard, setLeaderboard] = useState<{ name: string; score: number }[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
+  // Combo counter
+  const [showCombo, setShowCombo] = useState(false);
+  const [comboKey, setComboKey] = useState(0);
+
   // Multiplier text
   const streakMultiplier = streak >= 5 ? 3 : streak >= 3 ? 2 : 1;
 
@@ -94,10 +101,13 @@ export function QuizPlay() {
     if (!quizId) return;
     const load = async () => {
       const [quizRes, qRes] = await Promise.all([
-        supabase.from("quizzes").select("id, title, class_id").eq("id", quizId).single(),
+        supabase.from("quizzes").select("id, title, class_id, sound_theme").eq("id", quizId).single(),
         supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       ]);
-      if (quizRes.data) setQuiz(quizRes.data);
+      if (quizRes.data) {
+        setQuiz(quizRes.data);
+        setSoundTheme((quizRes.data as any).sound_theme as SoundTheme || "arcade");
+      }
       if (qRes.data) {
         setQuestions(qRes.data.map((q) => ({
           ...q,
@@ -196,6 +206,16 @@ export function QuizPlay() {
         .map((o, i) => (o !== current.correct_answer ? i : -1))
         .filter((i) => i !== -1);
       setHiddenOptions(wrongIndices.sort(() => Math.random() - 0.5).slice(0, 2));
+    } else if (id === "skip") {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setAnswers((a) => [...a, { correct: false, timeBonus: 0 }]);
+      if (currentIndex + 1 >= questions.length) {
+        finishQuiz();
+      } else {
+        setCurrentIndex((i) => i + 1);
+        setSelectedAnswer(null);
+        setGameState("playing");
+      }
     }
   };
 
@@ -218,7 +238,12 @@ export function QuizPlay() {
           setTimeout(() => playStreak(), 300);
           confetti({ particleCount: 30, spread: 40, origin: { y: 0.5 }, colors: ["#FFD700", "#FFA500"] });
         }
-        if (newStreak >= 5) setTimeout(() => playCombo(), 500);
+        if (newStreak >= 5) {
+          setTimeout(() => playCombo(), 500);
+          setComboKey((k) => k + 1);
+          setShowCombo(true);
+          setTimeout(() => setShowCombo(false), 2000);
+        }
       } else {
         playWrong();
       }
@@ -454,6 +479,8 @@ export function QuizPlay() {
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
       {/* Score popup */}
       <ScorePopup key={popupKey} score={popupScore} streak={popupStreak} isCorrect={popupCorrect} show={showPopup} />
+      {/* Combo counter */}
+      <ComboCounter key={comboKey} streak={streak} show={showCombo} />
 
       {/* Top Bar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-card/50 border-b border-border/30">

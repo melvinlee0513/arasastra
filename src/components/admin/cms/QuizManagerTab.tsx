@@ -48,7 +48,7 @@ export function QuizManagerTab() {
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [showQuizDialog, setShowQuizDialog] = useState(false);
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false);
-  const [quizForm, setQuizForm] = useState({ title: "", class_id: "" });
+  const [quizForm, setQuizForm] = useState({ title: "", class_id: "", sound_theme: "arcade" });
   const [questions, setQuestions] = useState<QuestionForm[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -60,7 +60,7 @@ export function QuizManagerTab() {
   const fetchData = async () => {
     setIsLoading(true);
     const [quizRes, classRes] = await Promise.all([
-      supabase.from("quizzes").select("id, title, class_id, created_at, class:classes(title)").order("created_at", { ascending: false }),
+      supabase.from("quizzes").select("id, title, class_id, created_at, sound_theme, class:classes(title)").order("created_at", { ascending: false }),
       supabase.from("classes").select("id, title").order("title"),
     ]);
 
@@ -87,13 +87,14 @@ export function QuizManagerTab() {
       if (editingQuiz) {
         await supabase
           .from("quizzes")
-          .update({ title: quizForm.title, class_id: quizForm.class_id || null })
+          .update({ title: quizForm.title, class_id: quizForm.class_id || null, sound_theme: quizForm.sound_theme })
           .eq("id", editingQuiz.id);
         toast({ title: "✅ Quiz updated" });
       } else {
         await supabase.from("quizzes").insert({
           title: quizForm.title,
           class_id: quizForm.class_id || null,
+          sound_theme: quizForm.sound_theme,
         });
         toast({ title: "✅ Quiz created" });
       }
@@ -219,7 +220,7 @@ export function QuizManagerTab() {
           variant="gold"
           onClick={() => {
             setEditingQuiz(null);
-            setQuizForm({ title: "", class_id: "" });
+            setQuizForm({ title: "", class_id: "", sound_theme: "arcade" });
             setShowQuizDialog(true);
           }}
         >
@@ -266,7 +267,7 @@ export function QuizManagerTab() {
                   size="sm"
                   onClick={() => {
                     setEditingQuiz(quiz);
-                    setQuizForm({ title: quiz.title, class_id: quiz.class_id || "" });
+                    setQuizForm({ title: quiz.title, class_id: quiz.class_id || "", sound_theme: (quiz as any).sound_theme || "arcade" });
                     setShowQuizDialog(true);
                   }}
                 >
@@ -316,6 +317,22 @@ export function QuizManagerTab() {
                       {c.title}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Sound Theme</Label>
+              <Select
+                value={quizForm.sound_theme}
+                onValueChange={(v) => setQuizForm((f) => ({ ...f, sound_theme: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="arcade">🕹️ Arcade</SelectItem>
+                  <SelectItem value="chill">🎵 Chill</SelectItem>
+                  <SelectItem value="retro">👾 Retro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
