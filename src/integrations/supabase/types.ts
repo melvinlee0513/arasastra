@@ -652,18 +652,21 @@ export type Database = {
           class_id: string | null
           created_at: string | null
           id: string
+          sound_theme: string
           title: string
         }
         Insert: {
           class_id?: string | null
           created_at?: string | null
           id?: string
+          sound_theme?: string
           title: string
         }
         Update: {
           class_id?: string | null
           created_at?: string | null
           id?: string
+          sound_theme?: string
           title?: string
         }
         Relationships: [
