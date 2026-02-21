@@ -13,6 +13,7 @@ import {
   CreditCard,
   UserCheck,
   ClipboardCheck,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +34,7 @@ const navItems = [
   { path: "/admin/payments", icon: CreditCard, label: "Payments" },
   { path: "/admin/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { path: "/admin/quiz-analytics", icon: HelpCircle, label: "Quiz Analytics" },
 ];
 
 export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
