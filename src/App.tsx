@@ -46,6 +46,7 @@ import { NotesManagement } from "@/pages/admin/NotesManagement";
 import { PaymentVerification } from "@/pages/admin/PaymentVerification";
 import { LeadsManagement } from "@/pages/admin/LeadsManagement";
 import { GradingPage } from "@/pages/admin/GradingPage";
+import { QuizAnalytics } from "@/pages/admin/QuizAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -295,6 +296,27 @@ const App = () => (
                   <AdminLayout>
                     <GradingPage />
                   </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/quiz-analytics"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <QuizAnalytics />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/quiz-analytics"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <QuizAnalytics />
+                  </TutorLayout>
                 </ProtectedRoute>
               }
             />

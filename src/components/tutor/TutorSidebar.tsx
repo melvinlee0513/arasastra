@@ -5,6 +5,7 @@ import {
   Calendar,
   FileText,
   ClipboardCheck,
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
   Home,
@@ -25,6 +26,7 @@ const navItems = [
   { path: "/tutor/students", icon: Users, label: "My Students" },
   { path: "/tutor/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/tutor/notes", icon: FileText, label: "Upload Notes" },
+  { path: "/tutor/quiz-analytics", icon: HelpCircle, label: "Quiz Analytics" },
 ];
 
 export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
