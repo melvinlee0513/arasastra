@@ -17,7 +17,11 @@ interface QuizItem {
   total_questions?: number;
 }
 
-export function QuizList() {
+interface QuizListProps {
+  embedded?: boolean;
+}
+
+export function QuizList({ embedded }: QuizListProps = {}) {
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -79,11 +83,13 @@ export function QuizList() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Quizzes</h1>
-        <p className="text-muted-foreground">Test your knowledge and earn XP!</p>
-      </div>
+    <div className={embedded ? "space-y-6" : "p-4 md:p-6 space-y-6 max-w-4xl mx-auto"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Quizzes</h1>
+          <p className="text-muted-foreground">Test your knowledge and earn XP!</p>
+        </div>
+      )}
 
       {quizzes.length === 0 ? (
         <Card className="p-12 text-center border-border">
@@ -97,7 +103,7 @@ export function QuizList() {
             <Card
               key={quiz.id}
               className="p-5 border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer group"
-              onClick={() => navigate(`/quiz/${quiz.id}`)}
+              onClick={() => navigate(`/quiz/${quiz.id}/lobby`)}
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">

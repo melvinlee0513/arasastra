@@ -33,7 +33,11 @@ interface Subject {
   name: string;
 }
 
-export function NotesBank() {
+interface NotesBankProps {
+  embedded?: boolean;
+}
+
+export function NotesBank({ embedded }: NotesBankProps = {}) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,11 +107,13 @@ export function NotesBank() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Notes Bank</h1>
-        <p className="text-muted-foreground">Download study materials and resources</p>
-      </div>
+    <div className={embedded ? "space-y-6" : "p-4 md:p-6 space-y-6 max-w-6xl mx-auto"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Notes Bank</h1>
+          <p className="text-muted-foreground">Download study materials and resources</p>
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="p-4 bg-card border-border">

@@ -247,15 +247,15 @@ export function LeadsManagement() {
     []
   );
 
-  const openWhatsApp = (phone: string | null, name: string) => {
+  const openWhatsApp = (phone: string | null, name: string, isNudge?: boolean) => {
     if (!phone) {
       toast({ title: "No phone number", description: "This lead has no phone number", variant: "destructive" });
       return;
     }
     const cleanPhone = phone.replace(/\D/g, "");
-    const message = encodeURIComponent(
-      `Hi ${name}, welcome to Arasa A+! I saw you registered and wanted to personally reach out. How can I help you get started?`
-    );
+    const message = isNudge
+      ? encodeURIComponent(`Hi ${name}, your spot in Arasa A+ is waiting! 🎓 We'd love to help you get started on your learning journey. Let me know if you have any questions!`)
+      : encodeURIComponent(`Hi ${name}, welcome to Arasa A+! I saw you registered and wanted to personally reach out. How can I help you get started?`);
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
   };
 
@@ -351,11 +351,11 @@ export function LeadsManagement() {
                   key={lead.id}
                   variant="outline"
                   size="sm"
-                  className="text-xs"
-                  onClick={() => openWhatsApp(lead.phone, lead.full_name)}
+                  className="text-xs border-orange-500/30 text-orange-600 hover:bg-orange-500/10"
+                  onClick={() => openWhatsApp(lead.phone, lead.full_name, true)}
                 >
                   <MessageCircle className="w-3 h-3 mr-1" />
-                  {lead.full_name.split(" ")[0]}
+                  Nudge {lead.full_name.split(" ")[0]}
                 </Button>
               ))}
             </div>

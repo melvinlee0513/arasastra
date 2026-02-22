@@ -26,7 +26,9 @@ import { StudentDashboard } from "@/pages/dashboard/StudentDashboard";
 import { ReplayLibrary } from "@/pages/dashboard/ReplayLibrary";
 import { QuizList } from "@/pages/dashboard/QuizList";
 import { NotesBank } from "@/pages/dashboard/NotesBank";
+import { LearningHub } from "@/pages/dashboard/LearningHub";
 import { QuizPlay } from "@/pages/quiz/QuizPlay";
+import { QuizLobby } from "@/pages/quiz/QuizLobby";
 
 // Tutor Pages
 import { TutorLayout } from "@/components/tutor/TutorLayout";
@@ -132,6 +134,44 @@ const App = () => (
                   <DashboardLayout>
                     <QuizList />
                   </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/learning"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <LearningHub />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/learning/quizzes"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <LearningHub />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quiz/:quizId/lobby"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <QuizLobby />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quiz/:quizId/play"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <QuizPlay />
                 </ProtectedRoute>
               }
             />

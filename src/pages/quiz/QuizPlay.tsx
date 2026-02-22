@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Timer, Trophy, Zap, ChevronRight, X, Star, Shield, Clock, Flame, SkipForward } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Timer, Trophy, Zap, ChevronRight, X, Star, Shield, Clock, Flame, SkipForward, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { ScorePopup } from "@/components/quiz/ScorePopup";
 import { QuizOptionButton } from "@/components/quiz/QuizOptionButton";
 import { QuizTimer } from "@/components/quiz/QuizTimer";
 import { ComboCounter } from "@/components/quiz/ComboCounter";
+import { PauseMenu } from "@/components/quiz/PauseMenu";
 
 interface Question {
   id: string;
@@ -54,6 +55,8 @@ const INITIAL_POWERUPS: PowerUp[] = [
 
 export function QuizPlay() {
   const { quizId } = useParams<{ quizId: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeAttemptId = searchParams.get("resume");
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -90,6 +93,12 @@ export function QuizPlay() {
   // Combo counter
   const [showCombo, setShowCombo] = useState(false);
   const [comboKey, setComboKey] = useState(0);
+  
+  // Pause menu
+  const [showPause, setShowPause] = useState(false);
+  const [sfxVolume, setSfxVolume] = useState(80);
+  const [isSaving, setIsSaving] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(resumeAttemptId);
 
   // Multiplier text
   const streakMultiplier = streak >= 5 ? 3 : streak >= 3 ? 2 : 1;
@@ -147,10 +156,46 @@ export function QuizPlay() {
             }))
         );
       }
+
+      // Resume logic
+      if (resumeAttemptId && user) {
+        const { data: attempt } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("id", resumeAttemptId)
+          .eq("user_id", user.id)
+          .eq("status", "in-progress")
+          .single();
+
+        if (attempt) {
+          setCurrentIndex(attempt.current_question_index);
+          setScore(attempt.score);
+          setStreak(attempt.streak);
+          const savedAnswers = Array.isArray(attempt.saved_answers) ? attempt.saved_answers : [];
+          setAnswers(savedAnswers as { correct: boolean; timeBonus: number }[]);
+          const usedIds = Array.isArray(attempt.power_ups_used) ? (attempt.power_ups_used as string[]) : [];
+          setPowerUps(INITIAL_POWERUPS.map((p) => ({ ...p, used: usedIds.includes(p.id) })));
+          setAttemptId(attempt.id);
+        }
+      }
+
       setGameState("countdown");
     };
     load();
   }, [quizId]);
+
+  // Escape key listener for pause menu
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && (gameState === "playing" || gameState === "feedback")) {
+        e.preventDefault();
+        setShowPause(true);
+        if (timerRef.current) clearInterval(timerRef.current);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [gameState]);
 
   // Countdown
   useEffect(() => {
@@ -294,6 +339,11 @@ export function QuizPlay() {
     setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.4, x: 0.7 } }), 600);
 
     if (user && quizId) {
+      // Mark any in-progress attempt as completed
+      if (attemptId) {
+        await supabase.from("quiz_attempts").update({ status: "completed", score }).eq("id", attemptId);
+      }
+
       await supabase.from("quiz_results").insert({
         quiz_id: quizId,
         user_id: user.id,
@@ -313,6 +363,64 @@ export function QuizPlay() {
           .eq("id", profile.id);
       }
     }
+  };
+
+  const saveAndQuit = async () => {
+    if (!user || !quizId) return;
+    setIsSaving(true);
+    try {
+      const attemptData = {
+        quiz_id: quizId,
+        user_id: user.id,
+        status: "in-progress" as const,
+        score,
+        current_question_index: currentIndex,
+        saved_answers: answers as unknown as import("@/integrations/supabase/types").Json,
+        streak,
+        power_ups_used: powerUps.filter((p) => p.used).map((p) => p.id) as unknown as import("@/integrations/supabase/types").Json,
+      };
+
+      if (attemptId) {
+        await supabase.from("quiz_attempts").update(attemptData).eq("id", attemptId);
+      } else {
+        const { data } = await supabase.from("quiz_attempts").insert(attemptData).select("id").single();
+        if (data) setAttemptId(data.id);
+      }
+    } catch (e) {
+      console.error("Error saving quiz:", e);
+    } finally {
+      setIsSaving(false);
+      navigate("/dashboard/learning/quizzes");
+    }
+  };
+
+  const handlePauseResume = () => {
+    setShowPause(false);
+    // Restart the timer for the current question
+    if (gameState === "playing" && !isTimeFrozen) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((t) => {
+          if (t <= 1) {
+            clearInterval(timerRef.current!);
+            handleAnswer(null);
+            return 0;
+          }
+          if (t === 6) playTimeWarning();
+          return t - 1;
+        });
+      }, 1000);
+    }
+  };
+
+  const handlePauseRestart = () => {
+    setShowPause(false);
+    // Delete the in-progress attempt if it exists
+    if (attemptId && user) {
+      supabase.from("quiz_attempts").delete().eq("id", attemptId).then(() => {
+        setAttemptId(null);
+      });
+    }
+    resetQuiz();
   };
 
   const resetQuiz = () => {
@@ -477,6 +585,17 @@ export function QuizPlay() {
   // --- PLAYING / FEEDBACK ---
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      {/* Pause Menu */}
+      <PauseMenu
+        open={showPause}
+        onOpenChange={setShowPause}
+        volume={sfxVolume}
+        onVolumeChange={setSfxVolume}
+        onResume={handlePauseResume}
+        onRestart={handlePauseRestart}
+        onSaveQuit={saveAndQuit}
+        isSaving={isSaving}
+      />
       {/* Score popup */}
       <ScorePopup key={popupKey} score={popupScore} streak={popupStreak} isCorrect={popupCorrect} show={showPopup} />
       {/* Combo counter */}
@@ -493,6 +612,17 @@ export function QuizPlay() {
         <Badge variant="secondary" className="gap-1">
           <span className="text-xs font-bold">{currentIndex + 1}/{questions.length}</span>
         </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            setShowPause(true);
+            if (timerRef.current) clearInterval(timerRef.current);
+          }}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Settings className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Score & Streak & Timer */}
