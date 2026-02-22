@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, Star, Zap } from "lucide-react";
+import { ExitIntentModal } from "@/components/account/ExitIntentModal";
 
 interface PricingPlan {
   id: string;
@@ -56,6 +57,7 @@ export function PricingSection({ selectedPlanId, onSelectPlan }: PricingSectionP
 
   return (
     <section className="space-y-6">
+      <ExitIntentModal />
       {/* Header */}
       <div className="text-center space-y-2">
         <Badge variant="secondary" className="bg-primary/10 text-primary border-0">

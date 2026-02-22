@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { VideoPlayer } from "@/components/shared/VideoPlayer";
 
 interface ClassReplay {
   id: string;
@@ -37,6 +38,7 @@ export function ReplayLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [activeVideo, setActiveVideo] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -80,6 +82,14 @@ export function ReplayLibrary() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Inline Video Player */}
+      {activeVideo && (
+        <VideoPlayer
+          url={activeVideo.url}
+          title={activeVideo.title}
+          onClose={() => setActiveVideo(null)}
+        />
+      )}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Replay Library</h1>
         <p className="text-muted-foreground">Watch past class recordings</p>
@@ -141,7 +151,11 @@ export function ReplayLibrary() {
             <Card
               key={replay.id}
               className="overflow-hidden bg-card border-border hover:shadow-lg transition-shadow group cursor-pointer"
-              onClick={() => replay.video_url && window.open(replay.video_url, "_blank")}
+              onClick={() => {
+                if (replay.video_url) {
+                  setActiveVideo({ url: replay.video_url, title: replay.title });
+                }
+              }}
             >
               {/* Thumbnail */}
               <div className="relative aspect-video bg-muted">

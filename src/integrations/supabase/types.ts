@@ -577,6 +577,56 @@ export type Database = {
           },
         ]
       }
+      quiz_attempts: {
+        Row: {
+          created_at: string
+          current_question_index: number
+          id: string
+          power_ups_used: Json
+          quiz_id: string
+          saved_answers: Json
+          score: number
+          status: string
+          streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_question_index?: number
+          id?: string
+          power_ups_used?: Json
+          quiz_id: string
+          saved_answers?: Json
+          score?: number
+          status?: string
+          streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_question_index?: number
+          id?: string
+          power_ups_used?: Json
+          quiz_id?: string
+          saved_answers?: Json
+          score?: number
+          status?: string
+          streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions: {
         Row: {
           correct_answer: string

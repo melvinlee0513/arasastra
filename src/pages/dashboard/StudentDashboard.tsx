@@ -333,7 +333,7 @@ export function StudentDashboard() {
             </div>
           </Card>
         </Link>
-        <Link to="/dashboard/notes">
+        <Link to="/dashboard/learning">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
@@ -346,7 +346,7 @@ export function StudentDashboard() {
             </div>
           </Card>
         </Link>
-        <Link to="/dashboard/quizzes">
+        <Link to="/dashboard/learning/quizzes">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">

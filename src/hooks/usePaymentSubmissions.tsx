@@ -208,6 +208,18 @@ export function useAdminPaymentSubmissions() {
       }
     }
 
+    // Trigger receipt email via edge function
+    const submission = submissions.find((s) => s.id === submissionId);
+    if (submission) {
+      try {
+        await supabase.functions.invoke("send-receipt", {
+          body: { userId, amount: submission.amount },
+        });
+      } catch (emailError) {
+        console.error("Receipt email failed (non-blocking):", emailError);
+      }
+    }
+
     await fetchAllSubmissions();
   };
 
