@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
+import { XPLeaderboard } from "@/components/dashboard/XPLeaderboard";
 
 interface LiveClass {
   id: string;
@@ -276,47 +277,54 @@ export function StudentDashboard() {
         )}
       </section>
 
-      {/* Upcoming Classes */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Upcoming Classes</h2>
-        {upcomingClasses.length === 0 ? (
-          <Card className="p-6 bg-card border-border">
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <Clock className="w-8 h-8" />
-              <div>
-                <p className="font-medium">No upcoming classes</p>
-                <p className="text-sm">Check back later for scheduled classes</p>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {upcomingClasses.map((classItem) => (
-              <Card key={classItem.id} className="p-4 bg-card border-border hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-accent" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{classItem.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {classItem.subject?.name} • {classItem.tutor?.name}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-accent">
-                      {format(new Date(classItem.scheduled_at), "MMM d")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(classItem.scheduled_at), "h:mm a")}
-                    </p>
-                  </div>
+      {/* Upcoming Classes + XP Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="space-y-3 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-foreground">Upcoming Classes</h2>
+          {upcomingClasses.length === 0 ? (
+            <Card className="p-6 bg-card border-border">
+              <div className="flex items-center gap-4 text-muted-foreground">
+                <Clock className="w-8 h-8" />
+                <div>
+                  <p className="font-medium">No upcoming classes</p>
+                  <p className="text-sm">Check back later for scheduled classes</p>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+              </div>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {upcomingClasses.map((classItem) => (
+                <Card key={classItem.id} className="p-4 bg-card border-border hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-foreground truncate">{classItem.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {classItem.subject?.name} • {classItem.tutor?.name}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-accent">
+                        {format(new Date(classItem.scheduled_at), "MMM d")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(classItem.scheduled_at), "h:mm a")}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* XP Leaderboard */}
+        <section>
+          <XPLeaderboard />
+        </section>
+      </div>
 
       {/* Quick Links */}
       <section className="grid grid-cols-3 gap-4">
