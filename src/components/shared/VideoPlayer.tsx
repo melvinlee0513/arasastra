@@ -9,6 +9,10 @@ interface VideoPlayerProps {
   onClose: () => void;
 }
 
+/**
+ * VideoPlayer — Inline player with Theater Mode and PiP support.
+ * Soft-Tech: glassmorphism overlay, rounded-2xl container, subtle shadows.
+ */
 export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
   const [theaterMode, setTheaterMode] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,10 +43,10 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
 
   return (
     <>
-      {/* Theater backdrop */}
+      {/* Theater backdrop — glassmorphism */}
       {theaterMode && (
         <div
-          className="fixed inset-0 bg-background/95 z-40 animate-fade-in"
+          className="fixed inset-0 bg-background/90 backdrop-blur-sm z-40 animate-fade-up"
           onClick={() => setTheaterMode(false)}
         />
       )}
@@ -52,15 +56,16 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
         theaterMode && "fixed inset-4 z-50 flex items-center justify-center"
       )}>
         <div className={cn(
-          "relative w-full bg-background rounded-xl overflow-hidden border border-border",
-          theaterMode && "max-w-6xl w-full shadow-2xl"
+          "relative w-full rounded-2xl overflow-hidden border border-border/40 shadow-sm",
+          "bg-card/70 backdrop-blur-md",
+          theaterMode && "max-w-6xl w-full shadow-md"
         )}>
-          {/* Controls overlay */}
-          <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Controls overlay — pill-shaped buttons */}
+          <div className="absolute top-3 right-3 z-10 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 bg-background/60 hover:bg-background/80 text-foreground"
+              className="h-8 w-8 rounded-full bg-card/60 backdrop-blur-sm hover:bg-card/80 text-foreground"
               onClick={togglePiP}
               title="Picture in Picture"
             >
@@ -69,7 +74,7 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 bg-background/60 hover:bg-background/80 text-foreground"
+              className="h-8 w-8 rounded-full bg-card/60 backdrop-blur-sm hover:bg-card/80 text-foreground"
               onClick={() => setTheaterMode(!theaterMode)}
               title={theaterMode ? "Exit Theater" : "Theater Mode"}
             >
@@ -79,7 +84,7 @@ export function VideoPlayer({ url, title, onClose }: VideoPlayerProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 bg-background/60 hover:bg-background/80 text-foreground"
+                className="h-8 w-8 rounded-full bg-card/60 backdrop-blur-sm hover:bg-card/80 text-foreground"
                 onClick={onClose}
               >
                 <X className="w-4 h-4" />
