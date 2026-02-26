@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
 import { XPLeaderboard } from "@/components/dashboard/XPLeaderboard";
+import { StreakFlame } from "@/components/dashboard/StreakFlame";
+import { useUserProgress } from "@/hooks/useUserProgress";
 
 interface LiveClass {
   id: string;
@@ -51,6 +53,7 @@ export function StudentDashboard() {
   const [enrolledSubjects, setEnrolledSubjects] = useState<EnrolledSubject[]>([]);
   const [attendanceScore, setAttendanceScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { progress: userProgress } = useUserProgress();
 
   useEffect(() => {
     if (profile?.id) {
@@ -150,15 +153,18 @@ export function StudentDashboard() {
           </h1>
           <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
-        {attendanceScore !== null && (
-          <Card className="p-3 bg-card border-border hidden md:flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-accent" />
-            <div>
-              <p className="text-xl font-bold text-foreground">{attendanceScore}%</p>
-              <p className="text-xs text-muted-foreground">Attendance</p>
-            </div>
-          </Card>
-        )}
+        <div className="hidden md:flex items-center gap-3">
+          <StreakFlame streak={userProgress.streak} />
+          {attendanceScore !== null && (
+            <Card className="p-3 bg-card border-border flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-accent" />
+              <div>
+                <p className="text-xl font-bold text-foreground">{attendanceScore}%</p>
+                <p className="text-xs text-muted-foreground">Attendance</p>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Live Now Section */}
