@@ -38,6 +38,12 @@ import { TutorStudents } from "@/pages/tutor/TutorStudents";
 import { TutorGrading } from "@/pages/tutor/TutorGrading";
 import { TutorNotes } from "@/pages/tutor/TutorNotes";
 
+// Guardian Pages
+import { GuardianLayout } from "@/components/guardian/GuardianLayout";
+import { ParentOverview } from "@/pages/guardian/ParentOverview";
+import { AcademicReports } from "@/pages/guardian/AcademicReports";
+import { GuardianBilling } from "@/pages/guardian/GuardianBilling";
+
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { ContentCMS } from "@/pages/admin/ContentCMS";
@@ -149,6 +155,16 @@ const App = () => (
             />
             <Route
               path="/dashboard/learning/quizzes"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <LearningHub />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/learning/flashcards"
               element={
                 <ProtectedRoute requiredRole="authenticated">
                   <DashboardLayout>
@@ -357,6 +373,38 @@ const App = () => (
                   <TutorLayout>
                     <QuizAnalytics />
                   </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Guardian/Parent Routes */}
+            <Route
+              path="/guardian"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <GuardianLayout>
+                    <ParentOverview />
+                  </GuardianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/guardian/reports"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <GuardianLayout>
+                    <AcademicReports />
+                  </GuardianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/guardian/billing"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <GuardianLayout>
+                    <GuardianBilling />
+                  </GuardianLayout>
                 </ProtectedRoute>
               }
             />

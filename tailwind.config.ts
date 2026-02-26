@@ -117,6 +117,59 @@ export default {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        // Quiz question transition animations
+        "slide-in-right": {
+          from: { opacity: "0", transform: "translateX(60px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-in-bottom": {
+          from: { opacity: "0", transform: "translateY(40px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "zoom-in": {
+          from: { opacity: "0", transform: "scale(0.85)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "zoom-out": {
+          from: { opacity: "1", transform: "scale(1)" },
+          to: { opacity: "0", transform: "scale(0.85)" },
+        },
+        "flip-in": {
+          from: { opacity: "0", transform: "rotateX(-15deg) translateY(10px)" },
+          to: { opacity: "1", transform: "rotateX(0deg) translateY(0)" },
+        },
+        "fade-scale-in": {
+          from: { opacity: "0", transform: "scale(0.92) translateY(8px)" },
+          to: { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
+        "rotate-in": {
+          from: { opacity: "0", transform: "rotate(-3deg) scale(0.95)" },
+          to: { opacity: "1", transform: "rotate(0) scale(1)" },
+        },
+        // Streak flame animations
+        "streak-flame-spark": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+        },
+        "streak-flame-warm": {
+          "0%, 100%": { transform: "scale(1) rotate(0deg)" },
+          "25%": { transform: "scale(1.08) rotate(-2deg)" },
+          "75%": { transform: "scale(1.08) rotate(2deg)" },
+        },
+        "streak-flame-hot": {
+          "0%, 100%": { transform: "scale(1) rotate(0deg)" },
+          "25%": { transform: "scale(1.12) rotate(-3deg)" },
+          "50%": { transform: "scale(1.05) rotate(1deg)" },
+          "75%": { transform: "scale(1.12) rotate(3deg)" },
+        },
+        "streak-flame-legendary": {
+          "0%, 100%": { transform: "scale(1) rotate(0deg)" },
+          "15%": { transform: "scale(1.15) rotate(-4deg)" },
+          "30%": { transform: "scale(1.08) rotate(2deg)" },
+          "45%": { transform: "scale(1.18) rotate(-2deg)" },
+          "60%": { transform: "scale(1.1) rotate(3deg)" },
+          "80%": { transform: "scale(1.15) rotate(-3deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -124,6 +177,16 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "fade-up": "fade-up 0.4s ease-out forwards",
         shimmer: "shimmer 2s linear infinite",
+        "slide-in-right": "slide-in-right 0.4s ease-out forwards",
+        "slide-in-bottom": "slide-in-bottom 0.4s ease-out forwards",
+        "zoom-in": "zoom-in 0.35s ease-out forwards",
+        "flip-in": "flip-in 0.4s ease-out forwards",
+        "fade-scale-in": "fade-scale-in 0.35s ease-out forwards",
+        "rotate-in": "rotate-in 0.4s ease-out forwards",
+        "streak-flame-spark": "streak-flame-spark 2s ease-in-out infinite",
+        "streak-flame-warm": "streak-flame-warm 1.5s ease-in-out infinite",
+        "streak-flame-hot": "streak-flame-hot 1.2s ease-in-out infinite",
+        "streak-flame-legendary": "streak-flame-legendary 0.8s ease-in-out infinite",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

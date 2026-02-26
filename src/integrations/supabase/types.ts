@@ -302,6 +302,108 @@ export type Database = {
           },
         ]
       }
+      flashcard_decks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          subject_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          subject_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          subject_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_decks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flashcard_progress: {
+        Row: {
+          flashcard_id: string
+          id: string
+          reviewed_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          flashcard_id: string
+          id?: string
+          reviewed_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          flashcard_id?: string
+          id?: string
+          reviewed_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_progress_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flashcards: {
+        Row: {
+          back_text: string
+          created_at: string
+          deck_id: string
+          front_text: string
+          id: string
+          sort_order: number | null
+        }
+        Insert: {
+          back_text: string
+          created_at?: string
+          deck_id: string
+          front_text: string
+          id?: string
+          sort_order?: number | null
+        }
+        Update: {
+          back_text?: string
+          created_at?: string
+          deck_id?: string
+          front_text?: string
+          id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_deck_id_fkey"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "flashcard_decks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           created_at: string | null
@@ -381,6 +483,35 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      parent_student_links: {
+        Row: {
+          created_at: string
+          id: string
+          parent_user_id: string
+          student_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parent_user_id: string
+          student_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parent_user_id?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_student_links_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_submissions: {
         Row: {
@@ -895,6 +1026,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_comments: {
+        Row: {
+          class_id: string
+          comment_text: string
+          created_at: string
+          id: string
+          timestamp_seconds: number
+          user_id: string
+        }
+        Insert: {
+          class_id: string
+          comment_text: string
+          created_at?: string
+          id?: string
+          timestamp_seconds?: number
+          user_id: string
+        }
+        Update: {
+          class_id?: string
+          comment_text?: string
+          created_at?: string
+          id?: string
+          timestamp_seconds?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_comments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

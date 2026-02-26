@@ -19,6 +19,7 @@ import { QuizOptionButton } from "@/components/quiz/QuizOptionButton";
 import { QuizTimer } from "@/components/quiz/QuizTimer";
 import { ComboCounter } from "@/components/quiz/ComboCounter";
 import { PauseMenu } from "@/components/quiz/PauseMenu";
+import { QuestionTransition } from "@/components/quiz/QuestionTransition";
 
 interface Question {
   id: string;
@@ -675,31 +676,30 @@ export function QuizPlay() {
       {/* Question */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 overflow-auto">
         <div className="w-full max-w-2xl space-y-6">
-          <div className={cn(
-            "bg-card rounded-2xl p-6 md:p-8 border border-border shadow-lg",
-            gameState === "playing" && "animate-fade-up"
-          )}>
-            <h2 className="text-xl md:text-2xl font-bold text-foreground text-center leading-relaxed">
-              {currentQuestion?.question}
-            </h2>
-          </div>
+          <QuestionTransition questionKey={currentIndex}>
+            <div className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-lg">
+              <h2 className="text-xl md:text-2xl font-bold text-foreground text-center leading-relaxed">
+                {currentQuestion?.question}
+              </h2>
+            </div>
 
-          {/* Options Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {currentQuestion?.options.map((option, i) => (
-              <QuizOptionButton
-                key={`${currentIndex}-${i}`}
-                option={option}
-                index={i}
-                correctAnswer={currentQuestion.correct_answer}
-                selectedAnswer={selectedAnswer}
-                isFeedback={gameState === "feedback"}
-                isHidden={hiddenOptions.includes(i)}
-                onSelect={handleAnswer}
-                animationDelay={i * 80}
-              />
-            ))}
-          </div>
+            {/* Options Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
+              {currentQuestion?.options.map((option, i) => (
+                <QuizOptionButton
+                  key={`${currentIndex}-${i}`}
+                  option={option}
+                  index={i}
+                  correctAnswer={currentQuestion.correct_answer}
+                  selectedAnswer={selectedAnswer}
+                  isFeedback={gameState === "feedback"}
+                  isHidden={hiddenOptions.includes(i)}
+                  onSelect={handleAnswer}
+                  animationDelay={i * 80}
+                />
+              ))}
+            </div>
+          </QuestionTransition>
 
           {/* Next Button */}
           {gameState === "feedback" && (
