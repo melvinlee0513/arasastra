@@ -43,6 +43,8 @@ import { GuardianLayout } from "@/components/guardian/GuardianLayout";
 import { ParentOverview } from "@/pages/guardian/ParentOverview";
 import { AcademicReports } from "@/pages/guardian/AcademicReports";
 import { GuardianBilling } from "@/pages/guardian/GuardianBilling";
+import { ParentPulse } from "@/pages/guardian/ParentPulse";
+import { FlashcardSwipeEngine } from "@/pages/dashboard/FlashcardSwipeEngine";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -376,6 +378,19 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            {/* Flashcard Swipe Engine — fullscreen */}
+            <Route
+              path="/dashboard/learning/flashcards/play"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <FlashcardSwipeEngine />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Parent Pulse — standalone bento route */}
+            <Route path="/guardian-pulse" element={<ParentPulse />} />
 
             {/* Guardian/Parent Routes */}
             <Route

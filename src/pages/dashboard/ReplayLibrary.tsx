@@ -38,7 +38,7 @@ export function ReplayLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [activeVideo, setActiveVideo] = useState<{ url: string; title: string } | null>(null);
+  const [activeVideo, setActiveVideo] = useState<{ url: string; title: string; classId: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -87,6 +87,7 @@ export function ReplayLibrary() {
         <VideoPlayer
           url={activeVideo.url}
           title={activeVideo.title}
+          classId={activeVideo.classId}
           onClose={() => setActiveVideo(null)}
         />
       )}
@@ -153,7 +154,7 @@ export function ReplayLibrary() {
               className="overflow-hidden bg-card border-border hover:shadow-lg transition-shadow group cursor-pointer"
               onClick={() => {
                 if (replay.video_url) {
-                  setActiveVideo({ url: replay.video_url, title: replay.title });
+                  setActiveVideo({ url: replay.video_url, title: replay.title, classId: replay.id });
                 }
               }}
             >
