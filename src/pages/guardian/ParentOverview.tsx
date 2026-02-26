@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, TrendingUp, CheckCircle, BookOpen } from "lucide-react";
+import { Users, TrendingUp, CheckCircle, BrainCircuit, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface LinkedStudent {
   id: string;
@@ -21,6 +22,10 @@ interface QuizScoreData {
   score: number;
 }
 
+/**
+ * ParentOverview — Student vitals, quiz score trend, and attendance ring.
+ * Soft-Tech aesthetic with glassmorphism cards and high whitespace.
+ */
 export function ParentOverview() {
   const { user } = useAuth();
   const [students, setStudents] = useState<LinkedStudent[]>([]);
@@ -66,7 +71,6 @@ export function ParentOverview() {
 
   const fetchStudentData = async (profileId: string) => {
     try {
-      // Get student's user_id from profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("user_id")
@@ -75,7 +79,7 @@ export function ParentOverview() {
 
       if (!profile) return;
 
-      // Fetch quiz scores over time
+      // Quiz scores over time
       const { data: results } = await supabase
         .from("quiz_results")
         .select("score, total_questions, completed_at")
@@ -92,7 +96,7 @@ export function ParentOverview() {
         );
       }
 
-      // Fetch attendance
+      // Attendance
       const { data: attendanceData } = await supabase
         .from("attendance")
         .select("status")
@@ -113,46 +117,63 @@ export function ParentOverview() {
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference - (attendancePercent / 100) * circumference;
 
+  /* ── Loading skeleton ── */
   if (isLoading) {
     return (
-      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <div className="p-6 md:p-10 space-y-8 max-w-6xl mx-auto">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-56 rounded-2xl" />
+          <Skeleton className="h-5 w-80 rounded-full" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Skeleton className="h-36 rounded-2xl" />
+          <Skeleton className="h-36 rounded-2xl" />
+          <Skeleton className="h-36 rounded-2xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <Skeleton className="h-72 rounded-2xl lg:col-span-2" />
+          <Skeleton className="h-72 rounded-2xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-6 md:p-10 space-y-8 max-w-6xl mx-auto">
+      {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Parent Overview</h1>
-        <p className="text-muted-foreground">Monitor your child's academic progress</p>
+        <p className="text-muted-foreground mt-1">Monitor your child's academic progress</p>
       </div>
 
+      {/* Empty state */}
       {students.length === 0 ? (
-        <Card className="p-12 text-center bg-card border-border">
-          <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+        <Card className="p-16 text-center bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm">
+          <div className="w-20 h-20 rounded-full bg-secondary/60 flex items-center justify-center mx-auto mb-5">
+            <Users className="w-10 h-10 text-muted-foreground" />
+          </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">No linked students</h3>
-          <p className="text-muted-foreground">Contact your administrator to link your child's account.</p>
+          <p className="text-muted-foreground max-w-sm mx-auto">
+            Contact your administrator to link your child's account to your parent portal.
+          </p>
         </Card>
       ) : (
         <>
-          {/* Student selector */}
+          {/* Student selector — pill buttons */}
           {students.length > 1 && (
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {students.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setSelectedStudent(s.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
-                    selectedStudent === s.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary"
-                  }`}
+                  className={cn(
+                    "flex items-center gap-2.5 px-5 py-2.5 rounded-full border transition-all duration-200",
+                    selectedStudent === s.id
+                      ? "border-primary bg-primary/10 shadow-sm"
+                      : "border-border/40 bg-card/70 backdrop-blur-sm hover:bg-secondary/50"
+                  )}
                 >
-                  <Avatar className="w-8 h-8">
+                  <Avatar className="w-7 h-7">
                     <AvatarImage src={s.avatar_url || undefined} />
                     <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                       {s.full_name.split(" ").map((n) => n[0]).join("")}
@@ -165,21 +186,23 @@ export function ParentOverview() {
           )}
 
           {/* Student Vitals Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {students
               .filter((s) => s.id === selectedStudent)
               .map((student) => (
-                <Card key={student.id} className="p-5 bg-card border-border">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Avatar className="w-12 h-12">
+                <Card key={student.id} className="p-6 bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar className="w-14 h-14 ring-2 ring-border/30">
                       <AvatarImage src={student.avatar_url || undefined} />
-                      <AvatarFallback className="bg-accent text-accent-foreground">
+                      <AvatarFallback className="bg-accent text-accent-foreground text-lg font-bold">
                         {student.full_name.split(" ").map((n) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-bold text-foreground">{student.full_name}</h3>
-                      {student.form_year && <Badge variant="secondary">{student.form_year}</Badge>}
+                      <h3 className="font-bold text-foreground text-lg">{student.full_name}</h3>
+                      {student.form_year && (
+                        <Badge variant="secondary" className="rounded-full mt-1">{student.form_year}</Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -189,18 +212,22 @@ export function ParentOverview() {
                 </Card>
               ))}
 
-            <Card className="p-5 bg-card border-border flex items-center gap-4">
-              <CheckCircle className="w-8 h-8 text-accent" />
+            <Card className="p-6 bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
+                <Presentation className="w-7 h-7 text-accent" />
+              </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{attendance.present}/{attendance.total}</p>
+                <p className="text-3xl font-bold text-foreground">{attendance.present}/{attendance.total}</p>
                 <p className="text-sm text-muted-foreground">Classes Attended</p>
               </div>
             </Card>
 
-            <Card className="p-5 bg-card border-border flex items-center gap-4">
-              <BookOpen className="w-8 h-8 text-accent" />
+            <Card className="p-6 bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
+                <BrainCircuit className="w-7 h-7 text-accent" />
+              </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{quizScores.length}</p>
+                <p className="text-3xl font-bold text-foreground">{quizScores.length}</p>
                 <p className="text-sm text-muted-foreground">Quizzes Completed</p>
               </div>
             </Card>
@@ -209,10 +236,10 @@ export function ParentOverview() {
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Quiz Scores Line Chart */}
-            <Card className="p-5 bg-card border-border lg:col-span-2">
-              <h3 className="font-bold text-foreground mb-4">Quiz Scores Over Time</h3>
+            <Card className="p-6 bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm lg:col-span-2">
+              <h3 className="font-bold text-foreground mb-5">Quiz Scores Over Time</h3>
               {quizScores.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={quizScores}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="date" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
@@ -221,47 +248,50 @@ export function ParentOverview() {
                       contentStyle={{
                         background: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
+                        borderRadius: "12px",
                         color: "hsl(var(--foreground))",
+                        boxShadow: "var(--shadow-sm)",
                       }}
                     />
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="hsl(var(--accent))"
-                      strokeWidth={2}
-                      dot={{ fill: "hsl(var(--accent))", r: 4 }}
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2.5}
+                      dot={{ fill: "hsl(var(--primary))", r: 4, strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 0 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  No quiz data yet
+                <div className="h-[260px] flex flex-col items-center justify-center text-muted-foreground gap-3">
+                  <BrainCircuit className="w-12 h-12 text-muted-foreground/40" />
+                  <p className="text-sm">No quiz data yet</p>
                 </div>
               )}
             </Card>
 
             {/* Attendance Ring */}
-            <Card className="p-5 bg-card border-border flex flex-col items-center justify-center">
-              <h3 className="font-bold text-foreground mb-4">Overall Attendance</h3>
-              <div className="relative w-32 h-32">
+            <Card className="p-6 bg-card/70 backdrop-blur-md border-border/40 rounded-2xl shadow-sm flex flex-col items-center justify-center">
+              <h3 className="font-bold text-foreground mb-5">Overall Attendance</h3>
+              <div className="relative w-36 h-36">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--secondary))" strokeWidth="8" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--secondary))" strokeWidth="7" />
                   <circle
                     cx="50" cy="50" r="45" fill="none"
-                    stroke="hsl(var(--accent))"
-                    strokeWidth="8"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="7"
                     strokeLinecap="round"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     className="transition-all duration-1000 ease-out"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-black text-foreground">{attendancePercent}%</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-black text-foreground">{attendancePercent}%</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">{attendance.present} of {attendance.total} classes</p>
+              <p className="text-sm text-muted-foreground mt-3">{attendance.present} of {attendance.total} classes</p>
             </Card>
           </div>
         </>
