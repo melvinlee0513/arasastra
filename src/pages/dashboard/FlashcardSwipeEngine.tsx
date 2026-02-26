@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { playSwoosh } from "@/lib/swipe-sounds";
 
 interface Flashcard {
   id: string;
@@ -18,11 +19,26 @@ interface Flashcard {
   sort_order: number;
 }
 
+/** 10 seed SPM Physics flashcards for immediate testing */
+const SEED_CARDS: Flashcard[] = [
+  { id: "seed-1", front_text: "What is Newton's First Law of Motion?", back_text: "An object at rest stays at rest, and an object in motion stays in motion unless acted upon by an external force.", sort_order: 1 },
+  { id: "seed-2", front_text: "Define acceleration.", back_text: "The rate of change of velocity with respect to time. a = Δv / Δt", sort_order: 2 },
+  { id: "seed-3", front_text: "What is Ohm's Law?", back_text: "V = IR — Voltage equals current times resistance.", sort_order: 3 },
+  { id: "seed-4", front_text: "State the principle of conservation of energy.", back_text: "Energy cannot be created or destroyed, only transformed from one form to another.", sort_order: 4 },
+  { id: "seed-5", front_text: "What is the formula for kinetic energy?", back_text: "KE = ½mv² where m is mass and v is velocity.", sort_order: 5 },
+  { id: "seed-6", front_text: "Define wavelength.", back_text: "The distance between two consecutive points in phase on a wave (e.g., crest to crest).", sort_order: 6 },
+  { id: "seed-7", front_text: "What is the relationship between frequency and period?", back_text: "f = 1/T — Frequency is the reciprocal of the period.", sort_order: 7 },
+  { id: "seed-8", front_text: "State Newton's Third Law.", back_text: "For every action, there is an equal and opposite reaction.", sort_order: 8 },
+  { id: "seed-9", front_text: "What is the unit of electric current?", back_text: "Ampere (A) — the SI unit of electric current.", sort_order: 9 },
+  { id: "seed-10", front_text: "Define gravitational potential energy.", back_text: "GPE = mgh — Energy stored due to an object's position in a gravitational field.", sort_order: 10 },
+];
+
 const SWIPE_THRESHOLD = 100;
 
 /**
  * FlashcardSwipeEngine — Fullscreen swipeable flashcards with framer-motion drag physics.
  * Swipe right = "Got It", left = "Review Again". Optimistic state updates.
+ * Includes audio feedback and drag-color indicators.
  */
 export function FlashcardSwipeEngine() {
   const { user } = useAuth();
@@ -45,13 +61,25 @@ export function FlashcardSwipeEngine() {
   const gotItOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
   const reviewOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
 
+  // Dynamic border color based on drag direction
+  const borderColor = useTransform(
+    x,
+    [-SWIPE_THRESHOLD, -30, 0, 30, SWIPE_THRESHOLD],
+    [
+      "hsl(0 84% 60%)",       // red
+      "hsl(0 84% 60% / 0.3)", // faint red
+      "transparent",
+      "hsl(142 76% 36% / 0.3)", // faint green
+      "hsl(142 76% 36%)",     // green
+    ]
+  );
+
   useEffect(() => {
     fetchCards();
   }, []);
 
   const fetchCards = async () => {
     setIsLoading(true);
-    // Get the deckId from URL params or use all cards
     const urlParams = new URLSearchParams(window.location.search);
     const deckId = urlParams.get("deck");
 
@@ -59,13 +87,17 @@ export function FlashcardSwipeEngine() {
     if (deckId) query = query.eq("deck_id", deckId);
 
     const { data } = await query;
-    if (data) setCards(data);
+    if (data && data.length > 0) {
+      setCards(data);
+    } else {
+      // Use seed cards for immediate testing
+      setCards(SEED_CARDS);
+    }
     setIsLoading(false);
   };
 
   const saveProgress = useCallback(async (flashcardId: string, status: "known" | "review") => {
-    if (!user) return;
-    // Fire and forget — optimistic
+    if (!user || flashcardId.startsWith("seed-")) return;
     supabase.from("flashcard_progress").upsert(
       {
         user_id: user.id,
@@ -84,8 +116,8 @@ export function FlashcardSwipeEngine() {
     if (!card) return;
 
     setExitDirection(direction);
+    playSwoosh(direction);
 
-    // Optimistic update
     if (direction === "right") {
       setKnownCount((c) => c + 1);
       saveProgress(card.id, "known");
@@ -131,7 +163,7 @@ export function FlashcardSwipeEngine() {
   if (cards.length === 0) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-6">
-        <Card className="p-16 text-center rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md max-w-md w-full space-y-5">
+        <Card className="p-16 text-center rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg max-w-md w-full space-y-5">
           <div className="w-20 h-20 rounded-full bg-secondary/60 flex items-center justify-center mx-auto">
             <Layers className="w-10 h-10 text-muted-foreground" strokeWidth={1.5} />
           </div>
@@ -155,7 +187,7 @@ export function FlashcardSwipeEngine() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
-          <Card className="p-10 text-center rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md max-w-md w-full space-y-6">
+          <Card className="p-10 text-center rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg max-w-md w-full space-y-6">
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
               <Sparkles className="w-10 h-10 text-primary" strokeWidth={1.5} />
             </div>
@@ -227,7 +259,7 @@ export function FlashcardSwipeEngine() {
           <AnimatePresence mode="wait">
             <motion.div
               key={card.id}
-              style={{ x, rotate, opacity }}
+              style={{ x, rotate, opacity, borderColor }}
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.7}
@@ -241,7 +273,7 @@ export function FlashcardSwipeEngine() {
                 transition: { duration: 0.3 },
               }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="cursor-grab active:cursor-grabbing touch-none"
+              className="cursor-grab active:cursor-grabbing touch-none rounded-3xl border-2"
               onClick={() => setIsFlipped(!isFlipped)}
             >
               <div
@@ -254,7 +286,7 @@ export function FlashcardSwipeEngine() {
               >
                 {/* Front */}
                 <Card
-                  className="absolute inset-0 p-10 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md flex items-center justify-center"
+                  className="absolute inset-0 p-10 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg flex items-center justify-center"
                   style={{ backfaceVisibility: "hidden" }}
                 >
                   <div className="text-center space-y-5">
