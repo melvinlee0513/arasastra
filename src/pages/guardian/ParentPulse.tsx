@@ -42,14 +42,37 @@ interface LinkedStudent {
 
 interface QuizScorePoint { date: string; score: number; }
 
+// Mock data for immediate demo when no linked students exist
+const MOCK_STUDENT: LinkedStudent = {
+  id: "mock-1",
+  full_name: "Aisha Rahman",
+  avatar_url: null,
+  xp_points: 2450,
+  form_year: "Form 4",
+  user_id: "mock-user-1",
+};
+
+const MOCK_QUIZ_SCORES: QuizScorePoint[] = [
+  { date: "Jan 5", score: 72 },
+  { date: "Jan 12", score: 78 },
+  { date: "Jan 20", score: 85 },
+  { date: "Feb 2", score: 80 },
+  { date: "Feb 10", score: 91 },
+  { date: "Feb 18", score: 88 },
+  { date: "Feb 25", score: 95 },
+];
+
+const MOCK_ATTENDANCE = { present: 42, total: 48 };
+
 /**
  * ParentPulse — Premium bento-grid parent dashboard.
- * No sidebar, fully centered, deep soft shadows, radial attendance ring.
+ * Mock Magic Link flow → immediate transition to dashboard with mock/real data.
  */
 export function ParentPulse() {
   const [authedUser, setAuthedUser] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [mockAuth, setMockAuth] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [students, setStudents] = useState<LinkedStudent[]>([]);
@@ -58,6 +81,7 @@ export function ParentPulse() {
   const [attendance, setAttendance] = useState({ present: 0, total: 0 });
   const [totalClasses, setTotalClasses] = useState(0);
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [useMockData, setUseMockData] = useState(false);
 
   /* ── Auth check ── */
   useEffect(() => {
@@ -73,15 +97,25 @@ export function ParentPulse() {
   }, []);
 
   useEffect(() => {
-    if (authedUser) fetchLinkedStudents();
-  }, [authedUser]);
+    if (authedUser || mockAuth) fetchLinkedStudents();
+  }, [authedUser, mockAuth]);
 
   useEffect(() => {
     if (selectedStudent) fetchStudentData(selectedStudent);
   }, [selectedStudent]);
 
-  /* ── Magic Link ── */
-  const sendMagicLink = async () => {
+  /* ── Mock Magic Link — instant transition ── */
+  const handleMockMagicLink = () => {
+    if (!email) return;
+    setMagicLinkSent(true);
+    // After a brief "sent" animation, transition directly into the dashboard
+    setTimeout(() => {
+      setMockAuth(true);
+    }, 1500);
+  };
+
+  /* ── Real Magic Link ── */
+  const sendRealMagicLink = async () => {
     if (!email) return;
     await supabase.auth.signInWithOtp({
       email,
@@ -92,36 +126,59 @@ export function ParentPulse() {
 
   /* ── Data fetching ── */
   const fetchLinkedStudents = async () => {
-    if (!authedUser) return;
+    if (!authedUser && !mockAuth) return;
     setIsDataLoading(true);
     try {
-      const { data: links } = await supabase
-        .from("parent_student_links")
-        .select("student_profile_id")
-        .eq("parent_user_id", authedUser.id);
+      if (authedUser) {
+        const { data: links } = await supabase
+          .from("parent_student_links")
+          .select("student_profile_id")
+          .eq("parent_user_id", authedUser.id);
 
-      if (links && links.length > 0) {
-        const ids = links.map((l) => l.student_profile_id);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, xp_points, form_year, user_id")
-          .in("id", ids);
+        if (links && links.length > 0) {
+          const ids = links.map((l) => l.student_profile_id);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url, xp_points, form_year, user_id")
+            .in("id", ids);
 
-        if (profiles && profiles.length > 0) {
-          setStudents(profiles);
-          setSelectedStudent(profiles[0]);
+          if (profiles && profiles.length > 0) {
+            setStudents(profiles);
+            setSelectedStudent(profiles[0]);
+            setIsDataLoading(false);
+            return;
+          }
         }
       }
+      // Fallback to mock data for demo
+      setUseMockData(true);
+      setStudents([MOCK_STUDENT]);
+      setSelectedStudent(MOCK_STUDENT);
+      setQuizScores(MOCK_QUIZ_SCORES);
+      setAttendance(MOCK_ATTENDANCE);
+      setTotalClasses(52);
     } catch (e) {
       console.error("Error fetching linked students:", e);
+      // Fallback to mock
+      setUseMockData(true);
+      setStudents([MOCK_STUDENT]);
+      setSelectedStudent(MOCK_STUDENT);
+      setQuizScores(MOCK_QUIZ_SCORES);
+      setAttendance(MOCK_ATTENDANCE);
+      setTotalClasses(52);
     } finally {
       setIsDataLoading(false);
     }
   };
 
   const fetchStudentData = async (student: LinkedStudent) => {
+    if (useMockData || student.id.startsWith("mock")) {
+      setQuizScores(MOCK_QUIZ_SCORES);
+      setAttendance(MOCK_ATTENDANCE);
+      setTotalClasses(52);
+      return;
+    }
     try {
-      // Quiz scores
       const { data: results } = await supabase
         .from("quiz_results")
         .select("score, total_questions, completed_at")
@@ -138,7 +195,6 @@ export function ParentPulse() {
         );
       }
 
-      // Attendance
       const { data: att } = await supabase
         .from("attendance")
         .select("status")
@@ -165,11 +221,16 @@ export function ParentPulse() {
   const radialData = [{ name: "Attendance", value: attendancePercent, fill: "hsl(var(--primary))" }];
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    if (authedUser) await supabase.auth.signOut();
     setAuthedUser(null);
+    setMockAuth(false);
     setStudents([]);
     setSelectedStudent(null);
+    setMagicLinkSent(false);
+    setUseMockData(false);
   };
+
+  const isAuthenticated = authedUser || mockAuth;
 
   /* ── Auth Loading ── */
   if (isAuthLoading) {
@@ -184,7 +245,7 @@ export function ParentPulse() {
   }
 
   /* ── Magic Link Auth Screen ── */
-  if (!authedUser) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-6">
         <motion.div
@@ -193,7 +254,7 @@ export function ParentPulse() {
           transition={{ type: "spring", stiffness: 200, damping: 25 }}
           className="w-full max-w-md"
         >
-          <Card className="p-10 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md text-center space-y-6">
+          <Card className="p-10 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg text-center space-y-6">
             <img src={owlMascot} alt="Arasa A+" className="w-16 h-16 mx-auto" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">Parent Pulse</h1>
@@ -209,22 +270,25 @@ export function ParentPulse() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-12 rounded-full text-center border-border/30 bg-secondary/30"
+                    onKeyDown={(e) => e.key === "Enter" && handleMockMagicLink()}
                   />
-                  <Button onClick={sendMagicLink} className="w-full h-12 rounded-full gap-2" disabled={!email}>
+                  <Button onClick={handleMockMagicLink} className="w-full h-12 rounded-full gap-2" disabled={!email}>
                     <Mail className="w-4 h-4" strokeWidth={1.5} />
                     Send Magic Link
                   </Button>
+                  <p className="text-xs text-muted-foreground">Demo mode — enters dashboard instantly</p>
                 </motion.div>
               ) : (
                 <motion.div key="sent" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-3 py-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto"
+                  >
                     <CheckCircle className="w-8 h-8 text-primary" strokeWidth={1.5} />
-                  </div>
-                  <p className="text-foreground font-medium">Check your inbox!</p>
-                  <p className="text-sm text-muted-foreground">We sent a magic link to <span className="font-medium text-foreground">{email}</span></p>
-                  <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setMagicLinkSent(false)}>
-                    Try a different email
-                  </Button>
+                  </motion.div>
+                  <p className="text-foreground font-medium">Signing you in…</p>
+                  <p className="text-sm text-muted-foreground">Loading your child's dashboard</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -238,13 +302,13 @@ export function ParentPulse() {
   if (isDataLoading && students.length === 0) {
     return (
       <div className="min-h-screen bg-secondary/30 p-6 md:p-10">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           <Skeleton className="h-12 w-64 rounded-3xl" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-36 rounded-3xl" />)}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Skeleton className="h-72 rounded-3xl md:col-span-2" />
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <Skeleton className="h-72 rounded-3xl md:col-span-2 lg:col-span-3" />
             <Skeleton className="h-72 rounded-3xl" />
           </div>
         </div>
@@ -252,28 +316,10 @@ export function ParentPulse() {
     );
   }
 
-  /* ── Empty state ── */
-  if (students.length === 0) {
-    return (
-      <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-6">
-        <Card className="p-16 text-center rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md max-w-md w-full space-y-5">
-          <div className="w-20 h-20 rounded-full bg-secondary/60 flex items-center justify-center mx-auto">
-            <Users className="w-10 h-10 text-muted-foreground" strokeWidth={1.5} />
-          </div>
-          <h2 className="text-xl font-bold text-foreground">No Linked Students</h2>
-          <p className="text-muted-foreground text-sm">Contact your administrator to link your child's account.</p>
-          <Button variant="ghost" size="sm" className="rounded-full gap-2" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" strokeWidth={1.5} /> Sign Out
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   /* ── Bento Dashboard ── */
   return (
     <div className="min-h-screen bg-secondary/30">
-      <div className="max-w-5xl mx-auto p-6 md:p-10 space-y-8">
+      <div className="max-w-6xl mx-auto p-6 md:p-10 space-y-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -287,9 +333,14 @@ export function ParentPulse() {
               <p className="text-sm text-muted-foreground">Real-time student vitals</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-full gap-2 text-muted-foreground" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" strokeWidth={1.5} /> Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            {useMockData && (
+              <Badge variant="secondary" className="rounded-full text-xs">Demo Mode</Badge>
+            )}
+            <Button variant="ghost" size="sm" className="rounded-full gap-2 text-muted-foreground" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4" strokeWidth={1.5} /> Sign Out
+            </Button>
+          </div>
         </motion.div>
 
         {/* Student selector — pill buttons */}
@@ -318,11 +369,11 @@ export function ParentPulse() {
           </div>
         )}
 
-        {/* Bento Grid */}
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Bento Grid — responsive 1 → 3 → 4 cols */}
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {/* Student Profile Card — spans 2 cols */}
-          <motion.div variants={itemVariants} className="col-span-2">
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md h-full">
+          <motion.div variants={itemVariants} className="col-span-1 md:col-span-2">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg h-full">
               <div className="flex items-center gap-4">
                 <Avatar className="w-16 h-16 ring-2 ring-border/20">
                   <AvatarImage src={selectedStudent?.avatar_url || undefined} />
@@ -336,7 +387,7 @@ export function ParentPulse() {
                     {selectedStudent?.form_year && (
                       <Badge variant="secondary" className="rounded-full text-xs">{selectedStudent.form_year}</Badge>
                     )}
-                    <Badge variant="outline" className="rounded-full text-xs gap-1">
+                    <Badge variant="outline" className="rounded-full text-xs gap-1 border-border/20">
                       <Sparkles className="w-3 h-3" strokeWidth={1.5} /> {selectedStudent?.xp_points} XP
                     </Badge>
                   </div>
@@ -347,7 +398,7 @@ export function ParentPulse() {
 
           {/* Attendance Stat */}
           <motion.div variants={itemVariants}>
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md h-full flex flex-col items-center justify-center text-center">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg h-full flex flex-col items-center justify-center text-center">
               <Activity className="w-5 h-5 text-primary mb-2" strokeWidth={1.5} />
               <p className="text-3xl font-bold text-foreground">{attendancePercent}%</p>
               <p className="text-xs text-muted-foreground mt-1">Attendance</p>
@@ -356,16 +407,16 @@ export function ParentPulse() {
 
           {/* Quizzes Completed Stat */}
           <motion.div variants={itemVariants}>
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md h-full flex flex-col items-center justify-center text-center">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg h-full flex flex-col items-center justify-center text-center">
               <BrainCircuit className="w-5 h-5 text-primary mb-2" strokeWidth={1.5} />
               <p className="text-3xl font-bold text-foreground">{quizScores.length}</p>
               <p className="text-xs text-muted-foreground mt-1">Quizzes Done</p>
             </Card>
           </motion.div>
 
-          {/* Quiz Scores Chart — spans 3 cols */}
-          <motion.div variants={itemVariants} className="col-span-2 md:col-span-3">
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md h-full">
+          {/* Quiz Scores Chart — spans 3 cols on lg */}
+          <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-3">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg h-full">
               <div className="flex items-center gap-2 mb-5">
                 <TrendingUp className="w-4 h-4 text-primary" strokeWidth={1.5} />
                 <h3 className="font-semibold text-foreground text-sm">Quiz Performance</h3>
@@ -405,7 +456,7 @@ export function ParentPulse() {
 
           {/* Attendance Radial — 1 col */}
           <motion.div variants={itemVariants}>
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md h-full flex flex-col items-center justify-center">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg h-full flex flex-col items-center justify-center">
               <h3 className="font-semibold text-foreground text-sm mb-3">Attendance</h3>
               <div className="w-32 h-32">
                 <ResponsiveContainer width="100%" height="100%">
@@ -428,9 +479,9 @@ export function ParentPulse() {
             </Card>
           </motion.div>
 
-          {/* Quick Stats Row */}
-          <motion.div variants={itemVariants} className="col-span-2 md:col-span-4">
-            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/90 backdrop-blur-md">
+          {/* Quick Stats Row — full width */}
+          <motion.div variants={itemVariants} className="col-span-1 md:col-span-3 lg:col-span-4">
+            <Card className="p-6 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Calendar className="w-5 h-5 text-primary" strokeWidth={1.5} />
