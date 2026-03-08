@@ -288,3 +288,25 @@
 .animate-combo-burst {
   animation: combo-burst 1.8s ease-out forwards;
 }
+
+/* PWA Native Feel */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Allow text selection in input fields and content areas */
+  input, textarea, [contenteditable], .select-text, pre, code {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
