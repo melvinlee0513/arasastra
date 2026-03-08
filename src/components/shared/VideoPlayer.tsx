@@ -3,6 +3,7 @@ import { Maximize, Minimize, PictureInPicture2, X, Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoSpatialTimeline } from "@/components/shared/VideoSpatialTimeline";
+import { TranscriptSearch } from "@/components/shared/TranscriptSearch";
 
 interface VideoPlayerProps {
   url: string;
