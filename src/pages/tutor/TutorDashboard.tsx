@@ -48,7 +48,7 @@ export function TutorDashboard() {
       // Get classes for this tutor
       const { data: classes } = await supabase
         .from("classes")
-        .select("id, title, scheduled_at, subject:subjects(name)")
+        .select("id, title, scheduled_at, video_url, subject:subjects(name)")
         .eq("tutor_id", tutor.id)
         .eq("is_published", true)
         .order("scheduled_at", { ascending: true });
