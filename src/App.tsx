@@ -45,6 +45,7 @@ import { AcademicReports } from "@/pages/guardian/AcademicReports";
 import { GuardianBilling } from "@/pages/guardian/GuardianBilling";
 import { ParentPulse } from "@/pages/guardian/ParentPulse";
 import { FlashcardSwipeEngine } from "@/pages/dashboard/FlashcardSwipeEngine";
+import { Achievements } from "@/pages/dashboard/Achievements";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -375,6 +376,18 @@ const App = () => (
                   <TutorLayout>
                     <QuizAnalytics />
                   </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Achievements Route */}
+            <Route
+              path="/dashboard/achievements"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <Achievements />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />

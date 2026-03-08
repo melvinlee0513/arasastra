@@ -3,6 +3,7 @@ import { DesktopSidebar } from "./DesktopSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { NotificationBell } from "./NotificationBell";
 import { CommandSearch } from "./CommandSearch";
+import { StreakWidget } from "@/components/dashboard/StreakWidget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { Search } from "lucide-react";
@@ -47,6 +48,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               ⌘K
             </kbd>
           </Button>
+          <StreakWidget />
           <NotificationBell />
         </div>
       )}
