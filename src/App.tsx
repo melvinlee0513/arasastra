@@ -47,6 +47,7 @@ import { GuardianBilling } from "@/pages/guardian/GuardianBilling";
 import { ParentPulse } from "@/pages/guardian/ParentPulse";
 import { FlashcardSwipeEngine } from "@/pages/dashboard/FlashcardSwipeEngine";
 import { Achievements } from "@/pages/dashboard/Achievements";
+import { MobileOnboarding } from "@/pages/MobileOnboarding";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
