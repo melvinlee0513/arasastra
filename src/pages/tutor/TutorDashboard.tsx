@@ -139,40 +139,40 @@ export function TutorDashboard() {
         <p className="text-muted-foreground">Here's your teaching overview</p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Vitals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-primary" />
+              <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.totalClasses || 0}</p>
-              <p className="text-sm text-muted-foreground">Total Classes</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.totalStudents || 0}</p>
+              <p className="text-sm text-muted-foreground">Total Students</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-accent" />
+              <Video className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.activeStudents || 0}</p>
-              <p className="text-sm text-muted-foreground">Active Students</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.activeReplays || 0}</p>
+              <p className="text-sm text-muted-foreground">Active Replays</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-accent" />
+              <MessageSquare className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.weeklyAttendanceRate || 0}%</p>
-              <p className="text-sm text-muted-foreground">Weekly Attendance</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.pendingQuestions || 0}</p>
+              <p className="text-sm text-muted-foreground">Pending Questions</p>
             </div>
           </div>
         </Card>
