@@ -36,6 +36,7 @@ const navItems = [
   { path: "/admin/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/admin/quiz-analytics", icon: HelpCircle, label: "Quiz Analytics" },
+  { path: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
 export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {

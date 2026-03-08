@@ -60,6 +60,8 @@ import { PaymentVerification } from "@/pages/admin/PaymentVerification";
 import { LeadsManagement } from "@/pages/admin/LeadsManagement";
 import { GradingPage } from "@/pages/admin/GradingPage";
 import { QuizAnalytics } from "@/pages/admin/QuizAnalytics";
+import { AdminSettings } from "@/pages/admin/AdminSettings";
+import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 
 const queryClient = new QueryClient();
 
