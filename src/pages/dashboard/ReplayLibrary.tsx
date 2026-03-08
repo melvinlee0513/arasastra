@@ -178,7 +178,7 @@ export function ReplayLibrary() {
                   <Badge variant="outline" className="mb-2 text-xs">
                     {replay.subject?.name || "General"}
                   </Badge>
-                  <h3 className="font-semibold text-foreground line-clamp-2">{replay.title}</h3>
+                  <h3 className="font-semibold text-foreground line-clamp-2 break-words">{replay.title}</h3>
                 </div>
 
                 <div className="flex items-center justify-between">

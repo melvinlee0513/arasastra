@@ -84,7 +84,7 @@ export function RemedialPlaylist() {
             </div>
 
             <Badge variant="outline" className="text-[10px] mb-1.5">{video.subject}</Badge>
-            <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-snug">{video.title}</h3>
+            <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-snug break-words">{video.title}</h3>
           </Card>
         ))}
       </div>

@@ -101,17 +101,21 @@ const App = () => (
             <Route
               path="/inbox"
               element={
-                <MainLayout>
-                  <InboxPage />
-                </MainLayout>
+                <ProtectedRoute requiredRole="authenticated">
+                  <MainLayout>
+                    <InboxPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/account"
               element={
-                <MainLayout>
-                  <AccountPage />
-                </MainLayout>
+                <ProtectedRoute requiredRole="authenticated">
+                  <MainLayout>
+                    <AccountPage />
+                  </MainLayout>
+                </ProtectedRoute>
               }
             />
 

@@ -92,12 +92,12 @@ export function VideoPlayer({ url, title, classId, onClose }: VideoPlayerProps) 
         />
       )}
 
-      <div
+       <div
         ref={containerRef}
         className={cn(
           "relative group",
           theaterMode && "fixed inset-4 z-50 flex flex-col items-center justify-center",
-          isFullscreen && "bg-background flex flex-col items-center justify-center p-6"
+          isFullscreen && "bg-background flex flex-col items-center justify-center p-4 md:p-6"
         )}
       >
         <div className={cn(
