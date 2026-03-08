@@ -19,6 +19,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useAuth();
+  usePWAAnalytics();
 
   return (
     <div className="min-h-screen bg-background">
