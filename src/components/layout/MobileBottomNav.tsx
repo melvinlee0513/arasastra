@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, Inbox, User, Video } from "lucide-react";
+import { Home, Calendar, BookOpen, Inbox, User, Video, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
