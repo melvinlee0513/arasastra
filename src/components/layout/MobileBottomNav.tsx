@@ -6,7 +6,7 @@ const navItems = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/timetable", icon: Calendar, label: "Schedule" },
   { path: "/classes", icon: BookOpen, label: "Classes" },
-  { path: "/inbox", icon: Inbox, label: "Inbox" },
+  { path: "/dashboard/achievements", icon: Trophy, label: "Awards" },
   { path: "/account", icon: User, label: "Profile" },
 ];
 
