@@ -1,4 +1,4 @@
-import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard, HelpCircle } from "lucide-react";
+import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard, HelpCircle, BrainCircuit, Link2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,8 @@ import { ClassCategoriesTab } from "@/components/admin/cms/ClassCategoriesTab";
 import { SiteContentTab } from "@/components/admin/cms/SiteContentTab";
 import { PricingPlansTab } from "@/components/admin/cms/PricingPlansTab";
 import { QuizManagerTab } from "@/components/admin/cms/QuizManagerTab";
+import { FlashcardDecksTab } from "@/components/admin/cms/FlashcardDecksTab";
+import { ParentLinksTab } from "@/components/admin/cms/ParentLinksTab";
 import { useState } from "react";
 
 export function ContentCMS() {
@@ -80,6 +82,20 @@ export function ContentCMS() {
             <HelpCircle className="w-4 h-4" />
             Quizzes
           </TabsTrigger>
+          <TabsTrigger
+            value="flashcards"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <BrainCircuit className="w-4 h-4" />
+            Flashcards
+          </TabsTrigger>
+          <TabsTrigger
+            value="parents"
+            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
+          >
+            <Link2 className="w-4 h-4" />
+            Parent Links
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="schedule" className="mt-6" key={`schedule-${refreshKey}`}>
@@ -104,6 +120,14 @@ export function ContentCMS() {
 
         <TabsContent value="quizzes" className="mt-6" key={`quizzes-${refreshKey}`}>
           <QuizManagerTab />
+        </TabsContent>
+
+        <TabsContent value="flashcards" className="mt-6" key={`flashcards-${refreshKey}`}>
+          <FlashcardDecksTab />
+        </TabsContent>
+
+        <TabsContent value="parents" className="mt-6" key={`parents-${refreshKey}`}>
+          <ParentLinksTab />
         </TabsContent>
       </Tabs>
     </div>
