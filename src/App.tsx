@@ -411,6 +411,7 @@ const App = () => (
 
             {/* Parent Pulse — standalone bento route */}
             <Route path="/guardian-pulse" element={<ParentPulse />} />
+            <Route path="/mobile-onboarding" element={<MobileOnboarding />} />
 
             {/* Guardian/Parent Routes */}
             <Route
