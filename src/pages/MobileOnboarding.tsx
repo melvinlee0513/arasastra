@@ -107,7 +107,7 @@ export function MobileOnboarding() {
         {installed ? (
           <Card className="rounded-3xl border-border/40 bg-card/80 backdrop-blur-xl">
             <CardContent className="p-6 text-center space-y-3">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+              <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
               <p className="font-semibold text-foreground">App Installed!</p>
               <p className="text-sm text-muted-foreground">
                 Arasa A+ is now on your home screen. Open it anytime for instant access.
