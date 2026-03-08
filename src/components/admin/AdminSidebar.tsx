@@ -14,6 +14,7 @@ import {
   UserCheck,
   ClipboardCheck,
   HelpCircle,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
