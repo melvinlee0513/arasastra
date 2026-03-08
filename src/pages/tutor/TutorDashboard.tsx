@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Calendar, CheckCircle, BookOpen, BarChart3 } from "lucide-react";
+import { Users, Calendar, CheckCircle, BookOpen, BarChart3, Video, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
