@@ -48,6 +48,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               ⌘K
             </kbd>
           </Button>
+          <StreakWidget />
           <NotificationBell />
         </div>
       )}

@@ -380,6 +380,18 @@ const App = () => (
               }
             />
 
+            {/* Achievements Route */}
+            <Route
+              path="/dashboard/achievements"
+              element={
+                <ProtectedRoute requiredRole="authenticated">
+                  <DashboardLayout>
+                    <Achievements />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Flashcard Swipe Engine — fullscreen */}
             <Route
               path="/dashboard/learning/flashcards/play"

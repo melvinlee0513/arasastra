@@ -333,6 +333,9 @@ export function StudentDashboard() {
         </section>
       </div>
 
+      {/* Remedial Playlist — Weak Link Diagnostic */}
+      <RemedialPlaylist />
+
       {/* Quick Links */}
       <section className="grid grid-cols-3 gap-4">
         <Link to="/dashboard/replays">
