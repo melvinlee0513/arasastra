@@ -60,6 +60,8 @@ import { PaymentVerification } from "@/pages/admin/PaymentVerification";
 import { LeadsManagement } from "@/pages/admin/LeadsManagement";
 import { GradingPage } from "@/pages/admin/GradingPage";
 import { QuizAnalytics } from "@/pages/admin/QuizAnalytics";
+import { AdminSettings } from "@/pages/admin/AdminSettings";
+import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PWAUpdatePrompt />
+        <MaintenanceGate>
         <BrowserRouter>
           <Routes>
             {/* Auth Pages */}
@@ -386,6 +389,16 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout>
+                    <AdminSettings />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Achievements Route */}
             <Route
@@ -449,6 +462,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </MaintenanceGate>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
