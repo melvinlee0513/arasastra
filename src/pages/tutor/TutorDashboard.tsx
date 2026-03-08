@@ -64,28 +64,23 @@ export function TutorDashboard() {
           subject_name: (c.subject as any)?.name || "General",
         }));
 
-      // Get attendance for this tutor's classes
+      // Get video comments (pending questions) for tutor's classes
       const classIds = (classes || []).map((c) => c.id);
-      let weeklyRate = 0;
+      let pendingQuestions = 0;
+      let activeReplays = 0;
 
       if (classIds.length > 0) {
-        const weekStart = startOfWeek(now).toISOString();
-        const weekEnd = endOfWeek(now).toISOString();
+        const { data: comments } = await supabase
+          .from("video_comments")
+          .select("id")
+          .in("class_id", classIds);
+        pendingQuestions = (comments || []).length;
 
-        const { data: attendance } = await supabase
-          .from("attendance")
-          .select("status")
-          .in("class_id", classIds)
-          .gte("date", weekStart.split("T")[0])
-          .lte("date", weekEnd.split("T")[0]);
-
-        if (attendance && attendance.length > 0) {
-          const present = attendance.filter((a) => a.status === "present").length;
-          weeklyRate = Math.round((present / attendance.length) * 100);
-        }
+        // Count classes with video URLs as active replays
+        activeReplays = (classes || []).filter((c) => c.video_url).length;
       }
 
-      // Get active students count (distinct from enrollments matching tutor's specialization)
+      // Get active students count
       const { data: enrollments } = await supabase
         .from("enrollments")
         .select("student_id")
@@ -94,9 +89,9 @@ export function TutorDashboard() {
       const uniqueStudents = new Set((enrollments || []).map((e) => e.student_id));
 
       setStats({
-        totalClasses: (classes || []).length,
-        activeStudents: uniqueStudents.size,
-        weeklyAttendanceRate: weeklyRate,
+        totalStudents: uniqueStudents.size,
+        activeReplays,
+        pendingQuestions,
         upcomingClasses: upcoming,
       });
     } catch (error) {
