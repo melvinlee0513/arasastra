@@ -124,10 +124,11 @@ export function Achievements() {
                   <Button
                     size="sm"
                     onClick={() => handleClaim(subject)}
-                    className="rounded-full gap-1.5 shadow-[0_0_16px_hsl(var(--accent)/0.2)]"
+                    className="rounded-full gap-1.5 shadow-[0_0_16px_hsl(var(--accent)/0.2)] shrink-0"
                   >
                     <Award className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    Claim Certificate
+                    <span className="hidden sm:inline">Claim Certificate</span>
+                    <span className="sm:hidden">Claim</span>
                   </Button>
                 )}
               </div>

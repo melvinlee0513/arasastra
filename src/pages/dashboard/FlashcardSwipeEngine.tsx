@@ -302,7 +302,7 @@ export function FlashcardSwipeEngine() {
                   >
                     <div className="text-center space-y-4">
                       <Badge className="bg-primary text-primary-foreground text-xs rounded-full px-3">Answer</Badge>
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-relaxed">{card.back_text}</h2>
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-relaxed break-words line-clamp-6">{card.back_text}</h2>
                     </div>
                   </Card>
                 </div>

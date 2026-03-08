@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ export function ProtectedRoute({
   const { user, role, isLoading, isAdmin, isTutor } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
+  const hasToasted = useRef(false);
 
   // Show loading spinner while checking auth
   if (isLoading) {
@@ -42,43 +43,41 @@ export function ProtectedRoute({
 
   // Admin-only route check
   if (adminOnly && !isAdmin) {
-    setTimeout(() => {
+    if (!hasToasted.current) {
+      hasToasted.current = true;
       toast({
         title: "Unauthorized",
         description: "You don't have permission to access the admin area.",
         variant: "destructive",
       });
-    }, 0);
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
   // Tutor-only route check
   if (tutorOnly && !isTutor) {
-    setTimeout(() => {
+    if (!hasToasted.current) {
+      hasToasted.current = true;
       toast({
         title: "Unauthorized",
         description: "You don't have permission to access the tutor area.",
         variant: "destructive",
       });
-    }, 0);
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
   // Role-specific checks
   if (requiredRole === "admin" && !isAdmin) {
-    setTimeout(() => {
+    if (!hasToasted.current) {
+      hasToasted.current = true;
       toast({
         title: "Unauthorized",
         description: "Admin access required.",
         variant: "destructive",
       });
-    }, 0);
+    }
     return <Navigate to="/dashboard" replace />;
-  }
-
-  // Authenticated users can access student routes (both admin and student)
-  if (requiredRole === "student" && !user) {
-    return <Navigate to="/auth" replace />;
   }
 
   return <>{children}</>;
