@@ -23,10 +23,12 @@ interface TutorSidebarProps {
 const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
+  { path: "/tutor/upload", icon: FileText, label: "Upload Content" },
   { path: "/tutor/students", icon: Users, label: "My Students" },
   { path: "/tutor/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/tutor/notes", icon: FileText, label: "Upload Notes" },
-  { path: "/tutor/quiz-analytics", icon: HelpCircle, label: "Quiz Analytics" },
+  { path: "/tutor/quizzes/new", icon: HelpCircle, label: "Quiz Builder" },
+  { path: "/tutor/questions", icon: HelpCircle, label: "Student Q&A" },
 ];
 
 export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {

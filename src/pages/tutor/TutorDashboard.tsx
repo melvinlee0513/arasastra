@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
-import { Users, Calendar, CheckCircle, BookOpen, BarChart3 } from "lucide-react";
+import { Users, Calendar, CheckCircle, BookOpen, BarChart3, Video, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { format } from "date-fns";
 
 interface TutorStats {
-  totalClasses: number;
-  activeStudents: number;
-  weeklyAttendanceRate: number;
+  totalStudents: number;
+  activeReplays: number;
+  pendingQuestions: number;
   upcomingClasses: Array<{
     id: string;
     title: string;
@@ -48,7 +48,7 @@ export function TutorDashboard() {
       // Get classes for this tutor
       const { data: classes } = await supabase
         .from("classes")
-        .select("id, title, scheduled_at, subject:subjects(name)")
+        .select("id, title, scheduled_at, video_url, subject:subjects(name)")
         .eq("tutor_id", tutor.id)
         .eq("is_published", true)
         .order("scheduled_at", { ascending: true });
@@ -64,28 +64,23 @@ export function TutorDashboard() {
           subject_name: (c.subject as any)?.name || "General",
         }));
 
-      // Get attendance for this tutor's classes
+      // Get video comments (pending questions) for tutor's classes
       const classIds = (classes || []).map((c) => c.id);
-      let weeklyRate = 0;
+      let pendingQuestions = 0;
+      let activeReplays = 0;
 
       if (classIds.length > 0) {
-        const weekStart = startOfWeek(now).toISOString();
-        const weekEnd = endOfWeek(now).toISOString();
+        const { data: comments } = await supabase
+          .from("video_comments")
+          .select("id")
+          .in("class_id", classIds);
+        pendingQuestions = (comments || []).length;
 
-        const { data: attendance } = await supabase
-          .from("attendance")
-          .select("status")
-          .in("class_id", classIds)
-          .gte("date", weekStart.split("T")[0])
-          .lte("date", weekEnd.split("T")[0]);
-
-        if (attendance && attendance.length > 0) {
-          const present = attendance.filter((a) => a.status === "present").length;
-          weeklyRate = Math.round((present / attendance.length) * 100);
-        }
+        // Count classes with video URLs as active replays
+        activeReplays = (classes || []).filter((c) => c.video_url).length;
       }
 
-      // Get active students count (distinct from enrollments matching tutor's specialization)
+      // Get active students count
       const { data: enrollments } = await supabase
         .from("enrollments")
         .select("student_id")
@@ -94,9 +89,9 @@ export function TutorDashboard() {
       const uniqueStudents = new Set((enrollments || []).map((e) => e.student_id));
 
       setStats({
-        totalClasses: (classes || []).length,
-        activeStudents: uniqueStudents.size,
-        weeklyAttendanceRate: weeklyRate,
+        totalStudents: uniqueStudents.size,
+        activeReplays,
+        pendingQuestions,
         upcomingClasses: upcoming,
       });
     } catch (error) {
@@ -144,40 +139,40 @@ export function TutorDashboard() {
         <p className="text-muted-foreground">Here's your teaching overview</p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Vitals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-primary" />
+              <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.totalClasses || 0}</p>
-              <p className="text-sm text-muted-foreground">Total Classes</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.totalStudents || 0}</p>
+              <p className="text-sm text-muted-foreground">Total Students</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-accent" />
+              <Video className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.activeStudents || 0}</p>
-              <p className="text-sm text-muted-foreground">Active Students</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.activeReplays || 0}</p>
+              <p className="text-sm text-muted-foreground">Active Replays</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-5 bg-card border-border">
+        <Card className="p-5 bg-card border-border rounded-3xl">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-accent" />
+              <MessageSquare className="w-6 h-6 text-accent" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{stats?.weeklyAttendanceRate || 0}%</p>
-              <p className="text-sm text-muted-foreground">Weekly Attendance</p>
+              <p className="text-2xl font-bold text-foreground">{stats?.pendingQuestions || 0}</p>
+              <p className="text-sm text-muted-foreground">Pending Questions</p>
             </div>
           </div>
         </Card>

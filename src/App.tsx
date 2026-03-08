@@ -38,6 +38,9 @@ import { TutorClasses } from "@/pages/tutor/TutorClasses";
 import { TutorStudents } from "@/pages/tutor/TutorStudents";
 import { TutorGrading } from "@/pages/tutor/TutorGrading";
 import { TutorNotes } from "@/pages/tutor/TutorNotes";
+import { TutorUpload } from "@/pages/tutor/TutorUpload";
+import { TutorQuizBuilder } from "@/pages/tutor/TutorQuizBuilder";
+import { TutorQuestions } from "@/pages/tutor/TutorQuestions";
 
 // Guardian Pages
 import { GuardianLayout } from "@/components/guardian/GuardianLayout";
@@ -272,6 +275,36 @@ const App = () => (
                 <ProtectedRoute tutorOnly>
                   <TutorLayout>
                     <TutorNotes />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/upload"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorUpload />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/quizzes/new"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorQuizBuilder />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/questions"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorQuestions />
                   </TutorLayout>
                 </ProtectedRoute>
               }
