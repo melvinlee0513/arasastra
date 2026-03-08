@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, Inbox, User, ChevronLeft, ChevronRight, Video, Shield, GraduationCap } from "lucide-react";
+import { Home, Calendar, BookOpen, Inbox, User, ChevronLeft, ChevronRight, Video, Shield, GraduationCap, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import owlMascot from "@/assets/owl-mascot.png";
@@ -41,6 +41,10 @@ const dashboardItems = [{
   path: "/dashboard/learning",
   icon: GraduationCap,
   label: "My Learning"
+}, {
+  path: "/dashboard/achievements",
+  icon: Trophy,
+  label: "Achievements"
 }];
 export function DesktopSidebar({
   collapsed,
