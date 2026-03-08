@@ -72,6 +72,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PWAUpdatePrompt />
+        <MaintenanceGate>
         <BrowserRouter>
           <Routes>
             {/* Auth Pages */}
