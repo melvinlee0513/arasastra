@@ -38,6 +38,9 @@ import { TutorClasses } from "@/pages/tutor/TutorClasses";
 import { TutorStudents } from "@/pages/tutor/TutorStudents";
 import { TutorGrading } from "@/pages/tutor/TutorGrading";
 import { TutorNotes } from "@/pages/tutor/TutorNotes";
+import { TutorUpload } from "@/pages/tutor/TutorUpload";
+import { TutorQuizBuilder } from "@/pages/tutor/TutorQuizBuilder";
+import { TutorQuestions } from "@/pages/tutor/TutorQuestions";
 
 // Guardian Pages
 import { GuardianLayout } from "@/components/guardian/GuardianLayout";
