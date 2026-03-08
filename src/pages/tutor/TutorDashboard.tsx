@@ -8,9 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
 interface TutorStats {
-  totalClasses: number;
-  activeStudents: number;
-  weeklyAttendanceRate: number;
+  totalStudents: number;
+  activeReplays: number;
+  pendingQuestions: number;
   upcomingClasses: Array<{
     id: string;
     title: string;
