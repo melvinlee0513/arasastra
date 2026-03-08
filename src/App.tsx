@@ -279,6 +279,36 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/tutor/upload"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorUpload />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/quizzes/new"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorQuizBuilder />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tutor/questions"
+              element={
+                <ProtectedRoute tutorOnly>
+                  <TutorLayout>
+                    <TutorQuestions />
+                  </TutorLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin Routes - Requires admin role */}
             <Route
