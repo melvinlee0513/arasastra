@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 
 // Layouts
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -46,6 +47,7 @@ import { GuardianBilling } from "@/pages/guardian/GuardianBilling";
 import { ParentPulse } from "@/pages/guardian/ParentPulse";
 import { FlashcardSwipeEngine } from "@/pages/dashboard/FlashcardSwipeEngine";
 import { Achievements } from "@/pages/dashboard/Achievements";
+import { MobileOnboarding } from "@/pages/MobileOnboarding";
 
 // Admin Pages
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
@@ -67,6 +69,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PWAUpdatePrompt />
         <BrowserRouter>
           <Routes>
             {/* Auth Pages */}
@@ -408,6 +411,7 @@ const App = () => (
 
             {/* Parent Pulse — standalone bento route */}
             <Route path="/guardian-pulse" element={<ParentPulse />} />
+            <Route path="/mobile-onboarding" element={<MobileOnboarding />} />
 
             {/* Guardian/Parent Routes */}
             <Route
