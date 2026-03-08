@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, TrendingDown, Users, BookOpen, Video, CreditCard, RefreshCw, FileText, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, BookOpen, Video, CreditCard, RefreshCw, FileText, DollarSign, Smartphone, Monitor, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  RadialBarChart,
+  RadialBar,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,7 +44,19 @@ interface TutorPerformance {
   rate: number;
 }
 
+interface PlatformInsights {
+  installRate: number;
+  deviceBreakdown: { name: string; value: number; color: string }[];
+  pwaVsBrowser: { name: string; sessions: number }[];
+  hasLiveEvents: boolean;
+}
+
 const COLORS = ["hsl(43, 90%, 55%)", "hsl(220, 45%, 22%)", "hsl(25, 50%, 35%)", "hsl(40, 30%, 96%)", "hsl(220, 40%, 28%)"];
+const PLATFORM_COLORS: Record<string, string> = {
+  iOS: "hsl(220, 45%, 22%)",
+  Android: "hsl(43, 90%, 55%)",
+  Desktop: "hsl(25, 50%, 35%)",
+};
 
 export function AnalyticsDashboard() {
   const [enrollmentsBySubject, setEnrollmentsBySubject] = useState<EnrollmentBySubject[]>([]);
@@ -59,11 +73,69 @@ export function AnalyticsDashboard() {
   const [weeklyEnrollments, setWeeklyEnrollments] = useState<WeeklyEnrollment[]>([]);
   const [projectedRevenue, setProjectedRevenue] = useState(0);
   const [tutorPerformance, setTutorPerformance] = useState<TutorPerformance[]>([]);
+  const [platformInsights, setPlatformInsights] = useState<PlatformInsights>({
+    installRate: 0,
+    deviceBreakdown: [],
+    pwaVsBrowser: [],
+    hasLiveEvents: false,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  const fetchPlatformInsights = async () => {
+    try {
+      const [eventsRes, totalUsersRes] = await Promise.all([
+        supabase.from("analytics_events").select("*"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+      ]);
+
+      const events = eventsRes.data || [];
+      const totalUsers = totalUsersRes.count || 1;
+
+      // Install rate
+      const uniqueInstallers = new Set(
+        events.filter((e) => e.event_type === "pwa_installed").map((e) => e.user_id)
+      );
+      const installRate = Math.round((uniqueInstallers.size / totalUsers) * 100);
+
+      // Device breakdown
+      const platformCounts: Record<string, number> = {};
+      const sessionEvents = events.filter((e) => e.event_type === "session_start");
+      const uniqueUsers = new Map<string, string>();
+      sessionEvents.forEach((e) => {
+        if (e.user_id && !uniqueUsers.has(e.user_id)) {
+          uniqueUsers.set(e.user_id, e.platform);
+        }
+      });
+      uniqueUsers.forEach((platform) => {
+        platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+      });
+      const deviceBreakdown = Object.entries(platformCounts).map(([name, value]) => ({
+        name,
+        value,
+        color: PLATFORM_COLORS[name] || "hsl(var(--muted))",
+      }));
+
+      // PWA vs Browser sessions
+      const pwaSessions = sessionEvents.filter((e) => e.is_pwa).length;
+      const browserSessions = sessionEvents.filter((e) => !e.is_pwa).length;
+      const pwaVsBrowser = [
+        { name: "PWA", sessions: pwaSessions },
+        { name: "Browser", sessions: browserSessions },
+      ];
+
+      // Check for recent events (live indicator)
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const hasLiveEvents = events.some((e) => e.created_at > fiveMinAgo);
+
+      setPlatformInsights({ installRate, deviceBreakdown, pwaVsBrowser, hasLiveEvents });
+    } catch (err) {
+      console.error("Error fetching platform insights:", err);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
@@ -170,6 +242,9 @@ export function AnalyticsDashboard() {
         })
       );
       setEnrollmentsBySubject(subjectEnrollments.filter((s) => s.count > 0));
+
+      // Fetch platform insights
+      await fetchPlatformInsights();
     } catch (error) {
       console.error("Error fetching analytics:", error);
     } finally {
@@ -191,6 +266,10 @@ export function AnalyticsDashboard() {
     { label: "Total Classes", value: stats.totalClasses, icon: Video, color: "text-accent" },
     { label: "Notes Uploaded", value: stats.totalNotes, icon: FileText, color: "text-primary" },
     { label: "Pending Payments", value: stats.pendingPayments, icon: TrendingUp, color: "text-destructive" },
+  ];
+
+  const radialData = [
+    { name: "Install Rate", value: platformInsights.installRate, fill: "hsl(190, 100%, 50%)" },
   ];
 
   return (
@@ -246,6 +325,143 @@ export function AnalyticsDashboard() {
             </Card>
           ))
         )}
+      </div>
+
+      {/* Platform Insights — Bento Grid */}
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-xl font-bold text-foreground">Platform Insights</h2>
+          {platformInsights.hasLiveEvents && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              Live
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Install Rate — Radial */}
+          <Card className="p-6 bg-card border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <Smartphone className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">PWA Install Rate</h3>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-40 w-full rounded-xl" />
+            ) : (
+              <div className="h-40 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="60%"
+                    outerRadius="90%"
+                    barSize={12}
+                    data={radialData}
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    <RadialBar
+                      dataKey="value"
+                      cornerRadius={10}
+                      background={{ fill: "hsl(var(--muted))" }}
+                    />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <div className="absolute text-center">
+                  <p className="text-2xl font-bold text-foreground">{platformInsights.installRate}%</p>
+                  <p className="text-xs text-muted-foreground">Installed</p>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Device Distribution — Pie */}
+          <Card className="p-6 bg-card border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <Monitor className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Device Distribution</h3>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-40 w-full rounded-xl" />
+            ) : platformInsights.deviceBreakdown.length > 0 ? (
+              <>
+                <div className="h-32">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={platformInsights.deviceBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={35}
+                        outerRadius={55}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {platformInsights.deviceBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {platformInsights.deviceBreakdown.map((item) => (
+                    <div key={item.name} className="flex items-center gap-1.5 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-muted-foreground">{item.name} ({item.value})</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
+                No device data yet
+              </div>
+            )}
+          </Card>
+
+          {/* PWA vs Browser — Bar */}
+          <Card className="p-6 bg-card border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">PWA vs Browser</h3>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-40 w-full rounded-xl" />
+            ) : (
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={platformInsights.pwaVsBrowser}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Bar dataKey="sessions" radius={[6, 6, 0, 0]}>
+                      <Cell fill="hsl(190, 100%, 50%)" />
+                      <Cell fill="hsl(var(--muted-foreground))" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
       {/* Charts Grid */}
