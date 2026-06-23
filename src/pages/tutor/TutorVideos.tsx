@@ -113,7 +113,17 @@ function formatBytes(bytes: number | null): string {
 }
 
 // ---------- Video Player Card ----------
-function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: (id: string) => void }) {
+function VideoPlayerCard({
+  video,
+  onDelete,
+  onEdit,
+  onTogglePublish,
+}: {
+  video: VideoResource;
+  onDelete: (v: VideoResource) => void;
+  onEdit: (v: VideoResource) => void;
+  onTogglePublish: (v: VideoResource) => void;
+}) {
   const [playing, setPlaying] = useState(false);
   const thumb =
     video.thumbnail_url ||
@@ -121,6 +131,7 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
@@ -172,6 +183,17 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
         <span className="absolute top-3 left-3 text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
           {video.source_type}
         </span>
+        <span
+          className={cn(
+            "absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur shadow-sm flex items-center gap-1.5",
+            video.is_published
+              ? "bg-emerald-500/95 text-white"
+              : "bg-slate-700/90 text-white",
+          )}
+        >
+          {video.is_published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+          {video.is_published ? "Published" : "Draft"}
+        </span>
       </div>
 
       <div className="p-5 flex-1 flex flex-col gap-2">
@@ -183,19 +205,121 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
           <p className="text-sm text-slate-600 line-clamp-2">{video.description}</p>
         )}
         <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100">
-          <span className="text-xs text-slate-500">
-            {new Date(video.created_at).toLocaleDateString()}
-          </span>
-          <button
-            onClick={() => onDelete(video.id)}
-            className="text-slate-400 hover:text-destructive transition-colors p-1.5 rounded-full hover:bg-destructive/10"
-            aria-label="Delete video"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
+            <Switch
+              checked={video.is_published}
+              onCheckedChange={() => onTogglePublish(video)}
+              aria-label="Toggle published"
+            />
+            <span className="font-medium">{video.is_published ? "Live" : "Hidden"}</span>
+          </label>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(video)}
+              className="text-slate-400 hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary/10"
+              aria-label="Edit video"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onDelete(video)}
+              className="text-slate-400 hover:text-destructive transition-colors p-1.5 rounded-full hover:bg-destructive/10"
+              aria-label="Delete video"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+// ---------- Edit Dialog ----------
+function VideoEditDialog({
+  video,
+  onClose,
+  onSaved,
+}: {
+  video: VideoResource | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [courseModule, setCourseModule] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // sync incoming video into form
+  useMemo(() => {
+    if (video) {
+      setTitle(video.title);
+      setCourseModule(video.course_module ?? "");
+      setDescription(video.description ?? "");
+    }
+  }, [video]);
+
+  const handleSave = async () => {
+    if (!video) return;
+    if (!title.trim()) {
+      toast({ title: "Title required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from("video_resources")
+      .update({
+        title: title.trim(),
+        course_module: courseModule.trim() || null,
+        description: description.trim() || null,
+      })
+      .eq("id", video.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "✅ Updated", description: "Video metadata saved." });
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!video} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="rounded-3xl max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" />
+            Edit Video Details
+          </DialogTitle>
+          <DialogDescription>Update the title, module, or description.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Title *</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={150} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Course / Module</Label>
+            <Input value={courseModule} onChange={(e) => setCourseModule(e.target.value)} maxLength={120} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" className="rounded-full" disabled={saving} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button className="rounded-full" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
