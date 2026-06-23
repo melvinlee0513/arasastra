@@ -285,6 +285,8 @@ export function UsersManagement() {
                           >
                             {user.role === "admin" ? (
                               <Shield className="w-3 h-3" />
+                            ) : user.role === "tutor" ? (
+                              <GraduationCap className="w-3 h-3" />
                             ) : (
                               <User className="w-3 h-3" />
                             )}
@@ -301,6 +303,14 @@ export function UsersManagement() {
                           <User className="w-4 h-4" />
                           Student
                           {user.role === "student" && <span className="ml-auto text-accent">✓</span>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => updateUserRole(user.user_id, "tutor")}
+                          className="gap-2"
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          Tutor
+                          {user.role === "tutor" && <span className="ml-auto text-accent">✓</span>}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => updateUserRole(user.user_id, "admin")}
