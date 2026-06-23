@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Home,
   LogOut,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
