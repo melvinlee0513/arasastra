@@ -33,6 +33,7 @@ const navItems = [
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/schedule", icon: Calendar, label: "Schedule" },
   { path: "/admin/notes", icon: FileText, label: "Notes Bank" },
+  { path: "/admin/videos", icon: Video, label: "Video Library" },
   { path: "/admin/payments", icon: CreditCard, label: "Payments" },
   { path: "/admin/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
