@@ -126,6 +126,7 @@ const App = () => (
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TutorLayout><TutorGrading /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TutorLayout><TutorNotes /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/upload" element={<ProtectedRoute tutorOnly><TutorLayout><TutorUpload /></TutorLayout></ProtectedRoute>} />
+            <Route path="/tutor/videos" element={<ProtectedRoute tutorOnly><TutorLayout><TutorVideos /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/quizzes/new" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuizBuilder /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuestions /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TutorLayout><QuizAnalytics /></TutorLayout></ProtectedRoute>} />
