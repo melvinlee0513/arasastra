@@ -1133,6 +1133,57 @@ export type Database = {
           },
         ]
       }
+      video_resources: {
+        Row: {
+          course_module: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          duration_seconds: number | null
+          file_size: number | null
+          id: string
+          is_published: boolean
+          source_type: Database["public"]["Enums"]["video_source_type"]
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          video_url: string
+          youtube_id: string | null
+        }
+        Insert: {
+          course_module?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          is_published?: boolean
+          source_type: Database["public"]["Enums"]["video_source_type"]
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          video_url: string
+          youtube_id?: string | null
+        }
+        Update: {
+          course_module?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          is_published?: boolean
+          source_type?: Database["public"]["Enums"]["video_source_type"]
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string
+          youtube_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1150,6 +1201,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student"
+      video_source_type: "upload" | "youtube" | "zoom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1278,6 +1330,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student"],
+      video_source_type: ["upload", "youtube", "zoom"],
     },
   },
 } as const
