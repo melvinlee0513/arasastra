@@ -50,6 +50,7 @@ const TutorNotes = lazy(() => import("@/pages/tutor/TutorNotes").then(m => ({ de
 const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ default: m.TutorUpload })));
 const TutorQuizBuilder = lazy(() => import("@/pages/tutor/TutorQuizBuilder").then(m => ({ default: m.TutorQuizBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
+const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 
 // Guardian
 const ParentOverview = lazy(() => import("@/pages/guardian/ParentOverview").then(m => ({ default: m.ParentOverview })));
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TutorLayout><TutorGrading /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TutorLayout><TutorNotes /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/upload" element={<ProtectedRoute tutorOnly><TutorLayout><TutorUpload /></TutorLayout></ProtectedRoute>} />
+            <Route path="/tutor/videos" element={<ProtectedRoute tutorOnly><TutorLayout><TutorVideos /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/quizzes/new" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuizBuilder /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuestions /></TutorLayout></ProtectedRoute>} />
             <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TutorLayout><QuizAnalytics /></TutorLayout></ProtectedRoute>} />
