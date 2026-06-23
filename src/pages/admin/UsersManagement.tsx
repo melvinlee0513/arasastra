@@ -121,7 +121,7 @@ export function UsersManagement() {
     });
   };
 
-  const updateUserRole = async (userId: string, newRole: "admin" | "student") => {
+  const updateUserRole = async (userId: string, newRole: "admin" | "student" | "tutor") => {
     setUpdatingRoleId(userId);
     try {
       // Check if user already has a role entry
