@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Edit, Shield, User, ChevronDown, RefreshCw } from "lucide-react";
+import { Search, Edit, Shield, User, GraduationCap, ChevronDown, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
