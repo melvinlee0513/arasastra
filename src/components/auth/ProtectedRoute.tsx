@@ -54,8 +54,8 @@ export function ProtectedRoute({
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Tutor-only route check
-  if (tutorOnly && !isTutor) {
+  // Tutor-only route check (admins have full access)
+  if (tutorOnly && !isTutor && !isAdmin) {
     if (!hasToasted.current) {
       hasToasted.current = true;
       toast({

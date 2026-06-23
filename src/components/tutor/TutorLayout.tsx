@@ -32,7 +32,7 @@ export function TutorLayout({ children }: TutorLayoutProps) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (role !== "tutor") return <Navigate to="/dashboard" replace />;
+  if (role !== "tutor" && role !== "admin") return <Navigate to="/dashboard" replace />;
 
   if (isMobile) {
     return (

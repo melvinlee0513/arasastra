@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Edit, Shield, User, ChevronDown, RefreshCw } from "lucide-react";
+import { Search, Edit, Shield, User, GraduationCap, ChevronDown, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -121,7 +121,7 @@ export function UsersManagement() {
     });
   };
 
-  const updateUserRole = async (userId: string, newRole: "admin" | "student") => {
+  const updateUserRole = async (userId: string, newRole: "admin" | "student" | "tutor") => {
     setUpdatingRoleId(userId);
     try {
       // Check if user already has a role entry
@@ -135,7 +135,7 @@ export function UsersManagement() {
         // Update existing role
         const { error } = await supabase
           .from("user_roles")
-          .update({ role: newRole })
+          .update({ role: newRole as any })
           .eq("user_id", userId);
 
         if (error) throw error;
@@ -143,7 +143,7 @@ export function UsersManagement() {
         // Insert new role
         const { error } = await supabase
           .from("user_roles")
-          .insert({ user_id: userId, role: newRole });
+          .insert({ user_id: userId, role: newRole as any });
 
         if (error) throw error;
       }
@@ -285,6 +285,8 @@ export function UsersManagement() {
                           >
                             {user.role === "admin" ? (
                               <Shield className="w-3 h-3" />
+                            ) : user.role === "tutor" ? (
+                              <GraduationCap className="w-3 h-3" />
                             ) : (
                               <User className="w-3 h-3" />
                             )}
@@ -301,6 +303,14 @@ export function UsersManagement() {
                           <User className="w-4 h-4" />
                           Student
                           {user.role === "student" && <span className="ml-auto text-accent">✓</span>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => updateUserRole(user.user_id, "tutor")}
+                          className="gap-2"
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          Tutor
+                          {user.role === "tutor" && <span className="ml-auto text-accent">✓</span>}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => updateUserRole(user.user_id, "admin")}
