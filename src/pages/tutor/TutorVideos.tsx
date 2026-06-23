@@ -863,6 +863,29 @@ export function TutorVideos() {
       </div>
 
       <VideoUploaderModal open={uploaderOpen} onOpenChange={setUploaderOpen} onUploaded={refresh} />
+      <VideoEditDialog video={editing} onClose={() => setEditing(null)} onSaved={refresh} />
+      <AlertDialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDelete?.title}" will be permanently removed from the library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
