@@ -628,6 +628,11 @@ export function TutorVideos() {
   const [addMode, setAddMode] = useState<"upload" | "embed">("embed");
   const [uploaderOpen, setUploaderOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [moduleFilter, setModuleFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editing, setEditing] = useState<VideoResource | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<VideoResource | null>(null);
 
   const { data: videos, isLoading } = useQuery({
     queryKey: ["video_resources"],
@@ -654,21 +659,51 @@ export function TutorVideos() {
     onError: (e: any) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: async (v: VideoResource) => {
+      const { error } = await (supabase as any)
+        .from("video_resources")
+        .update({ is_published: !v.is_published })
+        .eq("id", v.id);
+      if (error) throw error;
+      return !v.is_published;
+    },
+    onSuccess: (nowPublished) => {
+      toast({
+        title: nowPublished ? "✅ Published" : "Unpublished",
+        description: nowPublished ? "Visible to students." : "Hidden from students.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["video_resources"] });
+    },
+    onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["video_resources"] });
   }, [queryClient]);
 
+  const moduleOptions = useMemo(() => {
+    const set = new Set<string>();
+    (videos || []).forEach((v) => v.course_module && set.add(v.course_module));
+    return Array.from(set).sort();
+  }, [videos]);
+
   const filtered = useMemo(() => {
     if (!videos) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return videos;
-    return videos.filter(
-      (v) =>
+    return videos.filter((v) => {
+      if (sourceFilter !== "all" && v.source_type !== sourceFilter) return false;
+      if (moduleFilter !== "all" && v.course_module !== moduleFilter) return false;
+      if (statusFilter === "published" && !v.is_published) return false;
+      if (statusFilter === "draft" && v.is_published) return false;
+      if (!q) return true;
+      return (
         v.title.toLowerCase().includes(q) ||
         v.course_module?.toLowerCase().includes(q) ||
-        v.description?.toLowerCase().includes(q),
-    );
-  }, [videos, search]);
+        v.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [videos, search, sourceFilter, moduleFilter, statusFilter]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -699,14 +734,50 @@ export function TutorVideos() {
           </TabsList>
 
           <TabsContent value="library" className="mt-6 space-y-5">
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by title, module, or description…"
-                className="pl-11 rounded-full bg-white border-slate-200"
-              />
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by title, module, or description…"
+                  className="pl-11 rounded-full bg-white border-slate-200"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[180px]">
+                    <SelectValue placeholder="Course / Module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All modules</SelectItem>
+                    {moduleOptions.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[160px]">
+                    <SelectValue placeholder="Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sources</SelectItem>
+                    <SelectItem value="upload">Uploaded file</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="zoom">Zoom</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {isLoading ? (
@@ -724,23 +795,30 @@ export function TutorVideos() {
             ) : filtered.length === 0 ? (
               <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
                 <FileVideo className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="font-semibold text-slate-700">No videos yet</p>
-                <p className="text-sm text-slate-500 mb-5">Upload a recording or embed a YouTube link to begin.</p>
+                <p className="font-semibold text-slate-700">No videos match your filters</p>
+                <p className="text-sm text-slate-500 mb-5">Try clearing filters or add a new video.</p>
                 <Button onClick={() => setTab("add")} className="rounded-full">
                   <UploadCloud className="w-4 h-4" />
-                  Add your first video
+                  Add a video
                 </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <AnimatePresence>
                   {filtered.map((v) => (
-                    <VideoPlayerCard key={v.id} video={v} onDelete={(id) => deleteMutation.mutate(id)} />
+                    <VideoPlayerCard
+                      key={v.id}
+                      video={v}
+                      onDelete={(vid) => setPendingDelete(vid)}
+                      onEdit={(vid) => setEditing(vid)}
+                      onTogglePublish={(vid) => publishMutation.mutate(vid)}
+                    />
                   ))}
                 </AnimatePresence>
               </div>
             )}
           </TabsContent>
+
 
           <TabsContent value="add" className="mt-6 space-y-6">
             <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
