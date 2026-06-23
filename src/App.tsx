@@ -143,6 +143,7 @@ const App = () => (
             <Route path="/admin/grading" element={<ProtectedRoute adminOnly><AdminLayout><GradingPage /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/quiz-analytics" element={<ProtectedRoute adminOnly><AdminLayout><QuizAnalytics /></AdminLayout></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/videos" element={<ProtectedRoute adminOnly><AdminLayout><TutorVideos /></AdminLayout></ProtectedRoute>} />
 
             {/* Guardian Routes */}
             <Route path="/guardian" element={<ProtectedRoute requiredRole="authenticated"><GuardianLayout><ParentOverview /></GuardianLayout></ProtectedRoute>} />
