@@ -12,6 +12,9 @@ import {
   FileVideo,
   Loader2,
   CheckCircle2,
+  Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -29,6 +33,23 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -92,7 +113,17 @@ function formatBytes(bytes: number | null): string {
 }
 
 // ---------- Video Player Card ----------
-function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: (id: string) => void }) {
+function VideoPlayerCard({
+  video,
+  onDelete,
+  onEdit,
+  onTogglePublish,
+}: {
+  video: VideoResource;
+  onDelete: (v: VideoResource) => void;
+  onEdit: (v: VideoResource) => void;
+  onTogglePublish: (v: VideoResource) => void;
+}) {
   const [playing, setPlaying] = useState(false);
   const thumb =
     video.thumbnail_url ||
@@ -100,6 +131,7 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
@@ -151,6 +183,17 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
         <span className="absolute top-3 left-3 text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
           {video.source_type}
         </span>
+        <span
+          className={cn(
+            "absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur shadow-sm flex items-center gap-1.5",
+            video.is_published
+              ? "bg-emerald-500/95 text-white"
+              : "bg-slate-700/90 text-white",
+          )}
+        >
+          {video.is_published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+          {video.is_published ? "Published" : "Draft"}
+        </span>
       </div>
 
       <div className="p-5 flex-1 flex flex-col gap-2">
@@ -162,19 +205,121 @@ function VideoPlayerCard({ video, onDelete }: { video: VideoResource; onDelete: 
           <p className="text-sm text-slate-600 line-clamp-2">{video.description}</p>
         )}
         <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100">
-          <span className="text-xs text-slate-500">
-            {new Date(video.created_at).toLocaleDateString()}
-          </span>
-          <button
-            onClick={() => onDelete(video.id)}
-            className="text-slate-400 hover:text-destructive transition-colors p-1.5 rounded-full hover:bg-destructive/10"
-            aria-label="Delete video"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
+            <Switch
+              checked={video.is_published}
+              onCheckedChange={() => onTogglePublish(video)}
+              aria-label="Toggle published"
+            />
+            <span className="font-medium">{video.is_published ? "Live" : "Hidden"}</span>
+          </label>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(video)}
+              className="text-slate-400 hover:text-primary transition-colors p-1.5 rounded-full hover:bg-primary/10"
+              aria-label="Edit video"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onDelete(video)}
+              className="text-slate-400 hover:text-destructive transition-colors p-1.5 rounded-full hover:bg-destructive/10"
+              aria-label="Delete video"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+// ---------- Edit Dialog ----------
+function VideoEditDialog({
+  video,
+  onClose,
+  onSaved,
+}: {
+  video: VideoResource | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [courseModule, setCourseModule] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // sync incoming video into form
+  useMemo(() => {
+    if (video) {
+      setTitle(video.title);
+      setCourseModule(video.course_module ?? "");
+      setDescription(video.description ?? "");
+    }
+  }, [video]);
+
+  const handleSave = async () => {
+    if (!video) return;
+    if (!title.trim()) {
+      toast({ title: "Title required", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from("video_resources")
+      .update({
+        title: title.trim(),
+        course_module: courseModule.trim() || null,
+        description: description.trim() || null,
+      })
+      .eq("id", video.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "✅ Updated", description: "Video metadata saved." });
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!video} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="rounded-3xl max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" />
+            Edit Video Details
+          </DialogTitle>
+          <DialogDescription>Update the title, module, or description.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Title *</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={150} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Course / Module</Label>
+            <Input value={courseModule} onChange={(e) => setCourseModule(e.target.value)} maxLength={120} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" className="rounded-full" disabled={saving} onClick={onClose}>
+            Cancel
+          </Button>
+          <Button className="rounded-full" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -483,6 +628,11 @@ export function TutorVideos() {
   const [addMode, setAddMode] = useState<"upload" | "embed">("embed");
   const [uploaderOpen, setUploaderOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [moduleFilter, setModuleFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editing, setEditing] = useState<VideoResource | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<VideoResource | null>(null);
 
   const { data: videos, isLoading } = useQuery({
     queryKey: ["video_resources"],
@@ -509,21 +659,51 @@ export function TutorVideos() {
     onError: (e: any) => toast({ title: "Delete failed", description: e.message, variant: "destructive" }),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: async (v: VideoResource) => {
+      const { error } = await (supabase as any)
+        .from("video_resources")
+        .update({ is_published: !v.is_published })
+        .eq("id", v.id);
+      if (error) throw error;
+      return !v.is_published;
+    },
+    onSuccess: (nowPublished) => {
+      toast({
+        title: nowPublished ? "✅ Published" : "Unpublished",
+        description: nowPublished ? "Visible to students." : "Hidden from students.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["video_resources"] });
+    },
+    onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
   const refresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["video_resources"] });
   }, [queryClient]);
 
+  const moduleOptions = useMemo(() => {
+    const set = new Set<string>();
+    (videos || []).forEach((v) => v.course_module && set.add(v.course_module));
+    return Array.from(set).sort();
+  }, [videos]);
+
   const filtered = useMemo(() => {
     if (!videos) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return videos;
-    return videos.filter(
-      (v) =>
+    return videos.filter((v) => {
+      if (sourceFilter !== "all" && v.source_type !== sourceFilter) return false;
+      if (moduleFilter !== "all" && v.course_module !== moduleFilter) return false;
+      if (statusFilter === "published" && !v.is_published) return false;
+      if (statusFilter === "draft" && v.is_published) return false;
+      if (!q) return true;
+      return (
         v.title.toLowerCase().includes(q) ||
         v.course_module?.toLowerCase().includes(q) ||
-        v.description?.toLowerCase().includes(q),
-    );
-  }, [videos, search]);
+        v.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [videos, search, sourceFilter, moduleFilter, statusFilter]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -554,14 +734,50 @@ export function TutorVideos() {
           </TabsList>
 
           <TabsContent value="library" className="mt-6 space-y-5">
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by title, module, or description…"
-                className="pl-11 rounded-full bg-white border-slate-200"
-              />
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by title, module, or description…"
+                  className="pl-11 rounded-full bg-white border-slate-200"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[180px]">
+                    <SelectValue placeholder="Course / Module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All modules</SelectItem>
+                    {moduleOptions.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[160px]">
+                    <SelectValue placeholder="Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sources</SelectItem>
+                    <SelectItem value="upload">Uploaded file</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="zoom">Zoom</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="rounded-full bg-white border-slate-200 w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {isLoading ? (
@@ -579,23 +795,30 @@ export function TutorVideos() {
             ) : filtered.length === 0 ? (
               <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
                 <FileVideo className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="font-semibold text-slate-700">No videos yet</p>
-                <p className="text-sm text-slate-500 mb-5">Upload a recording or embed a YouTube link to begin.</p>
+                <p className="font-semibold text-slate-700">No videos match your filters</p>
+                <p className="text-sm text-slate-500 mb-5">Try clearing filters or add a new video.</p>
                 <Button onClick={() => setTab("add")} className="rounded-full">
                   <UploadCloud className="w-4 h-4" />
-                  Add your first video
+                  Add a video
                 </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <AnimatePresence>
                   {filtered.map((v) => (
-                    <VideoPlayerCard key={v.id} video={v} onDelete={(id) => deleteMutation.mutate(id)} />
+                    <VideoPlayerCard
+                      key={v.id}
+                      video={v}
+                      onDelete={(vid) => setPendingDelete(vid)}
+                      onEdit={(vid) => setEditing(vid)}
+                      onTogglePublish={(vid) => publishMutation.mutate(vid)}
+                    />
                   ))}
                 </AnimatePresence>
               </div>
             )}
           </TabsContent>
+
 
           <TabsContent value="add" className="mt-6 space-y-6">
             <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
@@ -640,6 +863,29 @@ export function TutorVideos() {
       </div>
 
       <VideoUploaderModal open={uploaderOpen} onOpenChange={setUploaderOpen} onUploaded={refresh} />
+      <VideoEditDialog video={editing} onClose={() => setEditing(null)} onSaved={refresh} />
+      <AlertDialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDelete?.title}" will be permanently removed from the library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

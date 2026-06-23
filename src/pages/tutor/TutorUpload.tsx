@@ -95,20 +95,20 @@ export function TutorUpload() {
   };
 
   const handleSubmit = async () => {
-    if (!tutorRecord || !user) return;
+    if (!user) return;
     setIsSubmitting(true);
 
     try {
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
 
-      // 1. Create the class
+      // 1. Create the class (tutor_id is optional — admins without a tutor record can still publish)
       const { data: newClass, error: classErr } = await supabase
         .from("classes")
         .insert({
           title,
           description: description || null,
           subject_id: subjectId,
-          tutor_id: tutorRecord.id,
+          tutor_id: tutorRecord?.id ?? null,
           scheduled_at: scheduledAt,
           duration_minutes: parseInt(duration),
           video_url: videoUrl || null,
