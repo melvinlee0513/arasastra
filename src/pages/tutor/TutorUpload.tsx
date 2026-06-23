@@ -51,25 +51,28 @@ export function TutorUpload() {
 
   useEffect(() => {
     if (user?.id) fetchTutorData();
+    fetchSubjects();
   }, [user?.id]);
+
+  const fetchSubjects = async () => {
+    const { data: subs } = await supabase
+      .from("subjects")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setSubjects(subs || []);
+  };
 
   const fetchTutorData = async () => {
     const { data: tutor } = await supabase
       .from("tutors")
       .select("id, specialization")
       .eq("user_id", user!.id)
-      .single();
+      .maybeSingle();
 
-    if (tutor) {
-      setTutorRecord(tutor);
-      // Get subjects matching specialization
-      const { data: subs } = await supabase
-        .from("subjects")
-        .select("id, name")
-        .eq("is_active", true);
-      setSubjects(subs || []);
-    }
+    if (tutor) setTutorRecord(tutor);
   };
+
 
   const isVideoUrlValid = (url: string) => {
     if (!url) return true; // optional
