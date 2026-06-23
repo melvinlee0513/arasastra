@@ -25,6 +25,7 @@ const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
   { path: "/tutor/upload", icon: FileText, label: "Upload Content" },
+  { path: "/tutor/videos", icon: Video, label: "Video Library" },
   { path: "/tutor/students", icon: Users, label: "My Students" },
   { path: "/tutor/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/tutor/notes", icon: FileText, label: "Upload Notes" },
