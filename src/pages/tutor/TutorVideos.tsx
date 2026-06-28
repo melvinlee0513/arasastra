@@ -288,9 +288,21 @@ function VideoPlayerCard({
             )}
           </>
         )}
-        <span className="absolute top-3 left-3 text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
-          {video.source_type}
-        </span>
+        <div className="absolute top-3 left-3 flex items-center gap-2">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
+            {video.source_type}
+          </span>
+          <span
+            className={cn(
+              "text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-md shadow-sm border",
+              video.access_level === "demo"
+                ? "bg-white/80 text-slate-800 border-slate-200"
+                : "bg-accent/95 text-accent-foreground border-accent",
+            )}
+          >
+            {video.access_level === "demo" ? "Demo" : "Exclusive"}
+          </span>
+        </div>
         <span
           className={cn(
             "absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur shadow-sm flex items-center gap-1.5",
