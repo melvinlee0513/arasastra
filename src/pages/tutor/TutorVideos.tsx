@@ -671,6 +671,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const [subjectId, setSubjectId] = useState("");
   const [standardId, setStandardId] = useState("");
   const [classId, setClassId] = useState("__unlinked");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
   const [submitting, setSubmitting] = useState(false);
 
   const detected = useMemo(() => {
