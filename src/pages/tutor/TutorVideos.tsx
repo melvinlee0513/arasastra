@@ -705,6 +705,18 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         </div>
       )}
 
+      <ScopePickers
+        subjects={scope?.subjects || []}
+        standards={scope?.standards || []}
+        classes={scope?.classes || []}
+        subjectId={subjectId}
+        standardId={standardId}
+        classId={classId}
+        onSubject={setSubjectId}
+        onStandard={setStandardId}
+        onClass={setClassId}
+      />
+
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Video Title *</Label>
