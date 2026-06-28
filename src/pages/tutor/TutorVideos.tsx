@@ -709,11 +709,13 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
+        access_level: accessLevel,
       });
       if (error) throw error;
       toast({ title: "✅ Resource added", description: "Video is live in your library." });
       setUrl(""); setTitle(""); setCourseModule(""); setDescription("");
       setSubjectId(""); setStandardId(""); setClassId("__unlinked");
+      setAccessLevel("exclusive");
       onCreated();
     } catch (e: any) {
       toast({ title: "Failed to add", description: e.message, variant: "destructive" });
