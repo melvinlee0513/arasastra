@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
 
 type SourceType = "upload" | "youtube" | "zoom";
+type AccessLevel = "exclusive" | "demo";
 
 interface VideoResource {
   id: string;
@@ -69,11 +70,45 @@ interface VideoResource {
   file_size: number | null;
   duration_seconds: number | null;
   is_published: boolean;
+  access_level: AccessLevel;
   created_by: string;
   created_at: string;
   subject_id?: string | null;
   standard_id?: string | null;
   class_id?: string | null;
+}
+
+// Reusable Exclusive/Demo pill toggle (Soft-Tech).
+function AccessLevelToggle({
+  value,
+  onChange,
+  className,
+}: {
+  value: AccessLevel;
+  onChange: (v: AccessLevel) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm", className)}>
+      {(["exclusive", "demo"] as AccessLevel[]).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={cn(
+            "px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-all",
+            value === opt
+              ? opt === "exclusive"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "bg-slate-900 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900",
+          )}
+        >
+          {opt === "exclusive" ? "Exclusive" : "Demo (public)"}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // Reusable Subject / Standard / Class picker gated by tutor assignments.
