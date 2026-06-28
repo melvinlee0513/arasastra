@@ -795,6 +795,16 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} placeholder="What's covered in this video?" className="rounded-xl" />
       </div>
 
+      <div className="space-y-1.5">
+        <Label>Access Level</Label>
+        <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
+        <p className="text-xs text-slate-500">
+          {accessLevel === "exclusive"
+            ? "Restricted to enrolled, paid students."
+            : "Public demo / preview — visible to anonymous visitors."}
+        </p>
+      </div>
+
       <div className="flex justify-end pt-2">
         <Button onClick={handleSubmit} disabled={submitting || !url || !title} className="rounded-full px-8">
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LinkIcon className="w-4 h-4" />}
