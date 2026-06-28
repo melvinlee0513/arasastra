@@ -65,9 +65,8 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Same-origin hashed built assets
-            urlPattern: ({ url, request }) =>
-              url.origin === self.location.origin &&
-              ["style", "script", "worker"].includes(request.destination),
+            urlPattern: ({ sameOrigin, request }) =>
+              sameOrigin && ["style", "script", "worker"].includes(request.destination),
             handler: "CacheFirst",
             options: {
               cacheName: "static-assets",
