@@ -36,6 +36,8 @@ const NotesBank = lazy(() => import("@/pages/dashboard/NotesBank").then(m => ({ 
 const LearningHub = lazy(() => import("@/pages/dashboard/LearningHub").then(m => ({ default: m.LearningHub })));
 const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m => ({ default: m.Achievements })));
 const FlashcardSwipeEngine = lazy(() => import("@/pages/dashboard/FlashcardSwipeEngine").then(m => ({ default: m.FlashcardSwipeEngine })));
+const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
+const ClassRoom = lazy(() => import("@/pages/dashboard/ClassRoom").then(m => ({ default: m.ClassRoom })));
 
 // Quiz
 const QuizPlay = lazy(() => import("@/pages/quiz/QuizPlay").then(m => ({ default: m.QuizPlay })));
@@ -117,6 +119,10 @@ const App = () => (
             {/* Quiz Routes */}
             <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><QuizLobby /></DashboardLayout></ProtectedRoute>} />
             <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><QuizPlay /></ProtectedRoute>} />
+            <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><MyClasses /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><ClassRoom /></DashboardLayout></ProtectedRoute>} />
+
+            {/* Quiz Routes */}
             <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><QuizPlay /></ProtectedRoute>} />
 
             {/* Tutor Routes */}

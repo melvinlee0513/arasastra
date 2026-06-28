@@ -53,6 +53,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
 
 type SourceType = "upload" | "youtube" | "zoom";
 
@@ -70,6 +71,78 @@ interface VideoResource {
   is_published: boolean;
   created_by: string;
   created_at: string;
+  subject_id?: string | null;
+  standard_id?: string | null;
+  class_id?: string | null;
+}
+
+// Reusable Subject / Standard / Class picker gated by tutor assignments.
+function ScopePickers({
+  subjects,
+  standards,
+  classes,
+  subjectId,
+  standardId,
+  classId,
+  onSubject,
+  onStandard,
+  onClass,
+}: {
+  subjects: ScopeSubject[];
+  standards: ScopeStandard[];
+  classes: ScopeClass[];
+  subjectId: string;
+  standardId: string;
+  classId: string;
+  onSubject: (v: string) => void;
+  onStandard: (v: string) => void;
+  onClass: (v: string) => void;
+}) {
+  const filteredClasses = classes.filter(
+    (c) =>
+      (!subjectId || c.subject_id === subjectId) &&
+      (!standardId || c.standard_id === standardId),
+  );
+  return (
+    <div className="grid md:grid-cols-3 gap-3">
+      <div className="space-y-1.5">
+        <Label>Subject *</Label>
+        <Select value={subjectId} onValueChange={onSubject}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select subject" /></SelectTrigger>
+          <SelectContent>
+            {subjects.length === 0 ? (
+              <SelectItem value="__none" disabled>No assigned subjects</SelectItem>
+            ) : subjects.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Standard</Label>
+        <Select value={standardId} onValueChange={onStandard}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Any standard" /></SelectTrigger>
+          <SelectContent>
+            {standards.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Class Instance</Label>
+        <Select value={classId} onValueChange={onClass}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Unlinked" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__unlinked">— Unlinked —</SelectItem>
+            {filteredClasses.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.cohort_label || c.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 }
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
@@ -344,6 +417,11 @@ function VideoUploaderModal({
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const { data: scope } = useTutorScope();
+  const [subjectId, setSubjectId] = useState("");
+  const [standardId, setStandardId] = useState("");
+  const [classId, setClassId] = useState("__unlinked");
+
   const reset = () => {
     setFile(null);
     setTitle("");
@@ -351,6 +429,9 @@ function VideoUploaderModal({
     setDescription("");
     setProgress(0);
     setUploading(false);
+    setSubjectId("");
+    setStandardId("");
+    setClassId("__unlinked");
   };
 
   const handleFile = (f: File | null) => {
@@ -370,6 +451,10 @@ function VideoUploaderModal({
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) {
       toast({ title: "Missing info", description: "Add a title and select a file.", variant: "destructive" });
+      return;
+    }
+    if (!subjectId) {
+      toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
       return;
     }
     setUploading(true);
@@ -402,6 +487,9 @@ function VideoUploaderModal({
         video_url: signed?.signedUrl || path,
         file_size: file.size,
         created_by: user.id,
+        subject_id: subjectId,
+        standard_id: standardId || null,
+        class_id: classId === "__unlinked" ? null : classId,
       });
       if (insErr) throw insErr;
 
@@ -470,6 +558,17 @@ function VideoUploaderModal({
             <Label>Video Title *</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lecture 3 — Stress & Strain" maxLength={150} />
           </div>
+          <ScopePickers
+            subjects={scope?.subjects || []}
+            standards={scope?.standards || []}
+            classes={scope?.classes || []}
+            subjectId={subjectId}
+            standardId={standardId}
+            classId={classId}
+            onSubject={setSubjectId}
+            onStandard={setStandardId}
+            onClass={setClassId}
+          />
           <div className="space-y-1.5">
             <Label>Associated Course / Module</Label>
             <Input value={courseModule} onChange={(e) => setCourseModule(e.target.value)} placeholder="Mechanics of Materials" maxLength={120} />
@@ -505,10 +604,14 @@ function VideoUploaderModal({
 function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: scope } = useTutorScope();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
   const [description, setDescription] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+  const [standardId, setStandardId] = useState("");
+  const [classId, setClassId] = useState("__unlinked");
   const [submitting, setSubmitting] = useState(false);
 
   const detected = useMemo(() => {
@@ -528,6 +631,10 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
       toast({ title: "Invalid link", description: "Paste a valid YouTube or Zoom URL.", variant: "destructive" });
       return;
     }
+    if (!subjectId) {
+      toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await (supabase as any).from("video_resources").insert({
@@ -539,10 +646,14 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         youtube_id: detected.id,
         thumbnail_url: detected.id ? `https://img.youtube.com/vi/${detected.id}/hqdefault.jpg` : null,
         created_by: user.id,
+        subject_id: subjectId,
+        standard_id: standardId || null,
+        class_id: classId === "__unlinked" ? null : classId,
       });
       if (error) throw error;
       toast({ title: "✅ Resource added", description: "Video is live in your library." });
       setUrl(""); setTitle(""); setCourseModule(""); setDescription("");
+      setSubjectId(""); setStandardId(""); setClassId("__unlinked");
       onCreated();
     } catch (e: any) {
       toast({ title: "Failed to add", description: e.message, variant: "destructive" });
@@ -593,6 +704,18 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
           />
         </div>
       )}
+
+      <ScopePickers
+        subjects={scope?.subjects || []}
+        standards={scope?.standards || []}
+        classes={scope?.classes || []}
+        subjectId={subjectId}
+        standardId={standardId}
+        classId={classId}
+        onSubject={setSubjectId}
+        onStandard={setStandardId}
+        onClass={setClassId}
+      />
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-1.5">

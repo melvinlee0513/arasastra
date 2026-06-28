@@ -34,12 +34,16 @@ const dashboardItems = [{
   label: "Dashboard",
   exact: true
 }, {
+  path: "/dashboard/classes",
+  icon: GraduationCap,
+  label: "My Classes"
+}, {
   path: "/dashboard/replays",
   icon: Video,
   label: "Replays"
 }, {
   path: "/dashboard/learning",
-  icon: GraduationCap,
+  icon: BookOpen,
   label: "My Learning"
 }, {
   path: "/dashboard/achievements",
