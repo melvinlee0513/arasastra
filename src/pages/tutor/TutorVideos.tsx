@@ -369,6 +369,7 @@ function VideoEditDialog({
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
   const [description, setDescription] = useState("");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
   const [saving, setSaving] = useState(false);
 
   // sync incoming video into form
@@ -377,6 +378,7 @@ function VideoEditDialog({
       setTitle(video.title);
       setCourseModule(video.course_module ?? "");
       setDescription(video.description ?? "");
+      setAccessLevel(video.access_level ?? "exclusive");
     }
   }, [video]);
 
