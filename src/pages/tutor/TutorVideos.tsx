@@ -53,6 +53,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
 
 type SourceType = "upload" | "youtube" | "zoom";
 
@@ -70,6 +71,78 @@ interface VideoResource {
   is_published: boolean;
   created_by: string;
   created_at: string;
+  subject_id?: string | null;
+  standard_id?: string | null;
+  class_id?: string | null;
+}
+
+// Reusable Subject / Standard / Class picker gated by tutor assignments.
+function ScopePickers({
+  subjects,
+  standards,
+  classes,
+  subjectId,
+  standardId,
+  classId,
+  onSubject,
+  onStandard,
+  onClass,
+}: {
+  subjects: ScopeSubject[];
+  standards: ScopeStandard[];
+  classes: ScopeClass[];
+  subjectId: string;
+  standardId: string;
+  classId: string;
+  onSubject: (v: string) => void;
+  onStandard: (v: string) => void;
+  onClass: (v: string) => void;
+}) {
+  const filteredClasses = classes.filter(
+    (c) =>
+      (!subjectId || c.subject_id === subjectId) &&
+      (!standardId || c.standard_id === standardId),
+  );
+  return (
+    <div className="grid md:grid-cols-3 gap-3">
+      <div className="space-y-1.5">
+        <Label>Subject *</Label>
+        <Select value={subjectId} onValueChange={onSubject}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select subject" /></SelectTrigger>
+          <SelectContent>
+            {subjects.length === 0 ? (
+              <SelectItem value="__none" disabled>No assigned subjects</SelectItem>
+            ) : subjects.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Standard</Label>
+        <Select value={standardId} onValueChange={onStandard}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Any standard" /></SelectTrigger>
+          <SelectContent>
+            {standards.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Class Instance</Label>
+        <Select value={classId} onValueChange={onClass}>
+          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Unlinked" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__unlinked">— Unlinked —</SelectItem>
+            {filteredClasses.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.cohort_label || c.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 }
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
