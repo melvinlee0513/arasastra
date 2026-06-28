@@ -468,6 +468,7 @@ function VideoUploaderModal({
   const [subjectId, setSubjectId] = useState("");
   const [standardId, setStandardId] = useState("");
   const [classId, setClassId] = useState("__unlinked");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
 
   const reset = () => {
     setFile(null);
@@ -479,6 +480,7 @@ function VideoUploaderModal({
     setSubjectId("");
     setStandardId("");
     setClassId("__unlinked");
+    setAccessLevel("exclusive");
   };
 
   const handleFile = (f: File | null) => {
