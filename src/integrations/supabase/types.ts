@@ -193,6 +193,8 @@ export type Database = {
       }
       classes: {
         Row: {
+          class_tag: string | null
+          cohort_label: string | null
           created_at: string | null
           description: string | null
           duration_minutes: number | null
@@ -201,6 +203,7 @@ export type Database = {
           is_published: boolean | null
           live_url: string | null
           scheduled_at: string
+          standard_id: string | null
           subject_id: string | null
           title: string
           tutor_id: string | null
@@ -208,6 +211,8 @@ export type Database = {
           zoom_link: string | null
         }
         Insert: {
+          class_tag?: string | null
+          cohort_label?: string | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number | null
@@ -216,6 +221,7 @@ export type Database = {
           is_published?: boolean | null
           live_url?: string | null
           scheduled_at: string
+          standard_id?: string | null
           subject_id?: string | null
           title: string
           tutor_id?: string | null
@@ -223,6 +229,8 @@ export type Database = {
           zoom_link?: string | null
         }
         Update: {
+          class_tag?: string | null
+          cohort_label?: string | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number | null
@@ -231,6 +239,7 @@ export type Database = {
           is_published?: boolean | null
           live_url?: string | null
           scheduled_at?: string
+          standard_id?: string | null
           subject_id?: string | null
           title?: string
           tutor_id?: string | null
@@ -238,6 +247,13 @@ export type Database = {
           zoom_link?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_subject_id_fkey"
             columns: ["subject_id"]
@@ -336,27 +352,37 @@ export type Database = {
       }
       enrollments: {
         Row: {
+          class_id: string | null
           enrolled_at: string | null
           id: string
           is_active: boolean | null
           student_id: string
-          subject_id: string
+          subject_id: string | null
         }
         Insert: {
+          class_id?: string | null
           enrolled_at?: string | null
           id?: string
           is_active?: boolean | null
           student_id: string
-          subject_id: string
+          subject_id?: string | null
         }
         Update: {
+          class_id?: string | null
           enrolled_at?: string | null
           id?: string
           is_active?: boolean | null
           student_id?: string
-          subject_id?: string
+          subject_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enrollments_student_id_fkey"
             columns: ["student_id"]
@@ -477,6 +503,7 @@ export type Database = {
       }
       notes: {
         Row: {
+          class_id: string | null
           created_at: string | null
           description: string | null
           file_name: string
@@ -484,12 +511,14 @@ export type Database = {
           file_type: string | null
           file_url: string
           id: string
+          standard_id: string | null
           subject_id: string | null
           title: string
           updated_at: string | null
           uploaded_by: string | null
         }
         Insert: {
+          class_id?: string | null
           created_at?: string | null
           description?: string | null
           file_name: string
@@ -497,12 +526,14 @@ export type Database = {
           file_type?: string | null
           file_url: string
           id?: string
+          standard_id?: string | null
           subject_id?: string | null
           title: string
           updated_at?: string | null
           uploaded_by?: string | null
         }
         Update: {
+          class_id?: string | null
           created_at?: string | null
           description?: string | null
           file_name?: string
@@ -510,12 +541,27 @@ export type Database = {
           file_type?: string | null
           file_url?: string
           id?: string
+          standard_id?: string | null
           subject_id?: string | null
           title?: string
           updated_at?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notes_subject_id_fkey"
             columns: ["subject_id"]
@@ -931,6 +977,30 @@ export type Database = {
           },
         ]
       }
+      standards: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           color: string | null
@@ -1035,6 +1105,52 @@ export type Database = {
         }
         Relationships: []
       }
+      tutor_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          standard_id: string | null
+          subject_id: string
+          tutor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          standard_id?: string | null
+          subject_id: string
+          tutor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          standard_id?: string | null
+          subject_id?: string
+          tutor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_assignments_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_assignments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutor_assignments_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "tutors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tutors: {
         Row: {
           avatar_url: string | null
@@ -1135,6 +1251,7 @@ export type Database = {
       }
       video_resources: {
         Row: {
+          class_id: string | null
           course_module: string | null
           created_at: string
           created_by: string
@@ -1144,6 +1261,8 @@ export type Database = {
           id: string
           is_published: boolean
           source_type: Database["public"]["Enums"]["video_source_type"]
+          standard_id: string | null
+          subject_id: string | null
           thumbnail_url: string | null
           title: string
           updated_at: string
@@ -1151,6 +1270,7 @@ export type Database = {
           youtube_id: string | null
         }
         Insert: {
+          class_id?: string | null
           course_module?: string | null
           created_at?: string
           created_by: string
@@ -1160,6 +1280,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           source_type: Database["public"]["Enums"]["video_source_type"]
+          standard_id?: string | null
+          subject_id?: string | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string
@@ -1167,6 +1289,7 @@ export type Database = {
           youtube_id?: string | null
         }
         Update: {
+          class_id?: string | null
           course_module?: string | null
           created_at?: string
           created_by?: string
@@ -1176,13 +1299,37 @@ export type Database = {
           id?: string
           is_published?: boolean
           source_type?: Database["public"]["Enums"]["video_source_type"]
+          standard_id?: string | null
+          subject_id?: string | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string
           video_url?: string
           youtube_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "video_resources_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_resources_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_resources_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1198,6 +1345,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      tutor_can_teach: {
+        Args: { _standard_id: string; _subject_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "student" | "tutor"
