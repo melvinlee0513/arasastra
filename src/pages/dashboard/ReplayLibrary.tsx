@@ -55,6 +55,7 @@ export function ReplayLibrary() {
           )
           .eq("is_published", true)
           .not("video_url", "is", null)
+          .neq("video_url", "")
           .order("scheduled_at", { ascending: false }),
         supabase.from("subjects").select("id, name").eq("is_active", true),
       ]);
