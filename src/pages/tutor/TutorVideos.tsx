@@ -627,6 +627,15 @@ function VideoUploaderModal({
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} placeholder="Brief summary…" />
           </div>
+          <div className="space-y-1.5">
+            <Label>Access Level</Label>
+            <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
+            <p className="text-xs text-slate-500">
+              {accessLevel === "exclusive"
+                ? "Visible only to enrolled, paid students."
+                : "Publicly viewable as a free demo / preview."}
+            </p>
+          </div>
         </div>
 
         {uploading && (
