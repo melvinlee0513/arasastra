@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 
 // Layouts (kept eager – small, used on every page)
@@ -89,7 +89,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <PWAUpdatePrompt />
+        <PWAInstallPrompt />
         <MaintenanceGate>
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
