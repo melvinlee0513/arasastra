@@ -401,6 +401,7 @@ export type Database = {
       }
       flashcard_decks: {
         Row: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
           created_at: string
           created_by: string | null
           description: string | null
@@ -409,6 +410,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -417,6 +419,7 @@ export type Database = {
           title: string
         }
         Update: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -503,6 +506,7 @@ export type Database = {
       }
       notes: {
         Row: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
           class_id: string | null
           created_at: string | null
           description: string | null
@@ -518,6 +522,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -533,6 +538,7 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -947,6 +953,7 @@ export type Database = {
       }
       quizzes: {
         Row: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
           class_id: string | null
           created_at: string | null
           id: string
@@ -954,6 +961,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           created_at?: string | null
           id?: string
@@ -961,6 +969,7 @@ export type Database = {
           title: string
         }
         Update: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           created_at?: string | null
           id?: string
@@ -1251,6 +1260,7 @@ export type Database = {
       }
       video_resources: {
         Row: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
           class_id: string | null
           course_module: string | null
           created_at: string
@@ -1270,6 +1280,7 @@ export type Database = {
           youtube_id: string | null
         }
         Insert: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           course_module?: string | null
           created_at?: string
@@ -1289,6 +1300,7 @@ export type Database = {
           youtube_id?: string | null
         }
         Update: {
+          access_level?: Database["public"]["Enums"]["material_access_level"]
           class_id?: string | null
           course_module?: string | null
           created_at?: string
@@ -1352,6 +1364,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student" | "tutor"
+      material_access_level: "exclusive" | "demo"
       video_source_type: "upload" | "youtube" | "zoom"
     }
     CompositeTypes: {
@@ -1481,6 +1494,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student", "tutor"],
+      material_access_level: ["exclusive", "demo"],
       video_source_type: ["upload", "youtube", "zoom"],
     },
   },
