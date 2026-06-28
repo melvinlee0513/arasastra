@@ -453,6 +453,10 @@ function VideoUploaderModal({
       toast({ title: "Missing info", description: "Add a title and select a file.", variant: "destructive" });
       return;
     }
+    if (!subjectId) {
+      toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     setProgress(5);
     try {
@@ -483,6 +487,9 @@ function VideoUploaderModal({
         video_url: signed?.signedUrl || path,
         file_size: file.size,
         created_by: user.id,
+        subject_id: subjectId,
+        standard_id: standardId || null,
+        class_id: classId === "__unlinked" ? null : classId,
       });
       if (insErr) throw insErr;
 
