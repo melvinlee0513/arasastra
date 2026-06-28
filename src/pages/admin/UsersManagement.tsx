@@ -308,7 +308,7 @@ export function UsersManagement() {
                 ) : filteredUsers.map((user) => {
                   const tutor = tutors.find((t) => t.user_id === user.user_id);
                   const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
+                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.id && e.class_id);
 
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/60">
