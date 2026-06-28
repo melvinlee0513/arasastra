@@ -91,6 +91,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PWAInstallPrompt />
+        <PWAUpdateBanner />
         <MaintenanceGate>
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
