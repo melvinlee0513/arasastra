@@ -395,6 +395,7 @@ function VideoEditDialog({
         title: title.trim(),
         course_module: courseModule.trim() || null,
         description: description.trim() || null,
+        access_level: accessLevel,
       })
       .eq("id", video.id);
     setSaving(false);
