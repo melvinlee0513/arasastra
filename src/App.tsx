@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdateBanner } from "@/components/pwa/PWAUpdateBanner";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 
 // Layouts (kept eager – small, used on every page)
