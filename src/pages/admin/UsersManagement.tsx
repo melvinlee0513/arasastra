@@ -175,16 +175,16 @@ export function UsersManagement() {
           const t = tutors.find((tt) => tt.user_id === u.user_id);
           if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
         } else if (u.role === "student") {
-          const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
+          const studentClassIds = enrollments.filter((e) => e.student_id === u.id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
-            || enrollments.some((e) => e.student_id === u.user_id && e.subject_id === subjectFilter);
+            || enrollments.some((e) => e.student_id === u.id && e.subject_id === subjectFilter);
           if (!hasSubject) return false;
         } else { return false; }
       }
 
       if (classFilter !== "all") {
         if (u.role !== "student") return false;
-        if (!enrollments.some((e) => e.student_id === u.user_id && e.class_id === classFilter)) return false;
+        if (!enrollments.some((e) => e.student_id === u.id && e.class_id === classFilter)) return false;
       }
 
       if (!q) return true;
@@ -308,7 +308,7 @@ export function UsersManagement() {
                 ) : filteredUsers.map((user) => {
                   const tutor = tutors.find((t) => t.user_id === user.user_id);
                   const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
+                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.id && e.class_id);
 
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/60">
@@ -465,7 +465,7 @@ function AssignmentDialog({
   const tutor = tutors.find((t) => t.user_id === user.user_id);
 
   const tutorRows = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-  const studentRows = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
+  const studentRows = enrollments.filter((e) => e.student_id === user.id && e.class_id);
 
   const addTutorAssignment = async () => {
     if (!tutor || !newSubject) return;
@@ -495,20 +495,40 @@ function AssignmentDialog({
     if (error) { setAssignments(prev); toast({ title: "Failed", description: error.message, variant: "destructive" }); }
   };
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   const addEnrollment = async () => {
     if (!newClass) return;
+    // CRITICAL: enrollments.student_id references profiles.id (NOT auth.users.id).
+    // Validate before we even touch the network so the FK can never trip.
+    const profileId = user.id;
+    if (!profileId || !UUID_RE.test(profileId)) {
+      toast({
+        title: "Invalid user profile",
+        description: "This user has no valid profile ID. Refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!UUID_RE.test(newClass)) {
+      toast({ title: "Invalid class", description: "Pick a valid class to enroll.", variant: "destructive" });
+      return;
+    }
     const klass = classes.find((c) => c.id === newClass);
     const optimistic: Enrollment = {
-      id: `tmp-${Date.now()}`, student_id: user.user_id,
+      id: `tmp-${Date.now()}`, student_id: profileId,
       class_id: newClass, subject_id: klass?.subject_id || null,
     };
     setEnrollments((p) => [...p, optimistic]);
     const { data, error } = await (supabase as any).from("enrollments").insert({
-      student_id: user.user_id, class_id: newClass, subject_id: klass?.subject_id || null, is_active: true,
+      student_id: profileId,
+      class_id: newClass,
+      subject_id: klass?.subject_id || null,
+      is_active: true,
     }).select().single();
     if (error) {
       setEnrollments((p) => p.filter((e) => e.id !== optimistic.id));
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Enrollment failed", description: error.message, variant: "destructive" });
       return;
     }
     setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));

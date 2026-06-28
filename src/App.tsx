@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdateBanner } from "@/components/pwa/PWAUpdateBanner";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 
 // Layouts (kept eager – small, used on every page)
@@ -90,6 +91,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PWAInstallPrompt />
+        <PWAUpdateBanner />
         <MaintenanceGate>
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
@@ -107,9 +109,10 @@ const App = () => (
 
             {/* Student Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><StudentDashboard /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/replays" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><ReplayLibrary /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/dashboard/replays" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><QuizList /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/learning" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/dashboard/learning/replays" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/learning/quizzes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/learning/flashcards" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
             <Route path="/dashboard/notes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><NotesBank /></DashboardLayout></ProtectedRoute>} />

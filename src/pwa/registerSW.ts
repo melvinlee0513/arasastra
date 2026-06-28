@@ -50,6 +50,11 @@ async function unregisterAppServiceWorker(): Promise<void> {
   }
 }
 
+function notifyUpdateReady(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("pwa:update-ready"));
+}
+
 export function registerAppServiceWorker(): void {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
@@ -58,11 +63,35 @@ export function registerAppServiceWorker(): void {
     return;
   }
 
+  // When the active controller changes, the new SW has taken over → notify UI.
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloaded) return;
+    reloaded = true;
+    notifyUpdateReady();
+  });
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register(SW_URL, { scope: "/" }).catch((err) => {
-      // Non-fatal — app still works without the SW
-      // eslint-disable-next-line no-console
-      console.warn("[pwa] service worker registration failed:", err);
-    });
+    navigator.serviceWorker
+      .register(SW_URL, { scope: "/" })
+      .then((reg) => {
+        // Listen for an updated worker installing
+        reg.addEventListener("updatefound", () => {
+          const installing = reg.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              // A new version is waiting / activating
+              notifyUpdateReady();
+            }
+          });
+        });
+        // Poll for updates hourly
+        setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn("[pwa] service worker registration failed:", err);
+      });
   });
 }

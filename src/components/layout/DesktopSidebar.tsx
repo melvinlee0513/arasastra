@@ -38,10 +38,6 @@ const dashboardItems = [{
   icon: GraduationCap,
   label: "My Classes"
 }, {
-  path: "/dashboard/replays",
-  icon: Video,
-  label: "Replays"
-}, {
   path: "/dashboard/learning",
   icon: BookOpen,
   label: "My Learning"

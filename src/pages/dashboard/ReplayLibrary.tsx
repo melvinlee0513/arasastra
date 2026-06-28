@@ -55,6 +55,7 @@ export function ReplayLibrary() {
           )
           .eq("is_published", true)
           .not("video_url", "is", null)
+          .neq("video_url", "")
           .order("scheduled_at", { ascending: false }),
         supabase.from("subjects").select("id, name").eq("is_active", true),
       ]);
@@ -62,7 +63,7 @@ export function ReplayLibrary() {
       if (classesRes.error) throw classesRes.error;
       if (subjectsRes.error) throw subjectsRes.error;
 
-      setReplays(classesRes.data || []);
+      setReplays((classesRes.data || []).filter((c: any) => typeof c.video_url === "string" && c.video_url.trim() !== ""));
       setSubjects(subjectsRes.data || []);
     } catch (error) {
       console.error("Error fetching replays:", error);

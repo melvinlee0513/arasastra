@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
 
 type SourceType = "upload" | "youtube" | "zoom";
+type AccessLevel = "exclusive" | "demo";
 
 interface VideoResource {
   id: string;
@@ -69,11 +70,45 @@ interface VideoResource {
   file_size: number | null;
   duration_seconds: number | null;
   is_published: boolean;
+  access_level: AccessLevel;
   created_by: string;
   created_at: string;
   subject_id?: string | null;
   standard_id?: string | null;
   class_id?: string | null;
+}
+
+// Reusable Exclusive/Demo pill toggle (Soft-Tech).
+function AccessLevelToggle({
+  value,
+  onChange,
+  className,
+}: {
+  value: AccessLevel;
+  onChange: (v: AccessLevel) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm", className)}>
+      {(["exclusive", "demo"] as AccessLevel[]).map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={cn(
+            "px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-all",
+            value === opt
+              ? opt === "exclusive"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "bg-slate-900 text-white shadow-sm"
+              : "text-slate-600 hover:text-slate-900",
+          )}
+        >
+          {opt === "exclusive" ? "Exclusive" : "Demo (public)"}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // Reusable Subject / Standard / Class picker gated by tutor assignments.
@@ -253,9 +288,21 @@ function VideoPlayerCard({
             )}
           </>
         )}
-        <span className="absolute top-3 left-3 text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
-          {video.source_type}
-        </span>
+        <div className="absolute top-3 left-3 flex items-center gap-2">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
+            {video.source_type}
+          </span>
+          <span
+            className={cn(
+              "text-xs font-semibold px-3 py-1 rounded-full backdrop-blur-md shadow-sm border",
+              video.access_level === "demo"
+                ? "bg-white/80 text-slate-800 border-slate-200"
+                : "bg-accent/95 text-accent-foreground border-accent",
+            )}
+          >
+            {video.access_level === "demo" ? "Demo" : "Exclusive"}
+          </span>
+        </div>
         <span
           className={cn(
             "absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full backdrop-blur shadow-sm flex items-center gap-1.5",
@@ -322,6 +369,7 @@ function VideoEditDialog({
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
   const [description, setDescription] = useState("");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
   const [saving, setSaving] = useState(false);
 
   // sync incoming video into form
@@ -330,6 +378,7 @@ function VideoEditDialog({
       setTitle(video.title);
       setCourseModule(video.course_module ?? "");
       setDescription(video.description ?? "");
+      setAccessLevel(video.access_level ?? "exclusive");
     }
   }, [video]);
 
@@ -346,6 +395,7 @@ function VideoEditDialog({
         title: title.trim(),
         course_module: courseModule.trim() || null,
         description: description.trim() || null,
+        access_level: accessLevel,
       })
       .eq("id", video.id);
     setSaving(false);
@@ -380,6 +430,10 @@ function VideoEditDialog({
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Access Level</Label>
+            <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
           </div>
         </div>
         <DialogFooter className="gap-2">
@@ -421,6 +475,7 @@ function VideoUploaderModal({
   const [subjectId, setSubjectId] = useState("");
   const [standardId, setStandardId] = useState("");
   const [classId, setClassId] = useState("__unlinked");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
 
   const reset = () => {
     setFile(null);
@@ -432,6 +487,7 @@ function VideoUploaderModal({
     setSubjectId("");
     setStandardId("");
     setClassId("__unlinked");
+    setAccessLevel("exclusive");
   };
 
   const handleFile = (f: File | null) => {
@@ -490,6 +546,7 @@ function VideoUploaderModal({
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
+        access_level: accessLevel,
       });
       if (insErr) throw insErr;
 
@@ -577,6 +634,15 @@ function VideoUploaderModal({
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} placeholder="Brief summary…" />
           </div>
+          <div className="space-y-1.5">
+            <Label>Access Level</Label>
+            <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
+            <p className="text-xs text-slate-500">
+              {accessLevel === "exclusive"
+                ? "Visible only to enrolled, paid students."
+                : "Publicly viewable as a free demo / preview."}
+            </p>
+          </div>
         </div>
 
         {uploading && (
@@ -612,6 +678,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const [subjectId, setSubjectId] = useState("");
   const [standardId, setStandardId] = useState("");
   const [classId, setClassId] = useState("__unlinked");
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("exclusive");
   const [submitting, setSubmitting] = useState(false);
 
   const detected = useMemo(() => {
@@ -649,11 +716,13 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
+        access_level: accessLevel,
       });
       if (error) throw error;
       toast({ title: "✅ Resource added", description: "Video is live in your library." });
       setUrl(""); setTitle(""); setCourseModule(""); setDescription("");
       setSubjectId(""); setStandardId(""); setClassId("__unlinked");
+      setAccessLevel("exclusive");
       onCreated();
     } catch (e: any) {
       toast({ title: "Failed to add", description: e.message, variant: "destructive" });
@@ -731,6 +800,16 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
       <div className="space-y-1.5">
         <Label>Description</Label>
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} placeholder="What's covered in this video?" className="rounded-xl" />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Access Level</Label>
+        <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
+        <p className="text-xs text-slate-500">
+          {accessLevel === "exclusive"
+            ? "Restricted to enrolled, paid students."
+            : "Public demo / preview — visible to anonymous visitors."}
+        </p>
       </div>
 
       <div className="flex justify-end pt-2">
