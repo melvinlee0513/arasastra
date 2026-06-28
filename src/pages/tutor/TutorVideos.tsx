@@ -539,6 +539,7 @@ function VideoUploaderModal({
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
+        access_level: accessLevel,
       });
       if (insErr) throw insErr;
 
