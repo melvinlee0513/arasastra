@@ -431,6 +431,10 @@ function VideoEditDialog({
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} />
           </div>
+          <div className="space-y-1.5">
+            <Label>Access Level</Label>
+            <AccessLevelToggle value={accessLevel} onChange={setAccessLevel} />
+          </div>
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" className="rounded-full" disabled={saving} onClick={onClose}>
