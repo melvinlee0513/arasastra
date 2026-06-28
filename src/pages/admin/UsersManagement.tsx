@@ -175,16 +175,16 @@ export function UsersManagement() {
           const t = tutors.find((tt) => tt.user_id === u.user_id);
           if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
         } else if (u.role === "student") {
-          const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
+          const studentClassIds = enrollments.filter((e) => e.student_id === u.id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
-            || enrollments.some((e) => e.student_id === u.user_id && e.subject_id === subjectFilter);
+            || enrollments.some((e) => e.student_id === u.id && e.subject_id === subjectFilter);
           if (!hasSubject) return false;
         } else { return false; }
       }
 
       if (classFilter !== "all") {
         if (u.role !== "student") return false;
-        if (!enrollments.some((e) => e.student_id === u.user_id && e.class_id === classFilter)) return false;
+        if (!enrollments.some((e) => e.student_id === u.id && e.class_id === classFilter)) return false;
       }
 
       if (!q) return true;
