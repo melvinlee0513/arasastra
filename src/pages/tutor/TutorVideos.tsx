@@ -417,6 +417,11 @@ function VideoUploaderModal({
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const { data: scope } = useTutorScope();
+  const [subjectId, setSubjectId] = useState("");
+  const [standardId, setStandardId] = useState("");
+  const [classId, setClassId] = useState("__unlinked");
+
   const reset = () => {
     setFile(null);
     setTitle("");
@@ -424,6 +429,9 @@ function VideoUploaderModal({
     setDescription("");
     setProgress(0);
     setUploading(false);
+    setSubjectId("");
+    setStandardId("");
+    setClassId("__unlinked");
   };
 
   const handleFile = (f: File | null) => {
