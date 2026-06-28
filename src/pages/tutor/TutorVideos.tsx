@@ -558,6 +558,17 @@ function VideoUploaderModal({
             <Label>Video Title *</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lecture 3 — Stress & Strain" maxLength={150} />
           </div>
+          <ScopePickers
+            subjects={scope?.subjects || []}
+            standards={scope?.standards || []}
+            classes={scope?.classes || []}
+            subjectId={subjectId}
+            standardId={standardId}
+            classId={classId}
+            onSubject={setSubjectId}
+            onStandard={setStandardId}
+            onClass={setClassId}
+          />
           <div className="space-y-1.5">
             <Label>Associated Course / Module</Label>
             <Input value={courseModule} onChange={(e) => setCourseModule(e.target.value)} placeholder="Mechanics of Materials" maxLength={120} />
