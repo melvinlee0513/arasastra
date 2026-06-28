@@ -604,10 +604,14 @@ function VideoUploaderModal({
 function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: scope } = useTutorScope();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
   const [description, setDescription] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+  const [standardId, setStandardId] = useState("");
+  const [classId, setClassId] = useState("__unlinked");
   const [submitting, setSubmitting] = useState(false);
 
   const detected = useMemo(() => {
@@ -627,6 +631,10 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
       toast({ title: "Invalid link", description: "Paste a valid YouTube or Zoom URL.", variant: "destructive" });
       return;
     }
+    if (!subjectId) {
+      toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await (supabase as any).from("video_resources").insert({
@@ -638,10 +646,14 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         youtube_id: detected.id,
         thumbnail_url: detected.id ? `https://img.youtube.com/vi/${detected.id}/hqdefault.jpg` : null,
         created_by: user.id,
+        subject_id: subjectId,
+        standard_id: standardId || null,
+        class_id: classId === "__unlinked" ? null : classId,
       });
       if (error) throw error;
       toast({ title: "✅ Resource added", description: "Video is live in your library." });
       setUrl(""); setTitle(""); setCourseModule(""); setDescription("");
+      setSubjectId(""); setStandardId(""); setClassId("__unlinked");
       onCreated();
     } catch (e: any) {
       toast({ title: "Failed to add", description: e.message, variant: "destructive" });
