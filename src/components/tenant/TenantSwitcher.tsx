@@ -50,14 +50,19 @@ export function TenantSwitcher({ className }: { className?: string }) {
             onSelect={() => setCurrentTenantId(c.id)}
             className="flex items-center gap-2 rounded-xl p-2"
           >
-            <img
-              src={c.logoUrl}
-              alt=""
-              className="h-8 w-8 rounded-lg object-cover"
-            />
+            {c.logoUrl ? (
+              <img
+                src={c.logoUrl}
+                alt=""
+                className="h-8 w-8 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <Building2 className="h-4 w-4 text-slate-400" />
+              </div>
+            )}
             <div className="flex-1 text-sm">
               <div className="font-medium text-slate-900">{c.name}</div>
-              <div className="text-xs text-slate-500">{c.slug}</div>
             </div>
             {c.id === center.id && (
               <Check className="h-4 w-4 text-[#0052FF]" />
