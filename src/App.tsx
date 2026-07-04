@@ -165,6 +165,7 @@ const App = () => (
             {/* Standalone Routes */}
             <Route path="/guardian-pulse" element={<ParentPulse />} />
             <Route path="/mobile-onboarding" element={<MobileOnboarding />} />
+            <Route path="/center" element={<ProtectedRoute requiredRole="authenticated"><TenantDashboard /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
@@ -173,6 +174,7 @@ const App = () => (
         </BrowserRouter>
         </MaintenanceGate>
       </TooltipProvider>
+      </TenantProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
