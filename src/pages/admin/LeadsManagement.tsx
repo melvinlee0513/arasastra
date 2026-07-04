@@ -227,15 +227,17 @@ export function LeadsManagement() {
 
   const saveRemarks = useCallback(
     async (profileId: string, remarks: string) => {
+      // Sanitize: trim + cap length so admins cannot store unbounded text.
+      const cleaned = (remarks ?? "").trim().slice(0, 2000);
       setLeads((prev) =>
-        prev.map((l) => (l.id === profileId ? { ...l, admin_remarks: remarks } : l))
+        prev.map((l) => (l.id === profileId ? { ...l, admin_remarks: cleaned } : l))
       );
       setEditingRemarkId(null);
 
       try {
         const { error } = await supabase
           .from("profiles")
-          .update({ admin_remarks: remarks })
+          .update({ admin_remarks: cleaned })
           .eq("id", profileId);
 
         if (error) throw error;
@@ -246,6 +248,7 @@ export function LeadsManagement() {
     },
     []
   );
+
 
   const openWhatsApp = (phone: string | null, name: string, isNudge?: boolean) => {
     if (!phone) {
