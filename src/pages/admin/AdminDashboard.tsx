@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Users, BookOpen, Video, TrendingUp } from "lucide-react";
+import { Users, BookOpen, Video, TrendingUp, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { InviteUserModal } from "@/components/admin/InviteUserModal";
 
 interface Stats {
   totalStudents: number;
