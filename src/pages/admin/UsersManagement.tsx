@@ -148,11 +148,25 @@ export function UsersManagement() {
 
   const updateUser = async () => {
     if (!editingUser) return;
+    // Validate + sanitize admin-provided fields before persisting.
+    const fullName = (editingUser.full_name ?? "").trim().slice(0, 100);
+    const formYear = (editingUser.form_year ?? "").trim().slice(0, 32) || null;
+    const rawPhone = (editingUser.phone ?? "").trim();
+    const cleanedPhone = rawPhone.replace(/[^+\d\s-]/g, "").slice(0, 20);
+    const phoneOk = cleanedPhone === "" || /^[+]?[\d\s-]{7,20}$/.test(cleanedPhone);
+    if (!fullName) {
+      toast({ title: "Invalid name", description: "Full name is required.", variant: "destructive" });
+      return;
+    }
+    if (!phoneOk) {
+      toast({ title: "Invalid phone", description: "Use 7–20 digits, spaces, or dashes.", variant: "destructive" });
+      return;
+    }
     try {
       const { error } = await supabase.from("profiles").update({
-        full_name: editingUser.full_name,
-        form_year: editingUser.form_year,
-        phone: editingUser.phone,
+        full_name: fullName,
+        form_year: formYear,
+        phone: cleanedPhone || null,
       }).eq("id", editingUser.id);
       if (error) throw error;
       toast({ title: "Saved" });
@@ -162,6 +176,7 @@ export function UsersManagement() {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
+
 
   // --- Faceted filtering ---
   const filteredUsers = useMemo(() => {
