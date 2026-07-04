@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useTenant } from "@/contexts/TenantContext";
 
 export function TutorNotes() {
   const { user } = useAuth();
@@ -38,6 +39,7 @@ export function TutorNotes() {
   const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
 
   useEffect(() => {
     fetchData();
@@ -67,6 +69,10 @@ export function TutorNotes() {
 
   const handleUpload = async () => {
     if (!file || !title || !subjectId || !user?.id) return;
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
     setIsUploading(true);
     try {
       const fileExt = file.name.split(".").pop();
@@ -88,6 +94,7 @@ export function TutorNotes() {
         file_size: file.size,
         file_type: file.type,
         uploaded_by: user.id,
+        center_id: currentTenantId,
       });
       if (insertErr) throw insertErr;
 

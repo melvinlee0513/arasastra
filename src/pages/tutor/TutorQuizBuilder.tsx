@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface QuestionDraft {
   question: string;
@@ -30,6 +31,7 @@ export function TutorQuizBuilder() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
 
   const [tutorClasses, setTutorClasses] = useState<{ id: string; title: string }[]>([]);
   const [quizTitle, setQuizTitle] = useState("");
@@ -95,6 +97,10 @@ export function TutorQuizBuilder() {
 
   const handleSubmit = async () => {
     if (!isValid()) return;
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -103,6 +109,7 @@ export function TutorQuizBuilder() {
         .insert({
           title: quizTitle,
           class_id: classId || null,
+          center_id: currentTenantId,
         })
         .select()
         .single();
