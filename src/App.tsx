@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { PWAUpdateBanner } from "@/components/pwa/PWAUpdateBanner";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
+import { TenantProvider } from "@/contexts/TenantContext";
 
 // Layouts (kept eager – small, used on every page)
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -28,6 +29,7 @@ const AccountPage = lazy(() => import("@/pages/AccountPage").then(m => ({ defaul
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const MobileOnboarding = lazy(() => import("@/pages/MobileOnboarding").then(m => ({ default: m.MobileOnboarding })));
+const TenantDashboard = lazy(() => import("@/pages/tenant/TenantDashboard").then(m => ({ default: m.TenantDashboard })));
 
 // Student Dashboard
 const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
@@ -87,6 +89,7 @@ function PageLoader() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <TenantProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -162,6 +165,7 @@ const App = () => (
             {/* Standalone Routes */}
             <Route path="/guardian-pulse" element={<ParentPulse />} />
             <Route path="/mobile-onboarding" element={<MobileOnboarding />} />
+            <Route path="/center" element={<ProtectedRoute requiredRole="authenticated"><TenantDashboard /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
@@ -170,6 +174,7 @@ const App = () => (
         </BrowserRouter>
         </MaintenanceGate>
       </TooltipProvider>
+      </TenantProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
