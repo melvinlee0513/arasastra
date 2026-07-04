@@ -10,29 +10,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * TenantContext — shell-only implementation.
- *
- * The database does not yet carry a `tuition_centers` table or `center_id`
- * columns. Until that migration lands, we expose a single hard-coded default
- * tenant derived from the current organisation. `DataBoundaryGate` and the
- * `.eq('center_id', ...)` guidance are wired up so that when the schema does
- * land, no call-site needs to change.
- */
-
 export type TenantCenter = {
   id: string;
   name: string;
-  logoUrl: string;
-  slug: string;
-};
-
-const DEFAULT_CENTER: TenantCenter = {
-  id: "arasa-default",
-  name: "Arasa A+",
-  slug: "arasa-a-plus",
-  logoUrl:
-    "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?auto=format&fit=crop&w=128&q=80",
+  logoUrl: string | null;
 };
 
 type TenantContextValue = {
@@ -52,7 +33,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const [center, setCenter] = useState<TenantCenter | null>(null);
-  const [availableCenters] = useState<TenantCenter[]>([DEFAULT_CENTER]);
+  const [availableCenters, setAvailableCenters] = useState<TenantCenter[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,9 +41,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authLoading) return;
 
-    // Public / logged-out users get the default tenant shell.
     if (!user) {
-      setCenter(DEFAULT_CENTER);
+      setCenter(null);
+      setAvailableCenters([]);
       setIsSuperAdmin(false);
       setIsLoading(false);
       return;
@@ -72,18 +53,57 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     (async () => {
       setIsLoading(true);
       try {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
+        const [rolesRes, profileRes] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", user.id),
+          supabase
+            .from("profiles")
+            .select("center_id")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
 
         if (cancelled) return;
 
-        // We treat 'admin' as capable of superadmin impersonation until a
-        // dedicated superadmin role exists in the enum.
-        const roleSet = new Set((roles ?? []).map((r) => r.role));
-        setIsSuperAdmin(roleSet.has("admin"));
-        setCenter(DEFAULT_CENTER);
+        const roleSet = new Set((rolesRes.data ?? []).map((r) => r.role));
+        const superAdmin = roleSet.has("admin");
+        setIsSuperAdmin(superAdmin);
+
+        let centers: TenantCenter[] = [];
+        if (superAdmin) {
+          const { data } = await supabase
+            .from("tuition_centers")
+            .select("id, name, logo_url")
+            .order("name");
+          centers = (data ?? []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            logoUrl: c.logo_url,
+          }));
+        }
+
+        const userCenterId = (profileRes.data as { center_id: string | null } | null)
+          ?.center_id ?? null;
+
+        let activeCenter: TenantCenter | null = null;
+        if (userCenterId) {
+          const found = centers.find((c) => c.id === userCenterId);
+          if (found) {
+            activeCenter = found;
+          } else {
+            const { data: c } = await supabase
+              .from("tuition_centers")
+              .select("id, name, logo_url")
+              .eq("id", userCenterId)
+              .maybeSingle();
+            if (c) {
+              activeCenter = { id: c.id, name: c.name, logoUrl: c.logo_url };
+              if (!centers.length) centers = [activeCenter];
+            }
+          }
+        }
+
+        setAvailableCenters(centers);
+        setCenter(activeCenter);
         setError(null);
       } catch (err) {
         if (cancelled) return;
@@ -104,8 +124,6 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     const next = availableCenters.find((c) => c.id === id);
     if (!next) return;
     setCenter(next);
-    // Invalidate every tenant-scoped query so downstream lists refetch
-    // without a hard reload.
     queryClient.invalidateQueries();
   };
 
