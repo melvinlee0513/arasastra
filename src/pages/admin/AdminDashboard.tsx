@@ -57,10 +57,21 @@ export function AdminDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to the Arasa A+ admin portal</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Welcome to the Arasa A+ admin portal</p>
+        </div>
+        <Button
+          onClick={() => setInviteOpen(true)}
+          className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white h-11 px-5 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
+        >
+          <UserPlus className="w-4 h-4 mr-2" /> Invite user
+        </Button>
       </div>
+
+      <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
