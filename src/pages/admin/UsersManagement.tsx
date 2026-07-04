@@ -520,20 +520,42 @@ function AssignmentDialog({
       class_id: newClass, subject_id: klass?.subject_id || null,
     };
     setEnrollments((p) => [...p, optimistic]);
-    const { data, error } = await (supabase as any).from("enrollments").insert({
-      student_id: profileId,
-      class_id: newClass,
-      subject_id: klass?.subject_id || null,
-      is_active: true,
-    }).select().single();
-    if (error) {
+
+    try {
+      const { data, error } = await (supabase as any).from("enrollments").insert({
+        student_id: profileId,
+        class_id: newClass,
+        subject_id: klass?.subject_id || null,
+        is_active: true,
+      }).select().single();
+
+      if (error) throw error;
+
+      setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));
+      setNewClass("");
+      toast({ title: "✅ Enrolled" });
+    } catch (err: any) {
       setEnrollments((p) => p.filter((e) => e.id !== optimistic.id));
-      toast({ title: "Enrollment failed", description: error.message, variant: "destructive" });
-      return;
+
+      const isDuplicateEnrollment =
+        err?.code === '23505' ||
+        (typeof err?.message === 'string' && err.message.includes('enrollments_student_id_class_id_key')) ||
+        (typeof err?.details === 'string' && err.details.includes('enrollments_student_id_class_id_key'));
+
+      if (isDuplicateEnrollment) {
+        toast({
+          title: "Enrollment failed",
+          description: "This student is already enrolled in this specific class time.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Enrollment failed",
+          description: err?.message || "An unexpected error occurred.",
+          variant: "destructive",
+        });
+      }
     }
-    setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));
-    setNewClass("");
-    toast({ title: "✅ Enrolled" });
   };
 
   const removeEnrollment = async (id: string) => {
