@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTenant } from "@/contexts/TenantContext";
 
 const STEPS = ["Class Details", "Media Linking", "Resource Tagging"];
 
@@ -24,6 +25,7 @@ export function TutorUpload() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(0);
@@ -96,6 +98,10 @@ export function TutorUpload() {
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -113,6 +119,7 @@ export function TutorUpload() {
           duration_minutes: parseInt(duration),
           video_url: videoUrl || null,
           is_published: true,
+          center_id: currentTenantId,
         })
         .select()
         .single();
@@ -140,6 +147,7 @@ export function TutorUpload() {
           file_type: pdfFile.type,
           uploaded_by: user.id,
           description: `Tags: ${tags.join(", ")}`,
+          center_id: currentTenantId,
         });
       }
 

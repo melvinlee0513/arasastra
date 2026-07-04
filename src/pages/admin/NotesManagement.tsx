@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface Note {
   id: string;
@@ -66,6 +67,7 @@ export function NotesManagement() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { currentTenantId } = useTenant();
  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Form state
@@ -153,6 +155,10 @@ export function NotesManagement() {
       });
       return;
     }
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -183,6 +189,7 @@ export function NotesManagement() {
           file_size: file.size,
           file_type: file.type,
           uploaded_by: user?.id,
+          center_id: currentTenantId,
         })
         .select()
         .single();

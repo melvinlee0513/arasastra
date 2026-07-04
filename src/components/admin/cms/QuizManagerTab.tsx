@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface Quiz {
   id: string;
@@ -52,6 +53,7 @@ export function QuizManagerTab() {
   const [questions, setQuestions] = useState<QuestionForm[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
 
   useEffect(() => {
     fetchData();
@@ -82,6 +84,10 @@ export function QuizManagerTab() {
   };
 
   const saveQuiz = async () => {
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
     setIsSaving(true);
     try {
       if (editingQuiz) {
@@ -95,6 +101,7 @@ export function QuizManagerTab() {
           title: quizForm.title,
           class_id: quizForm.class_id || null,
           sound_theme: quizForm.sound_theme,
+          center_id: currentTenantId,
         });
         toast({ title: "✅ Quiz created" });
       }

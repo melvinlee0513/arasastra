@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface Deck {
   id: string;
@@ -44,6 +45,7 @@ export function FlashcardDecksTab() {
   const [cards, setCards] = useState<CardForm[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
 
   useEffect(() => { fetchData(); }, []);
 
@@ -71,6 +73,10 @@ export function FlashcardDecksTab() {
   };
 
   const saveDeck = async () => {
+    if (!currentTenantId) {
+      toast({ title: "No organisation", description: "Tenant context missing", variant: "destructive" });
+      return;
+    }
     setIsSaving(true);
     try {
       if (editingDeck) {
@@ -85,6 +91,7 @@ export function FlashcardDecksTab() {
           title: deckForm.title,
           description: deckForm.description || null,
           subject_id: deckForm.subject_id || null,
+          center_id: currentTenantId,
         });
         toast({ title: "✅ Deck created" });
       }
