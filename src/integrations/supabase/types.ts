@@ -514,6 +514,41 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          center_id: string
+          created_at: string
+          email: string
+          id: string
+          role: string
+          status: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          email: string
+          id?: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]

@@ -30,6 +30,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then(m 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const MobileOnboarding = lazy(() => import("@/pages/MobileOnboarding").then(m => ({ default: m.MobileOnboarding })));
 const TenantDashboard = lazy(() => import("@/pages/tenant/TenantDashboard").then(m => ({ default: m.TenantDashboard })));
+const InvitePage = lazy(() => import("@/pages/InvitePage"));
 import { TenantGuard } from "@/components/tenant/TenantGuard";
 
 // Student Dashboard
@@ -103,6 +104,7 @@ const App = () => (
             {/* Auth Pages */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/invite" element={<InvitePage />} />
 
             {/* Public/Student Pages with MainLayout */}
             <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
