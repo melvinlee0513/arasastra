@@ -455,6 +455,7 @@ function AssignmentDialog({
   const [newSubject, setNewSubject] = useState("");
   const [newStandard, setNewStandard] = useState("__any");
   const [newClass, setNewClass] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) { setNewSubject(""); setNewStandard("__any"); setNewClass(""); }
