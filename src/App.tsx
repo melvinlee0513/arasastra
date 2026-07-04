@@ -30,6 +30,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then(m 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const MobileOnboarding = lazy(() => import("@/pages/MobileOnboarding").then(m => ({ default: m.MobileOnboarding })));
 const TenantDashboard = lazy(() => import("@/pages/tenant/TenantDashboard").then(m => ({ default: m.TenantDashboard })));
+import { TenantGuard } from "@/components/tenant/TenantGuard";
 
 // Student Dashboard
 const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
@@ -165,7 +166,7 @@ const App = () => (
             {/* Standalone Routes */}
             <Route path="/guardian-pulse" element={<ParentPulse />} />
             <Route path="/mobile-onboarding" element={<MobileOnboarding />} />
-            <Route path="/center" element={<ProtectedRoute requiredRole="authenticated"><TenantDashboard /></ProtectedRoute>} />
+            <Route path="/center" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><TenantDashboard /></TenantGuard></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
