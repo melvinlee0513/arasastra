@@ -646,8 +646,17 @@ function AssignmentDialog({
                     ))}
                 </SelectContent>
               </Select>
-              <Button onClick={addEnrollment} disabled={!newClass} className="rounded-full">
-                <Plus className="w-4 h-4 mr-1" /> Enroll
+              <Button
+                onClick={addEnrollment}
+                disabled={!newClass || isSubmitting}
+                aria-busy={isSubmitting}
+                className={`rounded-full ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Enrolling…</>
+                ) : (
+                  <><Plus className="w-4 h-4 mr-1" /> Enroll</>
+                )}
               </Button>
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
