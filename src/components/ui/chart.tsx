@@ -67,6 +67,10 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   return (
     <style
+      // SECURITY: This intentionally injects raw CSS. Only trusted, developer-authored
+      // ChartConfig values (theme keys + color strings) are ever interpolated here.
+      // NEVER pass user-controlled input into `config` — doing so introduces XSS via
+      // CSS/HTML injection into <style>.
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
