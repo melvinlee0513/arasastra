@@ -499,7 +499,7 @@ function AssignmentDialog({
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const addEnrollment = async () => {
-    if (!newClass) return;
+    if (!newClass || isSubmitting) return;
     // CRITICAL: enrollments.student_id references profiles.id (NOT auth.users.id).
     // Validate before we even touch the network so the FK can never trip.
     const profileId = user.id;
@@ -520,6 +520,8 @@ function AssignmentDialog({
       id: `tmp-${Date.now()}`, student_id: profileId,
       class_id: newClass, subject_id: klass?.subject_id || null,
     };
+
+    setIsSubmitting(true);
     setEnrollments((p) => [...p, optimistic]);
 
     try {
@@ -532,10 +534,14 @@ function AssignmentDialog({
 
       if (error) throw error;
 
+      // Reconcile optimistic row with DB row; keep modal open on success too so
+      // the admin can queue additional enrollments in one sitting.
       setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));
       setNewClass("");
       toast({ title: "✅ Enrolled" });
     } catch (err: any) {
+      // Rollback: remove ONLY the optimistic row we added; leave the rest of
+      // the grid untouched so it continues to mirror the database.
       setEnrollments((p) => p.filter((e) => e.id !== optimistic.id));
 
       const isDuplicateEnrollment =
@@ -543,21 +549,20 @@ function AssignmentDialog({
         (typeof err?.message === 'string' && err.message.includes('enrollments_student_id_class_id_key')) ||
         (typeof err?.details === 'string' && err.details.includes('enrollments_student_id_class_id_key'));
 
-      if (isDuplicateEnrollment) {
-        toast({
-          title: "Enrollment failed",
-          description: "This student is already enrolled in this specific class time.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Enrollment failed",
-          description: err?.message || "An unexpected error occurred.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Enrollment failed",
+        description: isDuplicateEnrollment
+          ? "Student is already enrolled in this class instance."
+          : "Failed to enroll student. Please try again.",
+        variant: "destructive",
+      });
+      // Do NOT call onClose(): the modal must stay open so the admin can pick
+      // another time slot without losing their selection context.
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
 
   const removeEnrollment = async (id: string) => {
     const prev = enrollments;
