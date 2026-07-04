@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Search, Edit, Shield, User, GraduationCap, ChevronDown, RefreshCw,
-  Settings2, Plus, X, Users, Filter,
+  Settings2, Plus, X, Users, Filter, Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
