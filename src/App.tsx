@@ -104,6 +104,7 @@ const App = () => (
             {/* Auth Pages */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/invite" element={<InvitePage />} />
 
             {/* Public/Student Pages with MainLayout */}
             <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
