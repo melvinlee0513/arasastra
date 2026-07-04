@@ -20,6 +20,7 @@ export function AdminDashboard() {
     totalEnrollments: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     fetchStats();
