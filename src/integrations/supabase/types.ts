@@ -402,6 +402,7 @@ export type Database = {
       flashcard_decks: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -411,6 +412,7 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -420,6 +422,7 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -428,6 +431,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_flashcards_center"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "flashcard_decks_subject_id_fkey"
             columns: ["subject_id"]
@@ -507,6 +517,7 @@ export type Database = {
       notes: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id: string | null
           created_at: string | null
           description: string | null
@@ -523,6 +534,7 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -539,6 +551,7 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id?: string
           class_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -554,6 +567,13 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_notes_center"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notes_class_id_fkey"
             columns: ["class_id"]
@@ -719,6 +739,7 @@ export type Database = {
           admin_remarks: string | null
           assigned_tutor_id: string | null
           avatar_url: string | null
+          center_id: string
           created_at: string | null
           email: string | null
           form_year: string | null
@@ -738,6 +759,7 @@ export type Database = {
           admin_remarks?: string | null
           assigned_tutor_id?: string | null
           avatar_url?: string | null
+          center_id: string
           created_at?: string | null
           email?: string | null
           form_year?: string | null
@@ -757,6 +779,7 @@ export type Database = {
           admin_remarks?: string | null
           assigned_tutor_id?: string | null
           avatar_url?: string | null
+          center_id?: string
           created_at?: string | null
           email?: string | null
           form_year?: string | null
@@ -773,6 +796,13 @@ export type Database = {
           xp_points?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_profiles_center"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_assigned_tutor_id_fkey"
             columns: ["assigned_tutor_id"]
@@ -954,6 +984,7 @@ export type Database = {
       quizzes: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id: string | null
           created_at: string | null
           id: string
@@ -962,6 +993,7 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id?: string | null
           created_at?: string | null
           id?: string
@@ -970,6 +1002,7 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id?: string
           class_id?: string | null
           created_at?: string | null
           id?: string
@@ -977,6 +1010,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_quizzes_center"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quizzes_class_id_fkey"
             columns: ["class_id"]
@@ -1111,6 +1151,27 @@ export type Database = {
           status?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      tuition_centers: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
         }
         Relationships: []
       }
@@ -1261,6 +1322,7 @@ export type Database = {
       video_resources: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id: string | null
           course_module: string | null
           created_at: string
@@ -1281,6 +1343,7 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
           class_id?: string | null
           course_module?: string | null
           created_at?: string
@@ -1301,6 +1364,7 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          center_id?: string
           class_id?: string | null
           course_module?: string | null
           created_at?: string
@@ -1320,6 +1384,13 @@ export type Database = {
           youtube_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_videos_center"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "video_resources_class_id_fkey"
             columns: ["class_id"]
