@@ -48,7 +48,7 @@ type TenantContextValue = {
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
   const [center, setCenter] = useState<TenantCenter | null>(null);
