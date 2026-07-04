@@ -49,19 +49,68 @@ export function DataBoundaryGate({
 }
 
 /**
- * Small helper for query builders: prevents forgetting the tenant filter.
- * Usage:
+ * withTenantFilter — the single helper for enforcing multi-tenant scope.
+ *
+ * SELECT / UPDATE / DELETE builders (they expose `.eq`):
  *   const q = withTenantFilter(supabase.from("classes").select("*"), tenantId);
+ *   await withTenantFilter(supabase.from("classes").update({...}), tenantId);
+ *
+ * INSERT payloads (plain object or array of objects):
+ *   const row  = withTenantFilter({ title: "..." }, tenantId);
+ *   const rows = withTenantFilter([{ title: "a" }, { title: "b" }], tenantId);
+ *   await supabase.from("classes").insert(row);
+ *
+ * The same call-site pattern therefore covers both reads and writes, so no
+ * additional helper is required.
  */
-export function withTenantFilter<T extends { eq: (col: string, val: string) => T }>(
-  query: T,
-  tenantId: string,
+type EqBuilder = { eq: (col: string, val: string) => EqBuilder };
+
+export function withTenantFilter<T extends EqBuilder>(
+  target: T,
+  tenantId: string | null | undefined,
+  column?: string,
+): T;
+export function withTenantFilter<T extends Record<string, unknown>>(
+  target: T,
+  tenantId: string | null | undefined,
+  column?: string,
+): T & Record<string, string>;
+export function withTenantFilter<T extends Record<string, unknown>>(
+  target: T[],
+  tenantId: string | null | undefined,
+  column?: string,
+): Array<T & Record<string, string>>;
+export function withTenantFilter(
+  target: unknown,
+  tenantId: string | null | undefined,
   column = "center_id",
-): T {
+): unknown {
   if (!tenantId) {
     throw new Error(
-      "[DataBoundaryGate] Refusing to run a tenant-scoped query without a tenantId",
+      "[withTenantFilter] Refusing to run a tenant-scoped operation without a tenantId",
     );
   }
-  return query.eq(column, tenantId);
+
+  // Query builder path (SELECT / UPDATE / DELETE): has an `.eq` method.
+  if (
+    target &&
+    typeof target === "object" &&
+    typeof (target as EqBuilder).eq === "function"
+  ) {
+    return (target as EqBuilder).eq(column, tenantId);
+  }
+
+  // INSERT payload — array of rows.
+  if (Array.isArray(target)) {
+    return target.map((row) => ({ ...row, [column]: tenantId }));
+  }
+
+  // INSERT / UPDATE payload — single row object.
+  if (target && typeof target === "object") {
+    return { ...(target as Record<string, unknown>), [column]: tenantId };
+  }
+
+  throw new Error(
+    "[withTenantFilter] Unsupported target — expected a Supabase query builder or a payload object/array",
+  );
 }
