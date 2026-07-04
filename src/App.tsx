@@ -112,51 +112,52 @@ const App = () => (
             <Route path="/account" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><AccountPage /></MainLayout></ProtectedRoute>} />
 
             {/* Student Dashboard Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><StudentDashboard /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/replays" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><QuizList /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/learning" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/learning/replays" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/learning/quizzes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/learning/flashcards" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><LearningHub /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/notes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><NotesBank /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><Achievements /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/learning/flashcards/play" element={<ProtectedRoute requiredRole="authenticated"><FlashcardSwipeEngine /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentDashboard /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/replays" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><QuizList /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/learning" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/learning/replays" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/learning/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/learning/flashcards" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/notes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><NotesBank /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/learning/flashcards/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FlashcardSwipeEngine /></TenantGuard></ProtectedRoute>} />
 
             {/* Quiz Routes */}
-            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><QuizLobby /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><QuizPlay /></ProtectedRoute>} />
-            <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><MyClasses /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><DashboardLayout><ClassRoom /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><QuizLobby /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassRoom /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
             {/* Quiz Routes */}
-            <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><QuizPlay /></ProtectedRoute>} />
+            <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
 
             {/* Tutor Routes */}
-            <Route path="/tutor" element={<ProtectedRoute tutorOnly><TutorLayout><TutorDashboard /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/classes" element={<ProtectedRoute tutorOnly><TutorLayout><TutorClasses /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TutorLayout><TutorStudents /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TutorLayout><TutorGrading /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TutorLayout><TutorNotes /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/upload" element={<ProtectedRoute tutorOnly><TutorLayout><TutorUpload /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/videos" element={<ProtectedRoute tutorOnly><TutorLayout><TutorVideos /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/quizzes/new" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuizBuilder /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TutorLayout><TutorQuestions /></TutorLayout></ProtectedRoute>} />
-            <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TutorLayout><QuizAnalytics /></TutorLayout></ProtectedRoute>} />
+            <Route path="/tutor" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorDashboard /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClasses /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/upload" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorUpload /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/videos" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorVideos /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/quizzes/new" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuizBuilder /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuestions /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><QuizAnalytics /></TutorLayout></TenantGuard></ProtectedRoute>} />
 
             {/* Admin Routes */}
-            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/leads" element={<ProtectedRoute adminOnly><AdminLayout><LeadsManagement /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/content" element={<ProtectedRoute adminOnly><AdminLayout><ContentCMS /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminLayout><UsersManagement /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/schedule" element={<ProtectedRoute adminOnly><AdminLayout><ScheduleManager /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/notes" element={<ProtectedRoute adminOnly><AdminLayout><NotesManagement /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/payments" element={<ProtectedRoute adminOnly><AdminLayout><PaymentVerification /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/analytics" element={<ProtectedRoute adminOnly><AdminLayout><AnalyticsDashboard /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/grading" element={<ProtectedRoute adminOnly><AdminLayout><GradingPage /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/quiz-analytics" element={<ProtectedRoute adminOnly><AdminLayout><QuizAnalytics /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>} />
-            <Route path="/admin/videos" element={<ProtectedRoute adminOnly><AdminLayout><TutorVideos /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AdminDashboard /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/leads" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><LeadsManagement /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/content" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ContentCMS /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><UsersManagement /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/schedule" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ScheduleManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/notes" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><NotesManagement /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/payments" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><PaymentVerification /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/analytics" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AnalyticsDashboard /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/grading" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><GradingPage /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/quiz-analytics" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><QuizAnalytics /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AdminSettings /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/videos" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorVideos /></AdminLayout></TenantGuard></ProtectedRoute>} />
+
 
             {/* Guardian Routes */}
             <Route path="/guardian" element={<ProtectedRoute requiredRole="authenticated"><GuardianLayout><ParentOverview /></GuardianLayout></ProtectedRoute>} />

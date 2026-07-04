@@ -140,7 +140,29 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     [center, availableCenters, isSuperAdmin, isLoading, error],
   );
 
-  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+  // Block downstream renders while we resolve the tenant for an authed user,
+  // so screens never flash a `currentTenantId === null` state mid-request.
+  const shouldGate = (authLoading || (!!user && isLoading));
+
+  return (
+    <TenantContext.Provider value={value}>
+      {shouldGate ? <TenantResolvingScreen /> : children}
+    </TenantContext.Provider>
+  );
+}
+
+function TenantResolvingScreen() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sky-50 p-8">
+      <div className="flex flex-col items-center gap-4 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div
+          className="h-10 w-10 rounded-full border-[3px] border-slate-200 animate-spin"
+          style={{ borderTopColor: "#0052FF" }}
+        />
+        <p className="text-sm text-slate-500">Loading your organisation…</p>
+      </div>
+    </div>
+  );
 }
 
 export function useTenant() {
