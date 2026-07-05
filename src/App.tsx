@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
-import { PWAUpdateBanner } from "@/components/pwa/PWAUpdateBanner";
+import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 import { TenantProvider } from "@/contexts/TenantContext";
 
@@ -99,7 +99,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PWAInstallPrompt />
-        <PWAUpdateBanner />
+        <AppUpdatePrompt />
         <MaintenanceGate>
         <BrowserRouter>
           <Suspense fallback={<PageLoader />}>
