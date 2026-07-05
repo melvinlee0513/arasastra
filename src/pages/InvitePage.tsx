@@ -65,6 +65,8 @@ export default function InvitePage() {
           data: {
             invite_token: token,
             full_name: fullName.trim() || invitation.email,
+            role: invitation.role,
+            center_id: invitation.center_id,
           },
         },
       });
