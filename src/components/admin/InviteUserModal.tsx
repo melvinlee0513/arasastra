@@ -41,6 +41,20 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
 
     setSubmitting(true);
     try {
+      // Guard against duplicates: block a second pending invite for same email in this centre.
+      const { data: existing } = await supabase
+        .from("invitations")
+        .select("id")
+        .eq("email", trimmed)
+        .eq("center_id", currentTenantId)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existing) {
+        toast.error("A pending invitation already exists for this email in this organization.");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("invitations")
         .insert({
@@ -52,13 +66,20 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Postgres unique_violation
+        if ((error as { code?: string }).code === "23505") {
+          toast.error("A pending invitation already exists for this email in this organization.");
+          return;
+        }
+        throw error;
+      }
 
-      const link = `${window.location.origin}/invite?token=${data.id}`;
+      const link = `https://arasaplus.info/invite?token=${data.id}`;
 
       toast.success("Invitation created", {
         description: link,
-        duration: 10000,
+        duration: 15000,
         action: {
           label: "Copy link",
           onClick: () => {
