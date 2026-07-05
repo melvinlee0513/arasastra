@@ -81,6 +81,8 @@ export function UsersManagement() {
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
   useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId]);
+  useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
+
 
   const fetchAll = async () => {
     setIsLoading(true);
