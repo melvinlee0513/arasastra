@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Search, Edit, Shield, User, GraduationCap, ChevronDown, RefreshCw,
-  Settings2, Plus, X, Users, Filter, Loader2,
+  Settings2, Plus, X, Users, Filter, Loader2, UserPlus, GraduationCap as GradCap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
+import { InviteUserModal } from "@/components/admin/InviteUserModal";
+import { cn } from "@/lib/utils";
+
 
 interface UserProfile {
   id: string;
