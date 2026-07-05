@@ -22,12 +22,21 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [params] = useSearchParams();
+  const nextParam = params.get("next");
+  // Only accept a same-origin relative path to avoid open-redirect abuse.
+  const safeNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, role, isLoading: authLoading, signIn } = useAuth();
 
   useEffect(() => {
     if (user && !authLoading && role) {
+      if (safeNext) {
+        window.location.href = safeNext;
+        return;
+      }
       if (role === "admin" || role === "superadmin") {
         navigate("/admin");
       } else if (role === "tutor") {
@@ -36,7 +45,7 @@ export function AuthPage() {
         navigate("/dashboard");
       }
     }
-  }, [user, role, authLoading, navigate]);
+  }, [user, role, authLoading, navigate, safeNext]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
