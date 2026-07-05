@@ -34,12 +34,9 @@ export default function InvitePage() {
         setLoading(false);
         return;
       }
-      const { data, error: qErr } = await supabase
-        .from("invitations")
-        .select("id, email, role, center_id, status")
-        .eq("id", token)
-        .eq("status", "pending")
-        .maybeSingle();
+      const { data: rows, error: qErr } = await supabase
+        .rpc("get_invitation_by_token", { _token: token });
+      const data = Array.isArray(rows) ? rows[0] : rows;
 
       if (qErr || !data) {
         setError("Invalid or Expired Invitation");
