@@ -256,7 +256,7 @@ export function UsersManagement() {
         <div className="inline-flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-md border border-white/40 p-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           {([
             { id: "student", label: "Students", icon: User },
-            { id: "tutor", label: "Tutors", icon: GradCap },
+            { id: "tutor", label: "Tutors", icon: GraduationCap },
           ] as const).map((t) => {
             const active = activeTab === t.id;
             const Icon = t.icon;
