@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef<string | null>(null);
 
