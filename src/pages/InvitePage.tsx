@@ -72,8 +72,8 @@ export default function InvitePage() {
         },
       });
       if (signUpErr) throw signUpErr;
-      toast.success("Account created", { description: "Check your email to confirm and sign in." });
-      navigate("/auth");
+      toast.success("Welcome aboard", { description: "Your account is ready." });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Signup failed";
       toast.error(message);
