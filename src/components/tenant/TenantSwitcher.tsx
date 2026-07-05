@@ -1,4 +1,5 @@
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { useState } from "react";
+import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { CreateTenantModal } from "@/components/admin/CreateTenantModal";
 
 /**
  * TenantSwitcher — visible to superadmins only. Impersonates another tuition
@@ -18,8 +20,10 @@ import { cn } from "@/lib/utils";
  */
 export function TenantSwitcher({ className }: { className?: string }) {
   const { center, availableCenters, isSuperAdmin, setCurrentTenantId } = useTenant();
+  const [createOpen, setCreateOpen] = useState(false);
 
   if (!isSuperAdmin || !center) return null;
+
 
   return (
     <DropdownMenu>
