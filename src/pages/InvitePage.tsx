@@ -38,12 +38,11 @@ export default function InvitePage() {
         .from("invitations")
         .select("id, email, role, center_id, status")
         .eq("id", token)
+        .eq("status", "pending")
         .maybeSingle();
 
       if (qErr || !data) {
-        setError("We couldn't find this invitation. It may have been revoked.");
-      } else if (data.status !== "pending") {
-        setError("This invitation has already been used or is no longer valid.");
+        setError("Invalid or Expired Invitation");
       } else {
         setInvitation(data as Invitation);
       }
