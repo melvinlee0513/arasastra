@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Search, Edit, Shield, User, GraduationCap, ChevronDown, RefreshCw,
-  Settings2, Plus, X, Users, Filter, Loader2,
+  Settings2, Plus, X, Users, Filter, Loader2, UserPlus,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
+import { InviteUserModal } from "@/components/admin/InviteUserModal";
+import { cn } from "@/lib/utils";
+
 
 interface UserProfile {
   id: string;
@@ -50,6 +54,7 @@ const FORM_YEARS = ["Year 5","Year 6","Form 1","Form 2","Form 3","Form 4","Form 
 
 export function UsersManagement() {
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
@@ -58,6 +63,7 @@ export function UsersManagement() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<{ id: string; user_id: string }[]>([]);
 
+  const [activeTab, setActiveTab] = useState<"tutor" | "student">("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [standardFilter, setStandardFilter] = useState("all");
@@ -70,16 +76,19 @@ export function UsersManagement() {
 
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId]);
+  useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
+
 
   const fetchAll = async () => {
     setIsLoading(true);
     try {
       const [profilesRes, rolesRes, subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("*").eq("center_id", currentTenantId).order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
         (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
         (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
@@ -221,19 +230,55 @@ export function UsersManagement() {
       <div className="p-5 md:p-8 space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-2xl bg-[#0052FF]/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#0052FF]" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">User Management</h1>
-              <p className="text-sm text-slate-500">Manage roles, assignments, and class enrollments.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-[#0F172A]">User Management</h1>
+              <p className="text-sm text-slate-500">Manage tutors and students for your organisation.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing} className="rounded-full">
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing} className="rounded-full">
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => setInviteOpen(true)}
+              className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
+            >
+              <UserPlus className="w-4 h-4 mr-2" /> Invite user
+            </Button>
+          </div>
         </div>
+
+        {/* Tabs: Tutors / Students */}
+        <div className="inline-flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-md border border-white/40 p-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          {([
+            { id: "student", label: "Students", icon: User },
+            { id: "tutor", label: "Tutors", icon: GraduationCap },
+          ] as const).map((t) => {
+            const active = activeTab === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-5 h-10 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-[#0052FF] text-white shadow-sm"
+                    : "text-[#0F172A] hover:bg-slate-100",
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
 
         {/* Faceted filter bar */}
         <Card className="p-4 rounded-3xl border-slate-200 shadow-sm bg-white space-y-3">
@@ -248,15 +293,6 @@ export function UsersManagement() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="rounded-full w-[140px]"><SelectValue placeholder="Role" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={standardFilter} onValueChange={setStandardFilter}>
                 <SelectTrigger className="rounded-full w-[140px]"><SelectValue placeholder="Standard" /></SelectTrigger>
                 <SelectContent>
@@ -446,6 +482,9 @@ export function UsersManagement() {
         setAssignments={setAssignments}
         setEnrollments={setEnrollments}
       />
+
+      {/* Invite user modal */}
+      <InviteUserModal open={inviteOpen} onClose={() => { setInviteOpen(false); fetchAll(); }} />
     </div>
   );
 }
