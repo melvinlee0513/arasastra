@@ -79,6 +79,7 @@ const LeadsManagement = lazy(() => import("@/pages/admin/LeadsManagement").then(
 const GradingPage = lazy(() => import("@/pages/admin/GradingPage").then(m => ({ default: m.GradingPage })));
 const QuizAnalytics = lazy(() => import("@/pages/admin/QuizAnalytics").then(m => ({ default: m.QuizAnalytics })));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
+const CurriculumManager = lazy(() => import("@/pages/admin/CurriculumManager"));
 
 const queryClient = new QueryClient();
 
@@ -163,6 +164,8 @@ const App = () => (
             <Route path="/admin/quiz-analytics" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><QuizAnalytics /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AdminSettings /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/videos" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorVideos /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/curriculum" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><CurriculumManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/curriculum" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><CurriculumManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
 
 
             {/* Guardian Routes */}
