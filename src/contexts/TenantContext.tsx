@@ -65,7 +65,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         const roleSet = new Set((rolesRes.data ?? []).map((r) => r.role));
-        const superAdmin = roleSet.has("admin");
+        const superAdmin = roleSet.has("superadmin");
         setIsSuperAdmin(superAdmin);
 
         let centers: TenantCenter[] = [];
