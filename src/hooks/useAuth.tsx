@@ -96,8 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userId)
-          .single(),
+          .eq("user_id", userId),
       ]);
 
       if (profileRes.data) {
@@ -105,7 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (roleRes.data) {
-        setRole(roleRes.data.role as UserRole);
+        const rolesList = (roleRes.data as { role: UserRole }[]).map((r) => r.role);
+        setRoles(rolesList);
+        // Priority: superadmin > admin > tutor > student
+        const priority: UserRole[] = ["superadmin", "admin", "tutor", "student"];
+        const primary = priority.find((p) => rolesList.includes(p)) ?? null;
+        setRole(primary);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
