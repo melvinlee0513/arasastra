@@ -482,6 +482,9 @@ export function UsersManagement() {
         setAssignments={setAssignments}
         setEnrollments={setEnrollments}
       />
+
+      {/* Invite user modal */}
+      <InviteUserModal open={inviteOpen} onClose={() => { setInviteOpen(false); fetchAll(); }} />
     </div>
   );
 }
