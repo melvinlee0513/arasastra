@@ -24,6 +24,7 @@ type TenantContextValue = {
   isSuperAdmin: boolean;
   isLoading: boolean;
   error: string | null;
+  refreshCenters: () => Promise<void>;
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
@@ -127,6 +128,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
+  const refreshCenters = async () => {
+    if (!isSuperAdmin) return;
+    const { data } = await supabase
+      .from("tuition_centers")
+      .select("id, name, logo_url")
+      .order("name");
+    const centers = (data ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      logoUrl: c.logo_url,
+    }));
+    setAvailableCenters(centers);
+    queryClient.invalidateQueries();
+  };
+
   const value = useMemo<TenantContextValue>(
     () => ({
       center,
@@ -136,6 +152,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       isSuperAdmin,
       isLoading,
       error,
+      refreshCenters,
     }),
     [center, availableCenters, isSuperAdmin, isLoading, error],
   );
