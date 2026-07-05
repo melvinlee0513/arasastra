@@ -91,22 +91,22 @@ export default function InvitePage() {
             <p className="text-slate-500">Verifying invitation…</p>
           </div>
         ) : error ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col items-center gap-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-red-100">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-6 text-center shadow-xl border border-white/20">
             <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
               <ShieldAlert className="w-8 h-8 text-red-500" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold text-[#0F172A]">Invitation Unavailable</h1>
+              <h1 className="text-2xl font-semibold text-[#0F172A]">Invalid or Expired Invitation</h1>
               <p className="text-slate-500">{error}</p>
             </div>
-            <Link to="/auth">
+            <Link to="/">
               <Button className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]">
-                Return to Login
+                Return to Home
               </Button>
             </Link>
           </div>
         ) : invitation ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col gap-6 shadow-xl border border-white/20">
             <div className="flex flex-col gap-2">
               <span className="inline-flex self-start rounded-full bg-[#0052FF]/10 text-[#0052FF] text-xs font-medium px-3 py-1 uppercase tracking-wide">
                 {invitation.role} invitation
