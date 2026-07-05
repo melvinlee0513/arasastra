@@ -82,7 +82,22 @@ export function TenantSwitcher({ className }: { className?: string }) {
             </DropdownMenuItem>
           );
         })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            setCreateOpen(true);
+          }}
+          className="flex items-center gap-2 rounded-full p-2 my-0.5 cursor-pointer text-[#0052FF] focus:bg-[#0052FF]/10 focus:text-[#0052FF]"
+        >
+          <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-[#0052FF]/10">
+            <Plus className="h-4 w-4 text-[#0052FF]" />
+          </div>
+          <span className="text-sm font-medium">New tenant</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
+      <CreateTenantModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </DropdownMenu>
   );
 }
+
