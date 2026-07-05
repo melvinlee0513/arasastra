@@ -38,12 +38,11 @@ export default function InvitePage() {
         .from("invitations")
         .select("id, email, role, center_id, status")
         .eq("id", token)
+        .eq("status", "pending")
         .maybeSingle();
 
       if (qErr || !data) {
-        setError("We couldn't find this invitation. It may have been revoked.");
-      } else if (data.status !== "pending") {
-        setError("This invitation has already been used or is no longer valid.");
+        setError("Invalid or Expired Invitation");
       } else {
         setInvitation(data as Invitation);
       }
@@ -73,8 +72,8 @@ export default function InvitePage() {
         },
       });
       if (signUpErr) throw signUpErr;
-      toast.success("Account created", { description: "Check your email to confirm and sign in." });
-      navigate("/auth");
+      toast.success("Welcome aboard", { description: "Your account is ready." });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Signup failed";
       toast.error(message);
@@ -84,30 +83,30 @@ export default function InvitePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         {loading ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-4 shadow-xl border border-white/20">
             <Loader2 className="w-8 h-8 animate-spin text-[#0052FF]" />
             <p className="text-slate-500">Verifying invitation…</p>
           </div>
         ) : error ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col items-center gap-6 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-red-100">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-6 text-center shadow-xl border border-white/20">
             <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
               <ShieldAlert className="w-8 h-8 text-red-500" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold text-[#0F172A]">Invitation Unavailable</h1>
+              <h1 className="text-2xl font-semibold text-[#0F172A]">Invalid or Expired Invitation</h1>
               <p className="text-slate-500">{error}</p>
             </div>
-            <Link to="/auth">
+            <Link to="/">
               <Button className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]">
-                Return to Login
+                Return to Home
               </Button>
             </Link>
           </div>
         ) : invitation ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col gap-6 shadow-xl border border-white/20">
             <div className="flex flex-col gap-2">
               <span className="inline-flex self-start rounded-full bg-[#0052FF]/10 text-[#0052FF] text-xs font-medium px-3 py-1 uppercase tracking-wide">
                 {invitation.role} invitation
@@ -167,7 +166,7 @@ export default function InvitePage() {
                 disabled={submitting}
                 className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
               >
-                {submitting ? "Creating account…" : "Accept invitation & sign up"}
+                {submitting ? "Creating account…" : "Complete Registration"}
               </Button>
             </form>
           </div>
