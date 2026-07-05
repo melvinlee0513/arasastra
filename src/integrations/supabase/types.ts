@@ -193,6 +193,7 @@ export type Database = {
       }
       classes: {
         Row: {
+          center_id: string | null
           class_tag: string | null
           cohort_label: string | null
           created_at: string | null
@@ -211,6 +212,7 @@ export type Database = {
           zoom_link: string | null
         }
         Insert: {
+          center_id?: string | null
           class_tag?: string | null
           cohort_label?: string | null
           created_at?: string | null
@@ -229,6 +231,7 @@ export type Database = {
           zoom_link?: string | null
         }
         Update: {
+          center_id?: string | null
           class_tag?: string | null
           cohort_label?: string | null
           created_at?: string | null
@@ -247,6 +250,13 @@ export type Database = {
           zoom_link?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "classes_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "classes_standard_id_fkey"
             columns: ["standard_id"]
@@ -1087,6 +1097,7 @@ export type Database = {
       }
       subjects: {
         Row: {
+          center_id: string | null
           color: string | null
           created_at: string | null
           description: string | null
@@ -1096,6 +1107,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          center_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
@@ -1105,6 +1117,7 @@ export type Database = {
           name: string
         }
         Update: {
+          center_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
@@ -1113,7 +1126,15 @@ export type Database = {
           is_active?: boolean | null
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subjects_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       submissions: {
         Row: {
