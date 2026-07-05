@@ -52,6 +52,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </kbd>
           </Button>
           <StreakWidget />
+          <TenantSwitcher />
           <NotificationBell />
         </div>
       )}
