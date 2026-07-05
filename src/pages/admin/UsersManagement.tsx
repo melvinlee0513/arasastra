@@ -54,6 +54,7 @@ const FORM_YEARS = ["Year 5","Year 6","Form 1","Form 2","Form 3","Form 4","Form 
 
 export function UsersManagement() {
   const { toast } = useToast();
+  const { currentTenantId } = useTenant();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
@@ -62,6 +63,7 @@ export function UsersManagement() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<{ id: string; user_id: string }[]>([]);
 
+  const [activeTab, setActiveTab] = useState<"tutor" | "student">("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [standardFilter, setStandardFilter] = useState("all");
@@ -74,16 +76,17 @@ export function UsersManagement() {
 
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId]);
 
   const fetchAll = async () => {
     setIsLoading(true);
     try {
       const [profilesRes, rolesRes, subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("*").eq("center_id", currentTenantId).order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
         (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
         (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
