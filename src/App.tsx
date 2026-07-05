@@ -44,6 +44,7 @@ const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m 
 const FlashcardSwipeEngine = lazy(() => import("@/pages/dashboard/FlashcardSwipeEngine").then(m => ({ default: m.FlashcardSwipeEngine })));
 const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
 const ClassRoom = lazy(() => import("@/pages/dashboard/ClassRoom").then(m => ({ default: m.ClassRoom })));
+const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
 // Quiz
 const QuizPlay = lazy(() => import("@/pages/quiz/QuizPlay").then(m => ({ default: m.QuizPlay })));
