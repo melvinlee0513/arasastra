@@ -143,7 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRole(null);
+    setRoles([]);
   };
+
+  const isSuperAdmin = role === "superadmin" || roles.includes("superadmin");
+  const isAdmin = isSuperAdmin || role === "admin" || roles.includes("admin");
 
   return (
     <AuthContext.Provider
@@ -152,8 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         role,
+        roles,
         isLoading,
-        isAdmin: role === "admin",
+        isAdmin,
+        isSuperAdmin,
         isTutor: role === "tutor",
         signIn,
         signUp,
@@ -170,8 +176,10 @@ const defaultAuthContext: AuthContextType = {
   session: null,
   profile: null,
   role: null,
+  roles: [],
   isLoading: true,
   isAdmin: false,
+  isSuperAdmin: false,
   isTutor: false,
   signIn: async () => ({ error: new Error("AuthProvider not mounted") }),
   signUp: async () => ({ error: new Error("AuthProvider not mounted") }),
