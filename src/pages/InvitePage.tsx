@@ -86,7 +86,7 @@ export default function InvitePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         {loading ? (
-          <div className="rounded-3xl bg-white/80 backdrop-blur-md p-8 flex flex-col items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-4 shadow-xl border border-white/20">
             <Loader2 className="w-8 h-8 animate-spin text-[#0052FF]" />
             <p className="text-slate-500">Verifying invitation…</p>
           </div>
