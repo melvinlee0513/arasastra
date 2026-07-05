@@ -125,6 +125,7 @@ const App = () => (
             <Route path="/dashboard/learning/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/learning/flashcards" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/notes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><NotesBank /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/resources" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ResourceHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/learning/flashcards/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FlashcardSwipeEngine /></TenantGuard></ProtectedRoute>} />
 
