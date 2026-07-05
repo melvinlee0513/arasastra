@@ -230,19 +230,55 @@ export function UsersManagement() {
       <div className="p-5 md:p-8 space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-2xl bg-[#0052FF]/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#0052FF]" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">User Management</h1>
-              <p className="text-sm text-slate-500">Manage roles, assignments, and class enrollments.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-[#0F172A]">User Management</h1>
+              <p className="text-sm text-slate-500">Manage tutors and students for your organisation.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing} className="rounded-full">
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing} className="rounded-full">
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => setInviteOpen(true)}
+              className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
+            >
+              <UserPlus className="w-4 h-4 mr-2" /> Invite user
+            </Button>
+          </div>
         </div>
+
+        {/* Tabs: Tutors / Students */}
+        <div className="inline-flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-md border border-white/40 p-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          {([
+            { id: "student", label: "Students", icon: User },
+            { id: "tutor", label: "Tutors", icon: GradCap },
+          ] as const).map((t) => {
+            const active = activeTab === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-5 h-10 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-[#0052FF] text-white shadow-sm"
+                    : "text-[#0F172A] hover:bg-slate-100",
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
 
         {/* Faceted filter bar */}
         <Card className="p-4 rounded-3xl border-slate-200 shadow-sm bg-white space-y-3">
