@@ -2,15 +2,17 @@ import { createContext, useContext, useEffect, useState, useRef, ReactNode } fro
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type UserRole = "admin" | "student" | "tutor";
+type UserRole = "admin" | "student" | "tutor" | "superadmin";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   role: UserRole | null;
+  roles: UserRole[];
   isLoading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isTutor: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef<string | null>(null);
 
@@ -93,8 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userId)
-          .single(),
+          .eq("user_id", userId),
       ]);
 
       if (profileRes.data) {
@@ -102,7 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (roleRes.data) {
-        setRole(roleRes.data.role as UserRole);
+        const rolesList = (roleRes.data as { role: UserRole }[]).map((r) => r.role);
+        setRoles(rolesList);
+        // Priority: superadmin > admin > tutor > student
+        const priority: UserRole[] = ["superadmin", "admin", "tutor", "student"];
+        const primary = priority.find((p) => rolesList.includes(p)) ?? null;
+        setRole(primary);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -136,7 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setRole(null);
+    setRoles([]);
   };
+
+  const isSuperAdmin = role === "superadmin" || roles.includes("superadmin");
+  const isAdmin = isSuperAdmin || role === "admin" || roles.includes("admin");
 
   return (
     <AuthContext.Provider
@@ -145,8 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         role,
+        roles,
         isLoading,
-        isAdmin: role === "admin",
+        isAdmin,
+        isSuperAdmin,
         isTutor: role === "tutor",
         signIn,
         signUp,
@@ -163,8 +176,10 @@ const defaultAuthContext: AuthContextType = {
   session: null,
   profile: null,
   role: null,
+  roles: [],
   isLoading: true,
   isAdmin: false,
+  isSuperAdmin: false,
   isTutor: false,
   signIn: async () => ({ error: new Error("AuthProvider not mounted") }),
   signUp: async () => ({ error: new Error("AuthProvider not mounted") }),

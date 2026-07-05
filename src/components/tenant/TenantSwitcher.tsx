@@ -44,31 +44,40 @@ export function TenantSwitcher({ className }: { className?: string }) {
           Impersonate centre
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {availableCenters.map((c) => (
-          <DropdownMenuItem
-            key={c.id}
-            onSelect={() => setCurrentTenantId(c.id)}
-            className="flex items-center gap-2 rounded-xl p-2"
-          >
-            {c.logoUrl ? (
-              <img
-                src={c.logoUrl}
-                alt=""
-                className="h-8 w-8 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                <Building2 className="h-4 w-4 text-slate-400" />
+        {availableCenters.map((c) => {
+          const active = c.id === center.id;
+          return (
+            <DropdownMenuItem
+              key={c.id}
+              onSelect={() => setCurrentTenantId(c.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-full p-2 my-0.5 cursor-pointer",
+                active && "bg-[#0052FF]/10 text-[#0052FF] focus:bg-[#0052FF]/15",
+              )}
+            >
+              {c.logoUrl ? (
+                <img
+                  src={c.logoUrl}
+                  alt=""
+                  className="h-8 w-8 rounded-lg object-cover"
+                />
+              ) : (
+                <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center",
+                  active ? "bg-[#0052FF]/15" : "bg-slate-100",
+                )}>
+                  <Building2 className={cn("h-4 w-4", active ? "text-[#0052FF]" : "text-slate-400")} />
+                </div>
+              )}
+              <div className="flex-1 text-sm">
+                <div className={cn("font-medium", active ? "text-[#0052FF]" : "text-slate-900")}>
+                  {c.name}
+                </div>
               </div>
-            )}
-            <div className="flex-1 text-sm">
-              <div className="font-medium text-slate-900">{c.name}</div>
-            </div>
-            {c.id === center.id && (
-              <Check className="h-4 w-4 text-[#0052FF]" />
-            )}
-          </DropdownMenuItem>
-        ))}
+              {active && <Check className="h-4 w-4 text-[#0052FF]" />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

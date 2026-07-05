@@ -3,6 +3,7 @@ import { DesktopSidebar } from "./DesktopSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { NotificationBell } from "./NotificationBell";
 import { CommandSearch } from "./CommandSearch";
+import { TenantSwitcher } from "@/components/tenant/TenantSwitcher";
 import { StreakWidget } from "@/components/dashboard/StreakWidget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +52,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </kbd>
           </Button>
           <StreakWidget />
+          <TenantSwitcher />
           <NotificationBell />
         </div>
       )}

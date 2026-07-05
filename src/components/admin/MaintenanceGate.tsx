@@ -34,9 +34,9 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", session.user.id)
-          .single();
-        setIsAdmin(roleData?.role === "admin");
+          .eq("user_id", session.user.id);
+        const rolesList = (roleData ?? []).map((r: { role: string }) => r.role);
+        setIsAdmin(rolesList.includes("admin") || rolesList.includes("superadmin"));
       }
     } catch {
       // If check fails, allow access
