@@ -24,6 +24,7 @@ type TenantContextValue = {
   isSuperAdmin: boolean;
   isLoading: boolean;
   error: string | null;
+  refreshCenters: () => Promise<void>;
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
