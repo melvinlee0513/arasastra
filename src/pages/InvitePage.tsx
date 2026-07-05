@@ -166,7 +166,7 @@ export default function InvitePage() {
                 disabled={submitting}
                 className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
               >
-                {submitting ? "Creating account…" : "Accept invitation & sign up"}
+                {submitting ? "Creating account…" : "Complete Registration"}
               </Button>
             </form>
           </div>
