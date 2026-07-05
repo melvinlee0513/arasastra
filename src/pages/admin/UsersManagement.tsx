@@ -293,15 +293,6 @@ export function UsersManagement() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="rounded-full w-[140px]"><SelectValue placeholder="Role" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={standardFilter} onValueChange={setStandardFilter}>
                 <SelectTrigger className="rounded-full w-[140px]"><SelectValue placeholder="Standard" /></SelectTrigger>
                 <SelectContent>
