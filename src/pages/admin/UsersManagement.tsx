@@ -307,7 +307,7 @@ export function UsersManagement() {
           {([
             { id: "student", label: "Students", icon: User },
             { id: "tutor", label: "Tutors", icon: GraduationCap },
-            { id: "admin", label: "Admins", icon: Shield },
+            ...(isSuperadmin ? [{ id: "admin", label: "Admins", icon: Shield }] as const : []),
           ] as const).map((t) => {
             const active = activeTab === t.id;
             const Icon = t.icon;
