@@ -37,6 +37,7 @@ interface UserProfile {
   avatar_url: string | null;
   form_year: string | null;
   phone: string | null;
+  center_id: string | null;
   created_at: string;
   role?: "admin" | "superadmin" | "tutor" | "student";
 }
