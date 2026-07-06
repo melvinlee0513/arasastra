@@ -85,7 +85,10 @@ export function UsersManagement() {
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId, activeTab]);
+  useEffect(() => {
+    if (isSuperadmin || currentTenantId) fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTenantId, activeTab, isSuperadmin]);
   useEffect(() => { setRoleFilter(activeTab === "admin" ? "all" : activeTab); }, [activeTab]);
 
 
