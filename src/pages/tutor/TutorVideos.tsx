@@ -1051,15 +1051,40 @@ export function TutorVideos() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
-                <FileVideo className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="font-semibold text-slate-700">No videos match your filters</p>
-                <p className="text-sm text-slate-500 mb-5">Try clearing filters or add a new video.</p>
-                <Button onClick={() => setTab("add")} className="rounded-full">
-                  <UploadCloud className="w-4 h-4" />
-                  Add a video
-                </Button>
-              </div>
+              (videos?.length ?? 0) === 0 ? (
+                <div className="bg-white rounded-3xl border border-slate-200 py-16 text-center px-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto mb-4 flex items-center justify-center">
+                    <FileVideo className="w-7 h-7 text-primary" />
+                  </div>
+                  <p className="font-semibold text-slate-900 text-lg">No videos yet</p>
+                  <p className="text-sm text-slate-500 mb-5 max-w-sm mx-auto">
+                    Upload your first recording or embed a YouTube / Zoom link to build your library.
+                  </p>
+                  <Button onClick={() => setTab("add")} className="rounded-full px-6">
+                    <UploadCloud className="w-4 h-4" />
+                    Add a video
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
+                  <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="font-semibold text-slate-700">No videos match your filters</p>
+                  <p className="text-sm text-slate-500 mb-5">Try clearing filters or adding a new video.</p>
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => {
+                      setSearch("");
+                      setModuleFilter("all");
+                      setSourceFilter("all");
+                      setStatusFilter("all");
+                      if (isSuperAdmin) setCenterFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
+              )
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <AnimatePresence>
