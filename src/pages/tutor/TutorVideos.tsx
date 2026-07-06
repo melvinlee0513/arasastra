@@ -525,6 +525,10 @@ function VideoUploaderModal({
       toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
       return;
     }
+    if (!currentTenantId) {
+      toast({ title: "No center selected", description: "Pick a center before uploading.", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     setProgress(5);
     try {
