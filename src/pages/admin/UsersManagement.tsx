@@ -80,16 +80,44 @@ export function UsersManagement() {
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId]);
+  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId, activeTab]);
   useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
 
 
   const fetchAll = async () => {
+    if (!currentTenantId) return;
     setIsLoading(true);
     try {
-      const [profilesRes, rolesRes, subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("center_id", currentTenantId).order("created_at", { ascending: false }),
-        supabase.from("user_roles").select("user_id, role"),
+      // 1. Relational filter: only user_ids whose role matches the active tab
+      const { data: roleUsers, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", activeTab);
+
+      if (roleError) throw roleError;
+
+      const userIds = (roleUsers || []).map((r) => r.user_id);
+
+      // 2. Tenant-scoped profiles for those users
+      let profilesData: any[] = [];
+      if (userIds.length > 0) {
+        const { data, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("center_id", currentTenantId)
+          .in("user_id", userIds)
+          .order("created_at", { ascending: false });
+
+        if (profilesError) throw profilesError;
+        profilesData = data || [];
+      }
+
+      const merged: UserProfile[] = profilesData.map((p) => ({
+        ...p,
+        role: activeTab,
+      }));
+
+      const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
         (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
         (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
         (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
@@ -97,13 +125,6 @@ export function UsersManagement() {
         (supabase as any).from("enrollments").select("id,student_id,class_id,subject_id"),
         (supabase as any).from("tutors").select("id,user_id"),
       ]);
-
-      const roleMap = new Map<string, string>();
-      (rolesRes.data || []).forEach((r: any) => roleMap.set(r.user_id, r.role));
-
-      const merged: UserProfile[] = (profilesRes.data || []).map((p: any) => ({
-        ...p, role: (roleMap.get(p.user_id) as any) || "student",
-      }));
 
       setUsers(merged);
       setSubjects(subsRes.data || []);
