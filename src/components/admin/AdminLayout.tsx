@@ -81,6 +81,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </div>
       </main>
+      <AdminForceRefreshButton />
     </div>
   );
 }
