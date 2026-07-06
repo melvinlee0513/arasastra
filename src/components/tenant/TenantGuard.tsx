@@ -14,7 +14,7 @@ interface TenantGuardProps {
  * center_id resolved, instead of stranding them on a broken page.
  */
 export function TenantGuard({ children }: TenantGuardProps) {
-  const { currentTenantId, isLoading } = useTenant();
+  const { currentTenantId, isLoading, isSuperAdmin } = useTenant();
 
   if (isLoading) {
     return (
@@ -27,7 +27,9 @@ export function TenantGuard({ children }: TenantGuardProps) {
     );
   }
 
-  if (!currentTenantId) {
+  // Superadmin has GOD-level cross-tenant access and never needs to be
+  // assigned to a center — they can view/configure every tenant.
+  if (!currentTenantId && !isSuperAdmin) {
     return <NoOrganizationView />;
   }
 
