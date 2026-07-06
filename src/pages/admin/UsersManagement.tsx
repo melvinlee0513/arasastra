@@ -57,9 +57,9 @@ const FORM_YEARS = ["Year 5","Year 6","Form 1","Form 2","Form 3","Form 4","Form 
 
 export function UsersManagement() {
   const { toast } = useToast();
-  const { currentTenantId } = useTenant();
-  const { role: userRole } = useAuth();
-  const isSuperadmin = userRole === "superadmin";
+  const { currentTenantId, isSuperAdmin: tenantIsSuperAdmin } = useTenant();
+  const { role: userRole, roles } = useAuth();
+  const isSuperadmin = tenantIsSuperAdmin || userRole === "superadmin" || roles.includes("superadmin");
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
@@ -104,10 +104,13 @@ export function UsersManagement() {
         return 'tutor';
       };
       const targetRole = getTargetRole(activeTab);
-      const { data: roleData, error: roleError } = await supabase
+      const roleQuery = supabase
         .from("user_roles")
-        .select("user_id, role")
-        .eq("role", targetRole);
+        .select("user_id, role");
+
+      const { data: roleData, error: roleError } = activeTab === "admin"
+        ? await roleQuery.in("role", ["admin", "superadmin"])
+        : await roleQuery.eq("role", targetRole);
 
       if (roleError) throw roleError;
 
