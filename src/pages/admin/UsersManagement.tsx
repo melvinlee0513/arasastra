@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { useAuth } from "@/hooks/useAuth";
 import { InviteUserModal } from "@/components/admin/InviteUserModal";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ interface UserProfile {
   avatar_url: string | null;
   form_year: string | null;
   phone: string | null;
+  center_id: string | null;
   created_at: string;
   role?: "admin" | "superadmin" | "tutor" | "student";
 }
@@ -56,6 +58,8 @@ const FORM_YEARS = ["Year 5","Year 6","Form 1","Form 2","Form 3","Form 4","Form 
 export function UsersManagement() {
   const { toast } = useToast();
   const { currentTenantId } = useTenant();
+  const { role: userRole } = useAuth();
+  const isSuperadmin = userRole === "superadmin";
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
@@ -81,7 +85,10 @@ export function UsersManagement() {
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId, activeTab]);
+  useEffect(() => {
+    if (isSuperadmin || currentTenantId) fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTenantId, activeTab, isSuperadmin]);
   useEffect(() => { setRoleFilter(activeTab === "admin" ? "all" : activeTab); }, [activeTab]);
 
 
@@ -112,12 +119,16 @@ export function UsersManagement() {
         if (!existing || row.role === "superadmin") roleByUserId.set(row.user_id, row.role);
       });
 
-      // Step 3: Fetch profiles using ONLY the validated IDs within the current tenant
-      const { data: profiles, error: profilesError } = await supabase
+      // Step 3: Fetch profiles using ONLY the validated IDs.
+      // STRICT CONDITIONAL: Only apply tenant isolation if NOT a superadmin.
+      let profileQuery = supabase
         .from("profiles")
         .select("*")
-        .in("user_id", userIds)
-        .eq("center_id", currentTenantId);
+        .in("user_id", userIds);
+      if (!isSuperadmin) {
+        profileQuery = profileQuery.eq("center_id", currentTenantId);
+      }
+      const { data: profiles, error: profilesError } = await profileQuery;
 
       if (profilesError) throw profilesError;
 
@@ -154,7 +165,7 @@ export function UsersManagement() {
   };
 
   const fetchAll = async () => {
-    if (!currentTenantId) return;
+    if (!isSuperadmin && !currentTenantId) return;
     await Promise.all([fetchUsers(), fetchRelations()]);
   };
 
@@ -296,7 +307,7 @@ export function UsersManagement() {
           {([
             { id: "student", label: "Students", icon: User },
             { id: "tutor", label: "Tutors", icon: GraduationCap },
-            { id: "admin", label: "Admins", icon: Shield },
+            ...(isSuperadmin ? [{ id: "admin", label: "Admins", icon: Shield }] as const : []),
           ] as const).map((t) => {
             const active = activeTab === t.id;
             const Icon = t.icon;
@@ -380,16 +391,19 @@ export function UsersManagement() {
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="hidden lg:table-cell">Scope</TableHead>
+                  {isSuperadmin && (
+                    <TableHead className="hidden md:table-cell">Center ID</TableHead>
+                  )}
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-slate-500">
                         <User className="w-10 h-10 text-slate-300" />
                         <p className="font-medium">No users match your filters</p>
@@ -445,6 +459,15 @@ export function UsersManagement() {
                           ? `${studentEnrollments.length} enrolled class${studentEnrollments.length === 1 ? "" : "es"}`
                           : "—"}
                       </TableCell>
+                      {isSuperadmin && (
+                        <TableCell className="hidden md:table-cell text-xs font-mono text-slate-500">
+                          {user.center_id ? (
+                            <span title={user.center_id}>{user.center_id.slice(0, 8)}…</span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="hidden md:table-cell text-slate-600">
                         {new Date(user.created_at).toLocaleDateString()}
                       </TableCell>

@@ -8,6 +8,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdminForceRefreshButton } from "./AdminForceRefreshButton";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -61,6 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <main className="pt-14 min-h-screen">
           {children}
         </main>
+        <AdminForceRefreshButton />
       </div>
     );
   }
@@ -79,6 +81,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </div>
       </main>
+      <AdminForceRefreshButton />
     </div>
   );
 }
