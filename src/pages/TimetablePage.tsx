@@ -229,10 +229,10 @@ export function TimetablePage() {
                       <span>Tutor TBA</span>
                     </div>
                   )}
-                  {classItem.room && (
+                  {classItem.cohort_label && (
                     <div className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span className="truncate">{classItem.room}</span>
+                      <Users className="w-3.5 h-3.5" />
+                      <span className="truncate">{classItem.cohort_label}</span>
                     </div>
                   )}
                 </div>
