@@ -31,12 +31,13 @@ import { cn } from "@/lib/utils";
 interface UserProfile {
   id: string;
   user_id: string;
+  email: string | null;
   full_name: string;
   avatar_url: string | null;
   form_year: string | null;
   phone: string | null;
   created_at: string;
-  role?: "admin" | "tutor" | "student";
+  role?: "admin" | "superadmin" | "tutor" | "student";
 }
 
 interface Subject { id: string; name: string }
@@ -63,7 +64,7 @@ export function UsersManagement() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<{ id: string; user_id: string }[]>([]);
 
-  const [activeTab, setActiveTab] = useState<"tutor" | "student">("student");
+  const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student">("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [standardFilter, setStandardFilter] = useState("all");
@@ -81,7 +82,7 @@ export function UsersManagement() {
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
   useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId, activeTab]);
-  useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
+  useEffect(() => { setRoleFilter(activeTab === "admin" ? "all" : activeTab); }, [activeTab]);
 
 
   const fetchUsers = async () => {
@@ -89,11 +90,12 @@ export function UsersManagement() {
       setIsLoading(true);
 
       // Step 1: Fetch the valid IDs for the active tab from the user_roles table
-      const targetRole: "student" | "tutor" = activeTab === "student" ? "student" : "tutor";
+      const targetRoles: Array<"admin" | "superadmin" | "student" | "tutor"> =
+        activeTab === "admin" ? ["admin", "superadmin"] : [activeTab];
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id")
-        .eq("role", targetRole);
+        .select("user_id, role")
+        .in("role", targetRoles);
 
       if (roleError) throw roleError;
 
@@ -103,7 +105,12 @@ export function UsersManagement() {
         return;
       }
 
-      const userIds = roleData.map((r) => r.user_id);
+      const userIds = Array.from(new Set(roleData.map((r) => r.user_id)));
+      const roleByUserId = new Map<string, "admin" | "superadmin" | "student" | "tutor">();
+      roleData.forEach((row) => {
+        const existing = roleByUserId.get(row.user_id);
+        if (!existing || row.role === "superadmin") roleByUserId.set(row.user_id, row.role);
+      });
 
       // Step 3: Fetch profiles using ONLY the validated IDs within the current tenant
       const { data: profiles, error: profilesError } = await supabase
@@ -117,7 +124,7 @@ export function UsersManagement() {
       // Step 4: Merge the explicit role back into the profile object for the UI
       const mergedUsers: UserProfile[] = (profiles || []).map((profile: any) => ({
         ...profile,
-        role: targetRole,
+        role: roleByUserId.get(profile.user_id) ?? targetRoles[0],
       }));
 
       setUsers(mergedUsers);
@@ -244,6 +251,7 @@ export function UsersManagement() {
 
       if (!q) return true;
       return u.full_name.toLowerCase().includes(q)
+        || (u.email || "").toLowerCase().includes(q)
         || (u.form_year || "").toLowerCase().includes(q)
         || (u.phone || "").toLowerCase().includes(q);
     });
@@ -288,6 +296,7 @@ export function UsersManagement() {
           {([
             { id: "student", label: "Students", icon: User },
             { id: "tutor", label: "Tutors", icon: GraduationCap },
+            { id: "admin", label: "Admins", icon: Shield },
           ] as const).map((t) => {
             const active = activeTab === t.id;
             const Icon = t.icon;
@@ -405,7 +414,7 @@ export function UsersManagement() {
                                 variant={user.role === "admin" ? "default" : "secondary"}
                                 className="gap-1 rounded-full cursor-pointer"
                               >
-                                {user.role === "admin" ? <Shield className="w-3 h-3" />
+                                {user.role === "admin" || user.role === "superadmin" ? <Shield className="w-3 h-3" />
                                   : user.role === "tutor" ? <GraduationCap className="w-3 h-3" />
                                   : <User className="w-3 h-3" />}
                                 {updatingRoleId === user.user_id ? "…" : user.role}
