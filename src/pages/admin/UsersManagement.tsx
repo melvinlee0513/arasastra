@@ -140,7 +140,7 @@ export function UsersManagement() {
       // Step 4: Merge the explicit role back into the profile object for the UI
       const mergedUsers: UserProfile[] = (profiles || []).map((profile: any) => ({
         ...profile,
-        role: roleByUserId.get(profile.user_id) ?? targetRoles[0],
+        role: roleByUserId.get(profile.user_id) ?? targetRole,
       }));
 
       setUsers(mergedUsers);
