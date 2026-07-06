@@ -24,9 +24,10 @@ const staticPages: SearchResult[] = [
   { id: "dashboard", title: "Dashboard", type: "page", subtitle: "Student dashboard", path: "/dashboard" },
   { id: "timetable", title: "Timetable", type: "page", subtitle: "Class schedule", path: "/timetable" },
   { id: "classes", title: "Classes", type: "page", subtitle: "Subject hub", path: "/classes" },
-  { id: "notes", title: "Notes Bank", type: "page", subtitle: "Study materials", path: "/dashboard/notes" },
-  { id: "quizzes", title: "Quizzes", type: "page", subtitle: "Test your knowledge", path: "/dashboard/quizzes" },
-  { id: "replays", title: "Replay Library", type: "page", subtitle: "Watch past classes", path: "/dashboard/replays" },
+  { id: "notes", title: "Notes Bank", type: "page", subtitle: "Study materials", path: "/dashboard/learning/notes" },
+  { id: "quizzes", title: "Quizzes", type: "page", subtitle: "Test your knowledge", path: "/dashboard/learning/quizzes" },
+  { id: "flashcards", title: "Flashcards", type: "page", subtitle: "Rapid recall", path: "/dashboard/learning/flashcards" },
+  { id: "replays", title: "Replay Library", type: "page", subtitle: "Watch past classes", path: "/dashboard/learning/replays" },
   { id: "account", title: "Account", type: "page", subtitle: "Profile & subscription", path: "/account" },
 ];
 
@@ -81,14 +82,14 @@ export function CommandSearch() {
         title: c.title,
         type: "class" as const,
         subtitle: (c.subject as { name: string } | null)?.name,
-        path: "/dashboard/replays",
+        path: "/dashboard/learning/replays",
       })),
       ...(notesRes.data || []).map((n) => ({
         id: n.id,
         title: n.title,
         type: "note" as const,
         subtitle: (n.subject as { name: string } | null)?.name,
-        path: "/dashboard/notes",
+        path: "/dashboard/learning/notes",
       })),
       ...(quizzesRes.data || []).map((q) => ({
         id: q.id,

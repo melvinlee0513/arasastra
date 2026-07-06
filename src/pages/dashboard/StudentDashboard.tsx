@@ -338,7 +338,7 @@ export function StudentDashboard() {
 
       {/* Quick Links */}
       <section className="grid grid-cols-3 gap-4">
-        <Link to="/dashboard/replays">
+        <Link to="/dashboard/learning/replays">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
@@ -351,7 +351,7 @@ export function StudentDashboard() {
             </div>
           </Card>
         </Link>
-        <Link to="/dashboard/learning">
+        <Link to="/dashboard/learning/notes">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
