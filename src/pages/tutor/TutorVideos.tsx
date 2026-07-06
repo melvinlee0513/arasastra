@@ -735,6 +735,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         youtube_id: detected.id,
         thumbnail_url: detected.id ? `https://img.youtube.com/vi/${detected.id}/hqdefault.jpg` : null,
         created_by: user.id,
+        center_id: currentTenantId,
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
