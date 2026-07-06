@@ -13,7 +13,7 @@ interface ScheduledClass {
   title: string;
   scheduled_at: string;
   duration_minutes: number | null;
-  room: string | null;
+  cohort_label: string | null;
   subject?: { name: string; icon: string | null } | null;
   tutor?: { name: string; avatar_url: string | null } | null;
 }
