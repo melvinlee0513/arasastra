@@ -15,6 +15,9 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Calendar as CalendarIcon,
+  AlertCircle,
+  Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +57,9 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
+import { useTenant } from "@/contexts/TenantContext";
+import { format } from "date-fns";
+
 
 type SourceType = "upload" | "youtube" | "zoom";
 type AccessLevel = "exclusive" | "demo";
@@ -76,6 +82,11 @@ interface VideoResource {
   subject_id?: string | null;
   standard_id?: string | null;
   class_id?: string | null;
+  center_id?: string | null;
+  updated_at?: string | null;
+  subject?: { name: string } | null;
+  class?: { title: string } | null;
+  center?: { name: string } | null;
 }
 
 // Reusable Exclusive/Demo pill toggle (Soft-Tech).
@@ -236,6 +247,14 @@ function VideoPlayerCard({
   const thumb =
     video.thumbnail_url ||
     (video.youtube_id ? `https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg` : null);
+  // Media payload validity — never mount <iframe>/<video> on an empty/invalid src.
+  const hasValidUrl =
+    typeof video.video_url === "string" && video.video_url.trim().length > 0;
+  const canPlayYouTube =
+    video.source_type === "youtube" && !!video.youtube_id;
+  const canPlayUpload = video.source_type === "upload" && hasValidUrl;
+  const canOpenZoom = video.source_type === "zoom" && hasValidUrl;
+  const isPlayable = canPlayYouTube || canPlayUpload || canOpenZoom;
 
   return (
     <motion.div
@@ -246,7 +265,7 @@ function VideoPlayerCard({
       className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
     >
       <div className="relative aspect-video bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-        {playing && video.source_type === "youtube" && video.youtube_id ? (
+        {playing && canPlayYouTube ? (
           <iframe
             className="w-full h-full"
             src={`https://www.youtube.com/embed/${video.youtube_id}?autoplay=1&rel=0`}
@@ -254,18 +273,21 @@ function VideoPlayerCard({
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
-        ) : playing && video.source_type === "upload" ? (
+        ) : playing && canPlayUpload ? (
           <video src={video.video_url} controls autoPlay className="w-full h-full object-contain bg-black" />
         ) : (
           <>
             {thumb ? (
               <img src={thumb} alt={video.title} className="w-full h-full object-cover" loading="lazy" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <FileVideo className="w-12 h-12 text-slate-400" />
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                <FileVideo className="w-12 h-12 mb-1" />
+                {!isPlayable && (
+                  <span className="text-[11px] font-medium">Media unavailable</span>
+                )}
               </div>
             )}
-            {video.source_type === "zoom" ? (
+            {canOpenZoom ? (
               <a
                 href={video.video_url}
                 target="_blank"
@@ -277,7 +299,7 @@ function VideoPlayerCard({
                   Open in Zoom
                 </span>
               </a>
-            ) : (
+            ) : isPlayable ? (
               <button
                 onClick={() => setPlaying(true)}
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
@@ -285,8 +307,9 @@ function VideoPlayerCard({
               >
                 <PlayCircle className="w-16 h-16 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
               </button>
-            )}
+            ) : null}
           </>
+
         )}
         <div className="absolute top-3 left-3 flex items-center gap-2">
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
@@ -318,12 +341,37 @@ function VideoPlayerCard({
 
       <div className="p-5 flex-1 flex flex-col gap-2">
         <h3 className="font-semibold text-slate-900 line-clamp-1">{video.title}</h3>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+          {video.subject?.name && (
+            <span className="font-medium text-primary">{video.subject.name}</span>
+          )}
+          {video.class?.title && (
+            <>
+              <span className="opacity-40">•</span>
+              <span className="truncate max-w-[10rem]">{video.class.title}</span>
+            </>
+          )}
+          {video.center?.name && (
+            <>
+              <span className="opacity-40">•</span>
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                {video.center.name}
+              </span>
+            </>
+          )}
+        </div>
         {video.course_module && (
-          <p className="text-xs font-medium text-primary">{video.course_module}</p>
+          <p className="text-xs font-medium text-slate-600">{video.course_module}</p>
         )}
         {video.description && (
           <p className="text-sm text-slate-600 line-clamp-2">{video.description}</p>
         )}
+        <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+          <CalendarIcon className="w-3 h-3" />
+          {format(new Date(video.updated_at || video.created_at), "MMM d, yyyy")}
+        </div>
+
         <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100">
           <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
             <Switch
@@ -461,6 +509,7 @@ function VideoUploaderModal({
   onUploaded: () => void;
 }) {
   const { user } = useAuth();
+  const { currentTenantId } = useTenant();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -513,6 +562,10 @@ function VideoUploaderModal({
       toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
       return;
     }
+    if (!currentTenantId) {
+      toast({ title: "No center selected", description: "Pick a center before uploading.", variant: "destructive" });
+      return;
+    }
     setUploading(true);
     setProgress(5);
     try {
@@ -543,6 +596,7 @@ function VideoUploaderModal({
         video_url: signed?.signedUrl || path,
         file_size: file.size,
         created_by: user.id,
+        center_id: currentTenantId,
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
@@ -671,6 +725,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: scope } = useTutorScope();
+  const { currentTenantId } = useTenant();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
@@ -702,6 +757,10 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
       toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
       return;
     }
+    if (!currentTenantId) {
+      toast({ title: "No center selected", description: "Pick a center before adding a video.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await (supabase as any).from("video_resources").insert({
@@ -713,6 +772,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
         youtube_id: detected.id,
         thumbnail_url: detected.id ? `https://img.youtube.com/vi/${detected.id}/hqdefault.jpg` : null,
         created_by: user.id,
+        center_id: currentTenantId,
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
@@ -826,6 +886,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
 export function TutorVideos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isSuperAdmin, availableCenters, currentTenantId } = useTenant();
   const [tab, setTab] = useState("library");
   const [addMode, setAddMode] = useState<"upload" | "embed">("embed");
   const [uploaderOpen, setUploaderOpen] = useState(false);
@@ -833,16 +894,25 @@ export function TutorVideos() {
   const [moduleFilter, setModuleFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Super Admin can filter across centers; Center Admin is locked to their own.
+  const [centerFilter, setCenterFilter] = useState<string>("all");
   const [editing, setEditing] = useState<VideoResource | null>(null);
   const [pendingDelete, setPendingDelete] = useState<VideoResource | null>(null);
 
-  const { data: videos, isLoading } = useQuery({
-    queryKey: ["video_resources"],
+  const { data: videos, isLoading, isError, error: loadError, refetch } = useQuery({
+    queryKey: ["video_resources", isSuperAdmin ? centerFilter : currentTenantId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let q = (supabase as any)
         .from("video_resources")
-        .select("*")
+        .select(
+          "*, subject:subjects(name), class:classes(title), center:tuition_centers(name)"
+        )
         .order("created_at", { ascending: false });
+      if (isSuperAdmin && centerFilter !== "all") {
+        q = q.eq("center_id", centerFilter);
+      }
+      // Center Admins are already scoped by RLS; no client filter needed.
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []) as VideoResource[];
     },
@@ -979,10 +1049,33 @@ export function TutorVideos() {
                     <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>
                 </Select>
+                {isSuperAdmin && (
+                  <Select value={centerFilter} onValueChange={setCenterFilter}>
+                    <SelectTrigger className="rounded-full bg-white border-slate-200 w-[180px]">
+                      <Building2 className="w-4 h-4 mr-2 text-slate-500" />
+                      <SelectValue placeholder="All centers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All centers</SelectItem>
+                      {availableCenters.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
-            {isLoading ? (
+            {isError ? (
+              <div className="bg-white rounded-3xl border border-rose-200 py-16 text-center px-6">
+                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+                <p className="font-semibold text-slate-900">We couldn't load your videos</p>
+                <p className="text-sm text-slate-500 mb-5">
+                  {import.meta.env.DEV ? (loadError as Error)?.message : "Please try again in a moment."}
+                </p>
+                <Button onClick={() => refetch()} className="rounded-full">Try again</Button>
+              </div>
+            ) : isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
@@ -995,15 +1088,40 @@ export function TutorVideos() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
-                <FileVideo className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="font-semibold text-slate-700">No videos match your filters</p>
-                <p className="text-sm text-slate-500 mb-5">Try clearing filters or add a new video.</p>
-                <Button onClick={() => setTab("add")} className="rounded-full">
-                  <UploadCloud className="w-4 h-4" />
-                  Add a video
-                </Button>
-              </div>
+              (videos?.length ?? 0) === 0 ? (
+                <div className="bg-white rounded-3xl border border-slate-200 py-16 text-center px-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto mb-4 flex items-center justify-center">
+                    <FileVideo className="w-7 h-7 text-primary" />
+                  </div>
+                  <p className="font-semibold text-slate-900 text-lg">No videos yet</p>
+                  <p className="text-sm text-slate-500 mb-5 max-w-sm mx-auto">
+                    Upload your first recording or embed a YouTube / Zoom link to build your library.
+                  </p>
+                  <Button onClick={() => setTab("add")} className="rounded-full px-6">
+                    <UploadCloud className="w-4 h-4" />
+                    Add a video
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl py-16 text-center">
+                  <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="font-semibold text-slate-700">No videos match your filters</p>
+                  <p className="text-sm text-slate-500 mb-5">Try clearing filters or adding a new video.</p>
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => {
+                      setSearch("");
+                      setModuleFilter("all");
+                      setSourceFilter("all");
+                      setStatusFilter("all");
+                      if (isSuperAdmin) setCenterFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
+              )
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <AnimatePresence>
