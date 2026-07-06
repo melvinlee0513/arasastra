@@ -247,6 +247,14 @@ function VideoPlayerCard({
   const thumb =
     video.thumbnail_url ||
     (video.youtube_id ? `https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg` : null);
+  // Media payload validity — never mount <iframe>/<video> on an empty/invalid src.
+  const hasValidUrl =
+    typeof video.video_url === "string" && video.video_url.trim().length > 0;
+  const canPlayYouTube =
+    video.source_type === "youtube" && !!video.youtube_id;
+  const canPlayUpload = video.source_type === "upload" && hasValidUrl;
+  const canOpenZoom = video.source_type === "zoom" && hasValidUrl;
+  const isPlayable = canPlayYouTube || canPlayUpload || canOpenZoom;
 
   return (
     <motion.div
