@@ -472,6 +472,7 @@ function VideoUploaderModal({
   onUploaded: () => void;
 }) {
   const { user } = useAuth();
+  const { currentTenantId } = useTenant();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
