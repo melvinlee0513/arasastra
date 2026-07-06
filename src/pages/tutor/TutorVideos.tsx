@@ -15,6 +15,9 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Calendar as CalendarIcon,
+  AlertCircle,
+  Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
