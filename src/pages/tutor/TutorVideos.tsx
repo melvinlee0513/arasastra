@@ -59,7 +59,7 @@ import { cn } from "@/lib/utils";
 import { useTutorScope, type ScopeClass, type ScopeStandard, type ScopeSubject } from "@/hooks/useTutorScope";
 import { useTenant } from "@/contexts/TenantContext";
 import { format } from "date-fns";
-import { toast as sonnerToast } from "sonner";
+
 
 type SourceType = "upload" | "youtube" | "zoom";
 type AccessLevel = "exclusive" | "demo";
