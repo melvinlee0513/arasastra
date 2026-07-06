@@ -720,6 +720,10 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
       toast({ title: "Pick a subject", description: "Choose which subject this video belongs to.", variant: "destructive" });
       return;
     }
+    if (!currentTenantId) {
+      toast({ title: "No center selected", description: "Pick a center before adding a video.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await (supabase as any).from("video_resources").insert({
