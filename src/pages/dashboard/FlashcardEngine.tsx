@@ -23,8 +23,11 @@ interface FlashcardDeck {
   id: string;
   title: string;
   description: string | null;
+  access_level: "demo" | "exclusive";
+  subject_id: string | null;
   subject_name?: string;
   card_count?: number;
+  known_count?: number;
 }
 
 /**
