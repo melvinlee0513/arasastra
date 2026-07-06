@@ -559,6 +559,7 @@ function VideoUploaderModal({
         video_url: signed?.signedUrl || path,
         file_size: file.size,
         created_by: user.id,
+        center_id: currentTenantId,
         subject_id: subjectId,
         standard_id: standardId || null,
         class_id: classId === "__unlinked" ? null : classId,
