@@ -35,6 +35,8 @@ interface FlashcardDeck {
  */
 export function FlashcardEngine() {
   const { user } = useAuth();
+  const { hasAccess } = useAccess();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [decks, setDecks] = useState<FlashcardDeck[]>([]);
   const [selectedDeck, setSelectedDeck] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function FlashcardEngine() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [knownCount, setKnownCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
 
   useEffect(() => {
     fetchDecks();
