@@ -59,7 +59,7 @@ export function TimetablePage() {
     try {
       const weekEnd = addDays(currentWeekStart, 7);
       const baseSelect =
-        "id, title, scheduled_at, duration_minutes, room, subject:subjects(name, icon), tutor:tutors(name, avatar_url)";
+        "id, title, scheduled_at, duration_minutes, cohort_label, subject:subjects(name, icon), tutor:tutors(name, avatar_url)";
 
       let query = supabase
         .from("classes")
