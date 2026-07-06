@@ -1012,10 +1012,33 @@ export function TutorVideos() {
                     <SelectItem value="draft">Draft</SelectItem>
                   </SelectContent>
                 </Select>
+                {isSuperAdmin && (
+                  <Select value={centerFilter} onValueChange={setCenterFilter}>
+                    <SelectTrigger className="rounded-full bg-white border-slate-200 w-[180px]">
+                      <Building2 className="w-4 h-4 mr-2 text-slate-500" />
+                      <SelectValue placeholder="All centers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All centers</SelectItem>
+                      {availableCenters.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
-            {isLoading ? (
+            {isError ? (
+              <div className="bg-white rounded-3xl border border-rose-200 py-16 text-center px-6">
+                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+                <p className="font-semibold text-slate-900">We couldn't load your videos</p>
+                <p className="text-sm text-slate-500 mb-5">
+                  {import.meta.env.DEV ? (loadError as Error)?.message : "Please try again in a moment."}
+                </p>
+                <Button onClick={() => refetch()} className="rounded-full">Try again</Button>
+              </div>
+            ) : isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
