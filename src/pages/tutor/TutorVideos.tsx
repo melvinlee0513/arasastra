@@ -82,6 +82,11 @@ interface VideoResource {
   subject_id?: string | null;
   standard_id?: string | null;
   class_id?: string | null;
+  center_id?: string | null;
+  updated_at?: string | null;
+  subject?: { name: string } | null;
+  class?: { title: string } | null;
+  center?: { name: string } | null;
 }
 
 // Reusable Exclusive/Demo pill toggle (Soft-Tech).
