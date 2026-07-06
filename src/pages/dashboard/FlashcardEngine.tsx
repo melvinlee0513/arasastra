@@ -52,34 +52,59 @@ export function FlashcardEngine() {
   }, []);
 
   const fetchDecks = async () => {
-    setIsLoading(true);
-    const { data } = await supabase
-      .from("flashcard_decks")
-      .select("id, title, description, subject:subjects(name)")
-      .order("created_at", { ascending: false });
+    setState("loading");
+    try {
+      const { data, error } = await supabase
+        .from("flashcard_decks")
+        .select("id, title, description, access_level, subject_id, subject:subjects(name)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
 
-    if (data) {
-      // Fetch card counts for each deck
-      const deckIds = data.map((d) => d.id);
-      const { data: allCards } = await supabase
-        .from("flashcards")
-        .select("deck_id")
-        .in("deck_id", deckIds);
+      const deckIds = (data || []).map((d) => d.id);
 
-      const countMap = new Map<string, number>();
-      (allCards || []).forEach((c) => {
-        countMap.set(c.deck_id, (countMap.get(c.deck_id) || 0) + 1);
+      const [cardsRes, progressRes] = await Promise.all([
+        deckIds.length
+          ? supabase.from("flashcards").select("id, deck_id").in("deck_id", deckIds)
+          : Promise.resolve({ data: [] as { id: string; deck_id: string }[] }),
+        user && deckIds.length
+          ? supabase
+              .from("flashcard_progress")
+              .select("flashcard_id, status")
+              .eq("user_id", user.id)
+          : Promise.resolve({ data: [] as { flashcard_id: string; status: string }[] }),
+      ]);
+
+      const cardToDeck = new Map<string, string>();
+      const cardCount = new Map<string, number>();
+      (cardsRes.data || []).forEach((c) => {
+        cardToDeck.set(c.id, c.deck_id);
+        cardCount.set(c.deck_id, (cardCount.get(c.deck_id) || 0) + 1);
+      });
+      const knownPerDeck = new Map<string, number>();
+      (progressRes.data || []).forEach((p) => {
+        if (p.status !== "known") return;
+        const d = cardToDeck.get(p.flashcard_id);
+        if (!d) return;
+        knownPerDeck.set(d, (knownPerDeck.get(d) || 0) + 1);
       });
 
       setDecks(
-        data.map((d) => ({
-          ...d,
+        (data || []).map((d) => ({
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          access_level: (d.access_level as "demo" | "exclusive") ?? "exclusive",
+          subject_id: d.subject_id ?? null,
           subject_name: (d.subject as any)?.name || undefined,
-          card_count: countMap.get(d.id) || 0,
+          card_count: cardCount.get(d.id) || 0,
+          known_count: knownPerDeck.get(d.id) || 0,
         }))
       );
+      setState("loaded");
+    } catch (e) {
+      console.error("Flashcard decks load failed:", e);
+      setState("error");
     }
-    setIsLoading(false);
   };
 
   const startDeck = async (deckId: string) => {
