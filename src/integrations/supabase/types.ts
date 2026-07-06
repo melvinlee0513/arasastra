@@ -1512,6 +1512,10 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: never; Returns: boolean }
+      same_center_as_current_user: {
+        Args: { _center_id: string }
+        Returns: boolean
+      }
       tutor_can_teach: {
         Args: { _standard_id: string; _subject_id: string; _user_id: string }
         Returns: boolean
