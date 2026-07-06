@@ -82,14 +82,14 @@ export function CommandSearch() {
         title: c.title,
         type: "class" as const,
         subtitle: (c.subject as { name: string } | null)?.name,
-        path: "/dashboard/replays",
+        path: "/dashboard/learning/replays",
       })),
       ...(notesRes.data || []).map((n) => ({
         id: n.id,
         title: n.title,
         type: "note" as const,
         subtitle: (n.subject as { name: string } | null)?.name,
-        path: "/dashboard/notes",
+        path: "/dashboard/learning/notes",
       })),
       ...(quizzesRes.data || []).map((q) => ({
         id: q.id,
