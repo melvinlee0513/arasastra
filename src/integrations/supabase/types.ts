@@ -1281,6 +1281,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          center_id: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -1294,6 +1295,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          center_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1307,6 +1309,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          center_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1317,7 +1320,15 @@ export type Database = {
           user_id?: string | null
           years_experience?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tutors_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1486,6 +1497,7 @@ export type Database = {
         }[]
       }
       get_profile_id: { Args: never; Returns: string }
+      get_user_center: { Args: { _user_id?: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
