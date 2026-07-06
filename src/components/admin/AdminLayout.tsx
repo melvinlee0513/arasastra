@@ -62,6 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <main className="pt-14 min-h-screen">
           {children}
         </main>
+        <AdminForceRefreshButton />
       </div>
     );
   }
