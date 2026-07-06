@@ -391,16 +391,19 @@ export function UsersManagement() {
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="hidden lg:table-cell">Scope</TableHead>
+                  {isSuperadmin && (
+                    <TableHead className="hidden md:table-cell">Center ID</TableHead>
+                  )}
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-slate-500">
                         <User className="w-10 h-10 text-slate-300" />
                         <p className="font-medium">No users match your filters</p>
