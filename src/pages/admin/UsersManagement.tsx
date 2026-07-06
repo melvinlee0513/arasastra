@@ -80,7 +80,7 @@ export function UsersManagement() {
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
 
-  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId]);
+  useEffect(() => { if (currentTenantId) fetchAll(); }, [currentTenantId, activeTab]);
   useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
 
 
