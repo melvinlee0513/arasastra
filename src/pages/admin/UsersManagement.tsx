@@ -459,6 +459,15 @@ export function UsersManagement() {
                           ? `${studentEnrollments.length} enrolled class${studentEnrollments.length === 1 ? "" : "es"}`
                           : "—"}
                       </TableCell>
+                      {isSuperadmin && (
+                        <TableCell className="hidden md:table-cell text-xs font-mono text-slate-500">
+                          {user.center_id ? (
+                            <span title={user.center_id}>{user.center_id.slice(0, 8)}…</span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="hidden md:table-cell text-slate-600">
                         {new Date(user.created_at).toLocaleDateString()}
                       </TableCell>
