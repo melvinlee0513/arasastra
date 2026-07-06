@@ -80,13 +80,16 @@ export function TutorDashboard() {
         activeReplays = (classes || []).filter((c) => c.video_url).length;
       }
 
-      // Get active students count
-      const { data: enrollments } = await supabase
-        .from("enrollments")
-        .select("student_id")
-        .eq("is_active", true);
-
-      const uniqueStudents = new Set((enrollments || []).map((e) => e.student_id));
+      // Active students enrolled in THIS tutor's classes only.
+      let uniqueStudents = new Set<string>();
+      if (classIds.length > 0) {
+        const { data: enrollments } = await supabase
+          .from("enrollments")
+          .select("student_id")
+          .eq("is_active", true)
+          .in("class_id", classIds);
+        uniqueStudents = new Set((enrollments || []).map((e) => e.student_id));
+      }
 
       setStats({
         totalStudents: uniqueStudents.size,
