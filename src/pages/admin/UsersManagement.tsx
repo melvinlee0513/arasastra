@@ -165,7 +165,7 @@ export function UsersManagement() {
   };
 
   const fetchAll = async () => {
-    if (!currentTenantId) return;
+    if (!isSuperadmin && !currentTenantId) return;
     await Promise.all([fetchUsers(), fetchRelations()]);
   };
 
