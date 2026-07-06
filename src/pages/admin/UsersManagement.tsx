@@ -84,61 +84,71 @@ export function UsersManagement() {
   useEffect(() => { setRoleFilter(activeTab); }, [activeTab]);
 
 
-  const fetchAll = async () => {
-    if (!currentTenantId) return;
-    setIsLoading(true);
+  const fetchUsers = async () => {
     try {
-      // 1. Relational filter: only user_ids whose role matches the active tab
-      const { data: roleUsers, error: roleError } = await supabase
+      setIsLoading(true);
+
+      // Step 1: Fetch the valid IDs for the active tab from the user_roles table
+      const targetRole: "student" | "tutor" = activeTab === "student" ? "student" : "tutor";
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", activeTab);
+        .eq("role", targetRole);
 
       if (roleError) throw roleError;
 
-      const userIds = (roleUsers || []).map((r) => r.user_id);
-
-      // 2. Tenant-scoped profiles for those users
-      let profilesData: any[] = [];
-      if (userIds.length > 0) {
-        const { data, error: profilesError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("center_id", currentTenantId)
-          .in("user_id", userIds)
-          .order("created_at", { ascending: false });
-
-        if (profilesError) throw profilesError;
-        profilesData = data || [];
+      // Step 2: Guard clause — stop and clear if no users found for this role
+      if (!roleData || roleData.length === 0) {
+        setUsers([]);
+        return;
       }
 
-      const merged: UserProfile[] = profilesData.map((p) => ({
-        ...p,
-        role: activeTab,
+      const userIds = roleData.map((r) => r.user_id);
+
+      // Step 3: Fetch profiles using ONLY the validated IDs within the current tenant
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("user_id", userIds)
+        .eq("center_id", currentTenantId);
+
+      if (profilesError) throw profilesError;
+
+      // Step 4: Merge the explicit role back into the profile object for the UI
+      const mergedUsers: UserProfile[] = (profiles || []).map((profile: any) => ({
+        ...profile,
+        role: targetRole,
       }));
 
-      const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-        (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
-        (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
-        (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
-        (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
-        (supabase as any).from("enrollments").select("id,student_id,class_id,subject_id"),
-        (supabase as any).from("tutors").select("id,user_id"),
-      ]);
-
-      setUsers(merged);
-      setSubjects(subsRes.data || []);
-      setStandards(stdsRes.data || []);
-      setClasses(classesRes.data || []);
-      setAssignments(assignsRes.data || []);
-      setEnrollments(enrolRes.data || []);
-      setTutors(tutorsRes.data || []);
-    } catch (e) {
-      console.error(e);
+      setUsers(mergedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
       toast({ title: "Error", description: "Failed to load users", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchRelations = async () => {
+    const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
+      (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
+      (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
+      (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
+      (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
+      (supabase as any).from("enrollments").select("id,student_id,class_id,subject_id"),
+      (supabase as any).from("tutors").select("id,user_id"),
+    ]);
+    setSubjects(subsRes.data || []);
+    setStandards(stdsRes.data || []);
+    setClasses(classesRes.data || []);
+    setAssignments(assignsRes.data || []);
+    setEnrollments(enrolRes.data || []);
+    setTutors(tutorsRes.data || []);
+  };
+
+  const fetchAll = async () => {
+    if (!currentTenantId) return;
+    await Promise.all([fetchUsers(), fetchRelations()]);
   };
 
   const handleRefresh = async () => {
