@@ -119,12 +119,16 @@ export function UsersManagement() {
         if (!existing || row.role === "superadmin") roleByUserId.set(row.user_id, row.role);
       });
 
-      // Step 3: Fetch profiles using ONLY the validated IDs within the current tenant
-      const { data: profiles, error: profilesError } = await supabase
+      // Step 3: Fetch profiles using ONLY the validated IDs.
+      // STRICT CONDITIONAL: Only apply tenant isolation if NOT a superadmin.
+      let profileQuery = supabase
         .from("profiles")
         .select("*")
-        .in("user_id", userIds)
-        .eq("center_id", currentTenantId);
+        .in("user_id", userIds);
+      if (!isSuperadmin) {
+        profileQuery = profileQuery.eq("center_id", currentTenantId);
+      }
+      const { data: profiles, error: profilesError } = await profileQuery;
 
       if (profilesError) throw profilesError;
 
