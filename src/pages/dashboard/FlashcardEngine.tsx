@@ -166,12 +166,21 @@ export function FlashcardEngine() {
           <p className="text-muted-foreground text-sm mt-1">Study with interactive flashcards</p>
         </div>
 
-        {isLoading ? (
+        {state === "loading" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-40 rounded-3xl" />
             ))}
           </div>
+        ) : state === "error" ? (
+          <Card className="p-10 text-center bg-card border-border rounded-3xl">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <h3 className="font-semibold text-foreground mb-1">Couldn't load flashcards</h3>
+            <p className="text-sm text-muted-foreground mb-4">Please try again in a moment.</p>
+            <Button onClick={fetchDecks} className="rounded-full">Try again</Button>
+          </Card>
         ) : decks.length === 0 ? (
           <Card className="p-16 text-center bg-card/60 backdrop-blur-lg border-0 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="w-20 h-20 rounded-full bg-secondary/60 flex items-center justify-center mx-auto mb-5">
@@ -181,7 +190,6 @@ export function FlashcardEngine() {
             <p className="text-muted-foreground max-w-sm mx-auto">
               Your tutors will create flashcard decks for your enrolled subjects soon.
             </p>
-            {/* Demo play mode — uses seed data */}
             <Button
               onClick={() => navigate("/dashboard/learning/flashcards/play")}
               className="mt-6 rounded-full gap-2 shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
@@ -192,57 +200,97 @@ export function FlashcardEngine() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {decks.map((deck) => (
-              <Card
-                key={deck.id}
-                className="p-6 bg-card/60 backdrop-blur-lg border-0 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all duration-200 group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <BrainCircuit className="w-6 h-6 text-primary" strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-foreground">{deck.title}</h3>
-                    {deck.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{deck.description}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      {deck.subject_name && (
-                        <Badge variant="secondary" className="rounded-full text-xs">{deck.subject_name}</Badge>
+            {decks.map((deck) => {
+              const isDemo = deck.access_level === "demo";
+              const unlocked = isDemo || hasAccess(deck.subject_id || "");
+              const total = deck.card_count || 0;
+              const known = deck.known_count || 0;
+              const pct = total > 0 ? Math.round((known / total) * 100) : 0;
+              return (
+                <Card
+                  key={deck.id}
+                  className="p-6 bg-card/60 backdrop-blur-lg border-0 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all duration-200 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <BrainCircuit className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-foreground truncate">{deck.title}</h3>
+                      {deck.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{deck.description}</p>
                       )}
-                      {deck.card_count !== undefined && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {deck.subject_name && (
+                          <Badge variant="secondary" className="rounded-full text-xs">{deck.subject_name}</Badge>
+                        )}
                         <Badge variant="outline" className="rounded-full text-xs border-border/20">
-                          {deck.card_count} cards
+                          {total} cards
                         </Badge>
-                      )}
+                        {isDemo ? (
+                          <Badge className="rounded-full text-xs bg-primary/15 text-primary border-0 gap-1">
+                            <Sparkles className="w-3 h-3" /> Demo
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="rounded-full text-xs">
+                            Exclusive
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Action buttons */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-full border-0 bg-secondary/50 text-sm"
-                    onClick={(e) => { e.stopPropagation(); startDeck(deck.id); }}
-                  >
-                    Study Inline
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 rounded-full gap-1.5 text-sm shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/dashboard/learning/flashcards/play?deck=${deck.id}`);
-                    }}
-                  >
-                    <Play className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    Play Mode
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  {total > 0 && (
+                    <div className="mt-4 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Mastered</span>
+                        <span className="font-medium text-foreground">{known}/{total} · {pct}%</span>
+                      </div>
+                      <Progress value={pct} className="h-2 rounded-full" />
+                    </div>
+                  )}
+
+                  {unlocked ? (
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 rounded-full border-0 bg-secondary/50 text-sm"
+                        onClick={(e) => { e.stopPropagation(); startDeck(deck.id); }}
+                      >
+                        Study inline
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 rounded-full gap-1.5 text-sm shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/dashboard/learning/flashcards/play?deck=${deck.id}`);
+                        }}
+                      >
+                        <Play className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Play mode
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-4 rounded-full gap-2"
+                      disabled
+                      onClick={() =>
+                        toast({
+                          title: "Enrollment required",
+                          description: "Enroll in this subject to unlock the deck.",
+                        })
+                      }
+                    >
+                      <Lock className="w-4 h-4" /> Enroll to unlock
+                    </Button>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
