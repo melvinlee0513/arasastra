@@ -849,6 +849,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
 export function TutorVideos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isSuperAdmin, availableCenters, currentTenantId } = useTenant();
   const [tab, setTab] = useState("library");
   const [addMode, setAddMode] = useState<"upload" | "embed">("embed");
   const [uploaderOpen, setUploaderOpen] = useState(false);
@@ -856,16 +857,25 @@ export function TutorVideos() {
   const [moduleFilter, setModuleFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Super Admin can filter across centers; Center Admin is locked to their own.
+  const [centerFilter, setCenterFilter] = useState<string>("all");
   const [editing, setEditing] = useState<VideoResource | null>(null);
   const [pendingDelete, setPendingDelete] = useState<VideoResource | null>(null);
 
-  const { data: videos, isLoading } = useQuery({
-    queryKey: ["video_resources"],
+  const { data: videos, isLoading, isError, error: loadError, refetch } = useQuery({
+    queryKey: ["video_resources", isSuperAdmin ? centerFilter : currentTenantId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let q = (supabase as any)
         .from("video_resources")
-        .select("*")
+        .select(
+          "*, subject:subjects(name), class:classes(title), center:tuition_centers(name)"
+        )
         .order("created_at", { ascending: false });
+      if (isSuperAdmin && centerFilter !== "all") {
+        q = q.eq("center_id", centerFilter);
+      }
+      // Center Admins are already scoped by RLS; no client filter needed.
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []) as VideoResource[];
     },
