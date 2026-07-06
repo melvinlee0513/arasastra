@@ -265,7 +265,7 @@ function VideoPlayerCard({
       className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
     >
       <div className="relative aspect-video bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-        {playing && video.source_type === "youtube" && video.youtube_id ? (
+        {playing && canPlayYouTube ? (
           <iframe
             className="w-full h-full"
             src={`https://www.youtube.com/embed/${video.youtube_id}?autoplay=1&rel=0`}
@@ -273,18 +273,21 @@ function VideoPlayerCard({
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
-        ) : playing && video.source_type === "upload" ? (
+        ) : playing && canPlayUpload ? (
           <video src={video.video_url} controls autoPlay className="w-full h-full object-contain bg-black" />
         ) : (
           <>
             {thumb ? (
               <img src={thumb} alt={video.title} className="w-full h-full object-cover" loading="lazy" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <FileVideo className="w-12 h-12 text-slate-400" />
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                <FileVideo className="w-12 h-12 mb-1" />
+                {!isPlayable && (
+                  <span className="text-[11px] font-medium">Media unavailable</span>
+                )}
               </div>
             )}
-            {video.source_type === "zoom" ? (
+            {canOpenZoom ? (
               <a
                 href={video.video_url}
                 target="_blank"
@@ -296,7 +299,7 @@ function VideoPlayerCard({
                   Open in Zoom
                 </span>
               </a>
-            ) : (
+            ) : isPlayable ? (
               <button
                 onClick={() => setPlaying(true)}
                 className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
@@ -304,8 +307,9 @@ function VideoPlayerCard({
               >
                 <PlayCircle className="w-16 h-16 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
               </button>
-            )}
+            ) : null}
           </>
+
         )}
         <div className="absolute top-3 left-3 flex items-center gap-2">
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/95 backdrop-blur text-slate-700 capitalize shadow-sm">
