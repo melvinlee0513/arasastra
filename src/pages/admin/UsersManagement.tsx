@@ -58,6 +58,8 @@ const FORM_YEARS = ["Year 5","Year 6","Form 1","Form 2","Form 3","Form 4","Form 
 export function UsersManagement() {
   const { toast } = useToast();
   const { currentTenantId } = useTenant();
+  const { role: userRole } = useAuth();
+  const isSuperadmin = userRole === "superadmin";
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [standards, setStandards] = useState<Standard[]>([]);
