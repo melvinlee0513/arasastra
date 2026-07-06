@@ -49,14 +49,11 @@ interface ActivityRow {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function countScoped(
-  table: "profiles" | "classes" | "video_resources" | "enrollments",
+  table: "profiles" | "classes" | "video_resources",
   centerId: string | null,
 ): Promise<number> {
-  let q = supabase.from(table).select("id", { count: "exact", head: true });
-  // enrollments has no center_id; scope through classes below
-  if (centerId && table !== "enrollments") {
-    q = q.eq("center_id", centerId);
-  }
+  const base = supabase.from(table as any).select("id", { count: "exact", head: true });
+  const q = centerId ? base.eq("center_id", centerId) : base;
   const { count } = await q;
   return count ?? 0;
 }
