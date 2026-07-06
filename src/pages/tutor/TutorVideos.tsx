@@ -329,12 +329,37 @@ function VideoPlayerCard({
 
       <div className="p-5 flex-1 flex flex-col gap-2">
         <h3 className="font-semibold text-slate-900 line-clamp-1">{video.title}</h3>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+          {video.subject?.name && (
+            <span className="font-medium text-primary">{video.subject.name}</span>
+          )}
+          {video.class?.title && (
+            <>
+              <span className="opacity-40">•</span>
+              <span className="truncate max-w-[10rem]">{video.class.title}</span>
+            </>
+          )}
+          {video.center?.name && (
+            <>
+              <span className="opacity-40">•</span>
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                {video.center.name}
+              </span>
+            </>
+          )}
+        </div>
         {video.course_module && (
-          <p className="text-xs font-medium text-primary">{video.course_module}</p>
+          <p className="text-xs font-medium text-slate-600">{video.course_module}</p>
         )}
         {video.description && (
           <p className="text-sm text-slate-600 line-clamp-2">{video.description}</p>
         )}
+        <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+          <CalendarIcon className="w-3 h-3" />
+          {format(new Date(video.updated_at || video.created_at), "MMM d, yyyy")}
+        </div>
+
         <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100">
           <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
             <Switch
