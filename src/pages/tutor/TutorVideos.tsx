@@ -688,6 +688,7 @@ function VideoLinkInput({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: scope } = useTutorScope();
+  const { currentTenantId } = useTenant();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [courseModule, setCourseModule] = useState("");
