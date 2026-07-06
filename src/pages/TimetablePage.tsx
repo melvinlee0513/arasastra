@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Clock, Loader2, AlertCircle, CalendarX, Lock, MapPin, User as UserIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle, CalendarX, Lock, Users, User as UserIcon } from "lucide-react";
 import { format, startOfWeek, addDays, isSameDay, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
