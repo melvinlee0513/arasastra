@@ -97,12 +97,17 @@ export function UsersManagement() {
       setIsLoading(true);
 
       // Step 1: Fetch the valid IDs for the active tab from the user_roles table
-      const targetRoles: Array<"admin" | "superadmin" | "student" | "tutor"> =
-        activeTab === "admin" ? ["admin", "superadmin"] : [activeTab];
+      const getTargetRole = (tab: string) => {
+        const normalized = tab.toLowerCase();
+        if (normalized.includes('student')) return 'student';
+        if (normalized.includes('admin')) return 'admin';
+        return 'tutor';
+      };
+      const targetRole = getTargetRole(activeTab);
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("user_id, role")
-        .in("role", targetRoles);
+        .eq("role", targetRole);
 
       if (roleError) throw roleError;
 
@@ -135,7 +140,7 @@ export function UsersManagement() {
       // Step 4: Merge the explicit role back into the profile object for the UI
       const mergedUsers: UserProfile[] = (profiles || []).map((profile: any) => ({
         ...profile,
-        role: roleByUserId.get(profile.user_id) ?? targetRoles[0],
+        role: roleByUserId.get(profile.user_id) ?? targetRole,
       }));
 
       setUsers(mergedUsers);
