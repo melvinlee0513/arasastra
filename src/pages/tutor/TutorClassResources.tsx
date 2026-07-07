@@ -163,9 +163,10 @@ export default function TutorClassResources() {
     if (!confirm(`Delete "${r.title}"?`)) return;
     const { error } = await supabase.from("class_resources").delete().eq("id", r.id);
     if (error) {
-      toast.error("Could not delete");
+      showSupabaseError(error, "Could not delete");
       return;
     }
+
     toast.success("Deleted");
     void load();
   }
