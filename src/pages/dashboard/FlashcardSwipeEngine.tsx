@@ -127,6 +127,11 @@ export function FlashcardSwipeEngine() {
         setStreak((s) => s + 1);
         setXp((v) => v + XP_PER_GOT_IT);
         saveProgress(card.id, "known");
+        // Fire-and-forget: award XP + update daily streak server-side.
+        void recordActivity("flashcard_known", XP_PER_GOT_IT, {
+          id: card.id,
+          type: "flashcard",
+        });
       } else {
         setReviewCount((c) => c + 1);
         setStreak(0);
