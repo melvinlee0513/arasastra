@@ -48,25 +48,24 @@ export function AttendanceDialog({
   const fetchStudents = async () => {
     setIsLoading(true);
     try {
-      // Get the class's subject to find enrolled students
-      const { data: classData } = await supabase
-        .from("classes")
-        .select("subject_id")
-        .eq("id", classId)
-        .single();
+      // Canonical: pull students enrolled directly in this class instance
+      const { data: enrollments } = await supabase
+        .from("class_enrollments")
+        .select("student_user_id")
+        .eq("class_id", classId)
+        .eq("status", "active");
 
-      if (!classData?.subject_id) {
+      const userIds = (enrollments || []).map((e: any) => e.student_user_id).filter(Boolean);
+      if (userIds.length === 0) {
         setStudents([]);
         setIsLoading(false);
         return;
       }
 
-      // Get enrolled students for this subject
-      const { data: enrollments } = await supabase
-        .from("enrollments")
-        .select("student_id, profiles!enrollments_student_id_fkey(id, user_id, full_name)")
-        .eq("subject_id", classData.subject_id)
-        .eq("is_active", true);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name")
+        .in("user_id", userIds);
 
       // Get existing attendance for this class
       const dateStr = new Date(classDate).toISOString().split("T")[0];
@@ -80,17 +79,12 @@ export function AttendanceDialog({
         (existingAttendance || []).map((a) => [a.user_id, a.status])
       );
 
-      const studentList: Student[] = (enrollments || [])
-        .filter((e) => e.profiles)
-        .map((e) => {
-          const profile = e.profiles as unknown as { id: string; user_id: string; full_name: string };
-          return {
-            id: profile.id,
-            user_id: profile.user_id,
-            full_name: profile.full_name,
-            present: attendanceMap.get(profile.user_id) === "present",
-          };
-        });
+      const studentList: Student[] = (profiles || []).map((p: any) => ({
+        id: p.id,
+        user_id: p.user_id,
+        full_name: p.full_name,
+        present: attendanceMap.get(p.user_id) === "present",
+      }));
 
       setStudents(studentList);
     } catch (error) {
