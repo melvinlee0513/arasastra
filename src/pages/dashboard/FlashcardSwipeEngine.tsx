@@ -112,6 +112,22 @@ export function FlashcardSwipeEngine() {
     [user],
   );
 
+  const advance = useCallback(() => {
+    x.set(0);
+    setIsFlipped(false);
+    setSwipeDirection(null);
+    setCurrentIndex((i) => {
+      const next = i + 1;
+      if (next >= queue.length) {
+        setIsComplete(true);
+        setIsAnimating(false);
+        return i;
+      }
+      setIsAnimating(false);
+      return next;
+    });
+  }, [queue.length, x]);
+
   const answer = useCallback(
     (direction: "left" | "right") => {
       if (isAnimating || isComplete) return;
@@ -138,25 +154,15 @@ export function FlashcardSwipeEngine() {
         setReviewPile((p) => (p.some((r) => r.id === card.id) ? p : [...p, card]));
         saveProgress(card.id, "review");
       }
+
+      // Advance after the exit animation duration. This guarantees the next
+      // card mounts even if framer-motion's onAnimationComplete does not fire
+      // (e.g. when the element unmounts mid-transition).
+      window.setTimeout(advance, 340);
     },
-    [isAnimating, isComplete, queue, currentIndex, saveProgress, recordActivity],
+    [isAnimating, isComplete, queue, currentIndex, saveProgress, recordActivity, advance],
   );
 
-  // Called when the exit animation finishes. This is the ONLY place where the
-  // card advances — never advance while a swipe animation is still in flight.
-  const handleAnimationComplete = useCallback(() => {
-    if (!swipeDirection) return;
-    x.set(0);
-    setIsFlipped(false);
-    setSwipeDirection(null);
-    if (currentIndex + 1 < queue.length) {
-      setCurrentIndex((i) => i + 1);
-      setIsAnimating(false);
-    } else {
-      setIsAnimating(false);
-      setIsComplete(true);
-    }
-  }, [swipeDirection, currentIndex, queue.length, x]);
 
   const handleDragEnd = useCallback(
     (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
@@ -404,8 +410,8 @@ export function FlashcardSwipeEngine() {
                 : { opacity: 1, scale: 1, y: 0, x: 0, rotate: 0 }
             }
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            onAnimationComplete={handleAnimationComplete}
             className="cursor-grab active:cursor-grabbing touch-none rounded-3xl will-change-transform"
+
             role="button"
             tabIndex={0}
             aria-label={isFlipped ? "Answer side, tap to flip" : "Question side, tap to flip"}

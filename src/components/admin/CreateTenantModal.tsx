@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 import {
   normalizeSlugInput,
   validateSubdomainSlug,
@@ -127,10 +129,9 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
       reset();
       onClose();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create tenant";
-      toast.error(message);
+      showSupabaseError(err as any, "Failed to create centre");
     } finally {
+
       setSubmitting(false);
     }
   };

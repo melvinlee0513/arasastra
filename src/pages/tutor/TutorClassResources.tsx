@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 import {
   ArrowLeft,
   Plus,
@@ -149,9 +151,10 @@ export default function TutorClassResources() {
       })
       .eq("id", r.id);
     if (error) {
-      toast.error("Could not update visibility");
+      showSupabaseError(error, "Could not update visibility");
       return;
     }
+
     toast.success(next === "published" ? "Published to students" : "Moved to draft");
     void load();
   }
@@ -160,9 +163,10 @@ export default function TutorClassResources() {
     if (!confirm(`Delete "${r.title}"?`)) return;
     const { error } = await supabase.from("class_resources").delete().eq("id", r.id);
     if (error) {
-      toast.error("Could not delete");
+      showSupabaseError(error, "Could not delete");
       return;
     }
+
     toast.success("Deleted");
     void load();
   }
@@ -459,7 +463,7 @@ function AttachMaterialModal({
       reset();
       onCreated();
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not attach material");
+      showSupabaseError(err, "Could not attach material");
     } finally {
       setSaving(false);
     }

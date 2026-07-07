@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -387,7 +389,7 @@ function SubjectModal({
       .insert({ name: name.trim(), description: description.trim() || null, center_id: centerId, is_active: true });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      showSupabaseError(error, "Could not create subject");
       return;
     }
     setName("");
@@ -483,7 +485,8 @@ function ClassModal({
     });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      showSupabaseError(error, "Could not create class");
+
       return;
     }
     setTitle("");
@@ -816,7 +819,7 @@ function AssignTutorsModal({
       toast.success("Tutor assignments updated");
       onDone();
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update assignments");
+      showSupabaseError(err, "Failed to update assignments");
     } finally {
       setSaving(false);
     }

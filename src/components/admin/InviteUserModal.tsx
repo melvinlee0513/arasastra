@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 
 interface InviteUserModalProps {
   open: boolean;
@@ -92,9 +94,9 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
       reset();
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create invitation";
-      toast.error(message);
+      showSupabaseError(err as any, "Failed to create invitation");
     } finally {
+
       setSubmitting(false);
     }
   };

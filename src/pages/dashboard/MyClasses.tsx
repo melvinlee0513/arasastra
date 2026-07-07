@@ -16,13 +16,21 @@ interface EnrolledClass {
   tutor_name: string | null;
 }
 
-const PLACEHOLDER_BANNERS = [
-  "https://images.unsplash.com/photo-1509869175650-a1d97972541a?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=900&q=70",
+// Deterministic soft-gradient banner per class — no external stock imagery.
+const BANNER_GRADIENTS = [
+  "from-sky-100 via-white to-cyan-100",
+  "from-indigo-100 via-white to-sky-100",
+  "from-emerald-100 via-white to-teal-100",
+  "from-amber-100 via-white to-rose-100",
+  "from-violet-100 via-white to-fuchsia-100",
+  "from-slate-100 via-white to-sky-50",
 ];
+function bannerFor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return BANNER_GRADIENTS[h % BANNER_GRADIENTS.length];
+}
+
 
 export function MyClasses() {
   const { user } = useAuth();
@@ -99,23 +107,21 @@ export function MyClasses() {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {classes.map((c, i) => (
+            {classes.map((c) => (
               <Link
                 key={c.id}
                 to={`/dashboard/classes/${c.id}`}
                 className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
               >
-                <div className="relative aspect-video overflow-hidden">
-                  <img
-                    src={PLACEHOLDER_BANNERS[i % PLACEHOLDER_BANNERS.length]}
-                    alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
+                <div
+                  className={`relative aspect-video overflow-hidden bg-gradient-to-br ${bannerFor(c.id)}`}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <GraduationCap className="w-14 h-14 text-slate-400/50" strokeWidth={1.25} />
+                  </div>
                   <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5">
                     {c.subject_name && (
-                      <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white">
+                      <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
                         {c.subject_name}
                       </Badge>
                     )}
@@ -126,6 +132,7 @@ export function MyClasses() {
                     )}
                   </div>
                 </div>
+
                 <div className="p-5 flex-1 flex flex-col gap-2">
                   <h3 className="font-semibold text-slate-900 line-clamp-1">{c.title}</h3>
                   {c.cohort_label && (
