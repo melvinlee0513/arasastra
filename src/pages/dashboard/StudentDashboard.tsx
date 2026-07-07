@@ -12,8 +12,10 @@ import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
 import { XPLeaderboard } from "@/components/dashboard/XPLeaderboard";
 import { StreakFlame } from "@/components/dashboard/StreakFlame";
+import { XPLevelChip } from "@/components/dashboard/XPLevelChip";
 import { RemedialPlaylist } from "@/components/dashboard/RemedialPlaylist";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { useGamification } from "@/hooks/useGamification";
 
 interface LiveClass {
   id: string;
