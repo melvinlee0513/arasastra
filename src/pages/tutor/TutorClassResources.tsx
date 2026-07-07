@@ -151,9 +151,10 @@ export default function TutorClassResources() {
       })
       .eq("id", r.id);
     if (error) {
-      toast.error("Could not update visibility");
+      showSupabaseError(error, "Could not update visibility");
       return;
     }
+
     toast.success(next === "published" ? "Published to students" : "Moved to draft");
     void load();
   }
