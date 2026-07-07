@@ -167,6 +167,43 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="centre-subdomain" className="text-[#0F172A] font-medium">
+              Tenant subdomain
+            </Label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                id="centre-subdomain"
+                required
+                value={subdomain}
+                onChange={(e) => setSubdomain(normalizeSlugInput(e.target.value))}
+                maxLength={50}
+                placeholder="srisarjana"
+                autoComplete="off"
+                className="pl-10 pr-28 rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
+              />
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                .{ROOT_DOMAIN}
+              </span>
+            </div>
+            {subdomain ? (
+              slugError ? (
+                <p className="text-xs text-rose-500">{slugError}</p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Preview:{" "}
+                  <span className="font-medium text-[#0052FF]">{tenantUrlFor(subdomain)}</span>
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-slate-400">
+                Lowercase letters, numbers, hyphens. 3–50 chars.
+              </p>
+            )}
+          </div>
+
+
+          <div className="flex flex-col gap-2">
             <Label htmlFor="centre-logo" className="text-[#0F172A] font-medium">
               Centre logo URL <span className="text-slate-400 font-normal">(optional)</span>
             </Label>
