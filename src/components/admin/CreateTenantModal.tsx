@@ -30,14 +30,21 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
   const [name, setName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [subdomain, setSubdomain] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!isSuperAdmin) return null;
+
+  const slugError = useMemo(
+    () => (subdomain ? validateSubdomainSlug(subdomain) : "Subdomain is required"),
+    [subdomain],
+  );
 
   const reset = () => {
     setName("");
     setLogoUrl("");
     setAdminEmail("");
+    setSubdomain("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,9 +53,15 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
     const trimmedName = name.trim();
     const trimmedEmail = adminEmail.trim().toLowerCase();
     const trimmedLogo = logoUrl.trim();
+    const cleanSlug = normalizeSlugInput(subdomain);
 
     if (!trimmedName || trimmedName.length > 120) {
       toast.error("Please enter a valid centre name");
+      return;
+    }
+    const slugErr = validateSubdomainSlug(cleanSlug);
+    if (slugErr) {
+      toast.error(slugErr);
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
@@ -62,17 +75,25 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
 
     setSubmitting(true);
     try {
-      // Step 1: create tuition centre
-      const { data: centre, error: centreError } = await supabase
+      // Step 1: create tuition centre (with subdomain slug, active by default so
+      // the manually-provisioned DNS record starts routing immediately).
+      const { data: centre, error: centreError } = await (supabase as any)
         .from("tuition_centers")
         .insert({
           name: trimmedName,
           logo_url: trimmedLogo || null,
+          subdomain_slug: cleanSlug,
+          domain_status: "active",
         })
         .select("id")
         .single();
 
-      if (centreError) throw centreError;
+      if (centreError) {
+        if ((centreError as any).code === "23505") {
+          throw new Error("That subdomain is already taken — pick another slug.");
+        }
+        throw centreError;
+      }
 
       // Step 2: create pending admin invitation tied to the new centre
       const { data: invite, error: inviteError } = await supabase
@@ -88,7 +109,7 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
 
       if (inviteError) throw inviteError;
 
-      const link = `${window.location.origin}/invite?token=${invite.id}`;
+      const link = `${tenantUrlFor(cleanSlug)}/invite?token=${invite.id}`;
 
       toast.success("Tenant created", {
         description: link,
