@@ -1385,6 +1385,72 @@ export type Database = {
           },
         ]
       }
+      student_streaks: {
+        Row: {
+          center_id: string
+          created_at: string
+          current_streak: number
+          id: string
+          last_activity_date: string | null
+          longest_streak: number
+          student_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          student_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          student_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      student_xp_events: {
+        Row: {
+          center_id: string
+          created_at: string
+          event_type: string
+          id: string
+          source_id: string | null
+          source_type: string | null
+          student_user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          source_id?: string | null
+          source_type?: string | null
+          student_user_id: string
+          xp_amount?: number
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          source_id?: string | null
+          source_type?: string | null
+          student_user_id?: string
+          xp_amount?: number
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           archived_at: string | null
@@ -1851,6 +1917,15 @@ export type Database = {
       }
       is_superadmin: { Args: never; Returns: boolean }
       is_tutor_of_class: { Args: { _class_id: string }; Returns: boolean }
+      record_learning_activity: {
+        Args: {
+          _event_type: string
+          _source_id?: string
+          _source_type?: string
+          _xp_amount: number
+        }
+        Returns: Json
+      }
       resolve_tenant_by_subdomain: {
         Args: { _slug: string }
         Returns: {
