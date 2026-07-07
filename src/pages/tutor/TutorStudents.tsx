@@ -30,62 +30,50 @@ export function TutorStudents() {
   const fetchStudents = async () => {
     setIsLoading(true);
     try {
-      // Get tutor record to find specialization
-      const { data: tutor } = await supabase
-        .from("tutors")
-        .select("id, specialization")
-        .eq("user_id", user!.id)
-        .single();
+      // Canonical: tutor's assigned classes -> enrolled students
+      const { data: myClasses } = await supabase
+        .from("class_tutors")
+        .select("class_id, classes:classes!class_tutors_class_id_fkey(id, subject_id, subject:subjects(name))")
+        .eq("tutor_user_id", user!.id);
 
-      if (!tutor?.specialization) { setIsLoading(false); return; }
+      const classIds = (myClasses || []).map((c: any) => c.class_id).filter(Boolean);
+      if (classIds.length === 0) { setIsLoading(false); return; }
 
-      // Find subjects matching specialization
-      const { data: subjects } = await supabase
-        .from("subjects")
-        .select("id, name")
-        .eq("name", tutor.specialization)
-        .eq("is_active", true);
+      const classToSubject = new Map<string, string>();
+      for (const row of (myClasses || []) as any[]) {
+        classToSubject.set(row.class_id, row.classes?.subject?.name || "Unknown");
+      }
 
-      if (!subjects || subjects.length === 0) { setIsLoading(false); return; }
-
-      const subjectIds = subjects.map((s) => s.id);
-      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
-
-      // Get enrollments for those subjects
       const { data: enrollments } = await supabase
-        .from("enrollments")
-        .select("student_id, subject_id")
-        .in("subject_id", subjectIds)
-        .eq("is_active", true);
+        .from("class_enrollments")
+        .select("student_user_id, class_id")
+        .in("class_id", classIds)
+        .eq("status", "active");
 
       if (!enrollments || enrollments.length === 0) { setIsLoading(false); return; }
 
-      const studentIds = [...new Set(enrollments.map((e) => e.student_id))];
+      const userIds = [...new Set(enrollments.map((e) => e.student_user_id))];
 
-      // Get profiles
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, email, avatar_url, form_year")
-        .in("id", studentIds);
+        .select("id, user_id, full_name, email, avatar_url, form_year")
+        .in("user_id", userIds);
 
-      const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+      const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
       const mapped: StudentInfo[] = enrollments.map((e) => {
-        const p = profileMap.get(e.student_id);
+        const p = profileMap.get(e.student_user_id) as any;
         return {
-          id: e.student_id,
+          id: p?.id || e.student_user_id,
           full_name: p?.full_name || "Unknown",
           email: p?.email || null,
           avatar_url: p?.avatar_url || null,
           form_year: p?.form_year || null,
-          subject_name: subjectMap.get(e.subject_id) || "Unknown",
+          subject_name: classToSubject.get(e.class_id) || "Unknown",
         };
       });
 
-      // Deduplicate by student id
-      const unique = Array.from(
-        new Map(mapped.map((s) => [s.id, s])).values()
-      );
+      const unique = Array.from(new Map(mapped.map((s) => [s.id, s])).values());
 
       setStudents(unique);
     } catch (error) {

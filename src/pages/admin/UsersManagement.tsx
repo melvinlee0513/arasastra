@@ -161,14 +161,24 @@ export function UsersManagement() {
       (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
       (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
       (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
-      (supabase as any).from("enrollments").select("id,student_id,class_id,subject_id"),
+      (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
       (supabase as any).from("tutors").select("id,user_id"),
     ]);
     setSubjects(subsRes.data || []);
     setStandards(stdsRes.data || []);
     setClasses(classesRes.data || []);
     setAssignments(assignsRes.data || []);
-    setEnrollments(enrolRes.data || []);
+    // Normalize canonical rows into the Enrollment shape used by filters/UI:
+    // student_id here holds the auth user_id; subject_id is derived from class.
+    const classMap = new Map((classesRes.data || []).map((c: any) => [c.id, c.subject_id]));
+    setEnrollments(
+      (enrolRes.data || []).map((e: any) => ({
+        id: e.id,
+        student_id: e.student_user_id,
+        class_id: e.class_id,
+        subject_id: (classMap.get(e.class_id) as string | null) ?? null,
+      })),
+    );
     setTutors(tutorsRes.data || []);
   };
 
@@ -256,16 +266,16 @@ export function UsersManagement() {
           const t = tutors.find((tt) => tt.user_id === u.user_id);
           if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
         } else if (u.role === "student") {
-          const studentClassIds = enrollments.filter((e) => e.student_id === u.id).map((e) => e.class_id);
+          const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
-            || enrollments.some((e) => e.student_id === u.id && e.subject_id === subjectFilter);
+            || enrollments.some((e) => e.student_id === u.user_id && e.subject_id === subjectFilter);
           if (!hasSubject) return false;
         } else { return false; }
       }
 
       if (classFilter !== "all") {
         if (u.role !== "student") return false;
-        if (!enrollments.some((e) => e.student_id === u.id && e.class_id === classFilter)) return false;
+        if (!enrollments.some((e) => e.student_id === u.user_id && e.class_id === classFilter)) return false;
       }
 
       if (!q) return true;
@@ -421,7 +431,7 @@ export function UsersManagement() {
                 ) : filteredUsers.map((user) => {
                   const tutor = tutors.find((t) => t.user_id === user.user_id);
                   const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.id && e.class_id);
+                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/60">
@@ -591,7 +601,7 @@ function AssignmentDialog({
   const tutor = tutors.find((t) => t.user_id === user.user_id);
 
   const tutorRows = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-  const studentRows = enrollments.filter((e) => e.student_id === user.id && e.class_id);
+  const studentRows = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
   const addTutorAssignment = async () => {
     if (!tutor || !newSubject) return;
@@ -625,13 +635,12 @@ function AssignmentDialog({
 
   const addEnrollment = async () => {
     if (!newClass || isSubmitting) return;
-    // CRITICAL: enrollments.student_id references profiles.id (NOT auth.users.id).
-    // Validate before we even touch the network so the FK can never trip.
-    const profileId = user.id;
-    if (!profileId || !UUID_RE.test(profileId)) {
+    // Canonical class_enrollments uses auth user_id (student_user_id).
+    const studentUserId = user.user_id;
+    if (!studentUserId || !UUID_RE.test(studentUserId)) {
       toast({
-        title: "Invalid user profile",
-        description: "This user has no valid profile ID. Refresh and try again.",
+        title: "Invalid user",
+        description: "This user is missing an auth id. Refresh and try again.",
         variant: "destructive",
       });
       return;
@@ -641,8 +650,13 @@ function AssignmentDialog({
       return;
     }
     const klass = classes.find((c) => c.id === newClass);
+    const centerId = user.center_id;
+    if (!centerId) {
+      toast({ title: "Missing center", description: "User has no center assigned.", variant: "destructive" });
+      return;
+    }
     const optimistic: Enrollment = {
-      id: `tmp-${Date.now()}`, student_id: profileId,
+      id: `tmp-${Date.now()}`, student_id: studentUserId,
       class_id: newClass, subject_id: klass?.subject_id || null,
     };
 
@@ -650,39 +664,32 @@ function AssignmentDialog({
     setEnrollments((p) => [...p, optimistic]);
 
     try {
-      const { data, error } = await (supabase as any).from("enrollments").insert({
-        student_id: profileId,
+      const { data, error } = await (supabase as any).from("class_enrollments").insert({
+        center_id: centerId,
         class_id: newClass,
-        subject_id: klass?.subject_id || null,
-        is_active: true,
+        student_user_id: studentUserId,
+        status: "active",
       }).select().single();
 
       if (error) throw error;
 
-      // Reconcile optimistic row with DB row; keep modal open on success too so
-      // the admin can queue additional enrollments in one sitting.
-      setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));
+      setEnrollments((p) => p.map((e) => e.id === optimistic.id
+        ? { id: data.id, student_id: data.student_user_id, class_id: data.class_id, subject_id: klass?.subject_id || null }
+        : e));
       setNewClass("");
       toast({ title: "✅ Enrolled" });
     } catch (err: any) {
-      // Rollback: remove ONLY the optimistic row we added; leave the rest of
-      // the grid untouched so it continues to mirror the database.
       setEnrollments((p) => p.filter((e) => e.id !== optimistic.id));
-
-      const isDuplicateEnrollment =
-        err?.code === '23505' ||
-        (typeof err?.message === 'string' && err.message.includes('enrollments_student_id_class_id_key')) ||
-        (typeof err?.details === 'string' && err.details.includes('enrollments_student_id_class_id_key'));
-
-      toast({
-        title: "Enrollment failed",
-        description: isDuplicateEnrollment
-          ? "Student is already enrolled in this class instance."
-          : "Failed to enroll student. Please try again.",
-        variant: "destructive",
-      });
-      // Do NOT call onClose(): the modal must stay open so the admin can pick
-      // another time slot without losing their selection context.
+      const { showSupabaseError } = await import("@/lib/supabaseErrors");
+      if (err?.code === '23505') {
+        toast({
+          title: "Enrollment failed",
+          description: "Student is already enrolled in this class instance.",
+          variant: "destructive",
+        });
+      } else {
+        showSupabaseError(err, "Enrollment failed");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -692,8 +699,12 @@ function AssignmentDialog({
   const removeEnrollment = async (id: string) => {
     const prev = enrollments;
     setEnrollments((p) => p.filter((e) => e.id !== id));
-    const { error } = await (supabase as any).from("enrollments").delete().eq("id", id);
-    if (error) { setEnrollments(prev); toast({ title: "Failed", description: error.message, variant: "destructive" }); }
+    const { error } = await (supabase as any).from("class_enrollments").delete().eq("id", id);
+    if (error) {
+      setEnrollments(prev);
+      const { showSupabaseError } = await import("@/lib/supabaseErrors");
+      showSupabaseError(error, "Remove failed");
+    }
   };
 
   const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name || "Unknown";

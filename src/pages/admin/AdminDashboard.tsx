@@ -61,21 +61,16 @@ async function countScoped(
 async function countEnrollments(centerId: string | null): Promise<number> {
   if (!centerId) {
     const { count } = await supabase
-      .from("enrollments")
-      .select("id", { count: "exact", head: true });
+      .from("class_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active");
     return count ?? 0;
   }
-  // Scope enrollments via their class' center_id.
-  const { data: cls } = await supabase
-    .from("classes")
-    .select("id")
-    .eq("center_id", centerId);
-  const ids = (cls ?? []).map((c) => c.id);
-  if (ids.length === 0) return 0;
   const { count } = await supabase
-    .from("enrollments")
+    .from("class_enrollments")
     .select("id", { count: "exact", head: true })
-    .in("class_id", ids);
+    .eq("center_id", centerId)
+    .eq("status", "active");
   return count ?? 0;
 }
 

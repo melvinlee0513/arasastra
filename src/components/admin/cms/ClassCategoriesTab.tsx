@@ -74,10 +74,14 @@ export function ClassCategoriesTab() {
 
       if (subjectIds.length > 0) {
         const enrollmentPromises = subjectIds.map(async (id) => {
+          const { data: cls } = await supabase.from("classes").select("id").eq("subject_id", id);
+          const cids = (cls || []).map((c) => c.id);
+          if (cids.length === 0) return { id, count: 0 };
           const { count } = await supabase
-            .from("enrollments")
+            .from("class_enrollments")
             .select("id", { count: "exact", head: true })
-            .eq("subject_id", id);
+            .eq("status", "active")
+            .in("class_id", cids);
           return { id, count: count || 0 };
         });
         const results = await Promise.all(enrollmentPromises);

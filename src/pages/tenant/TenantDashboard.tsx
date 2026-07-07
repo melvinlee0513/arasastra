@@ -42,9 +42,9 @@ function TenantMetrics({ tenantId }: { tenantId: string }) {
     queryKey: ["tenant", tenantId, "active-enrollments"],
     queryFn: async () => {
       const { count } = await supabase
-        .from("enrollments")
+        .from("class_enrollments")
         .select("id", { count: "exact", head: true })
-        .eq("is_active", true);
+        .eq("status", "active");
       return count ?? 0;
     },
   });
