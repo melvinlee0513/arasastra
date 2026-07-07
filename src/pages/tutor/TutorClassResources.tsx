@@ -463,7 +463,7 @@ function AttachMaterialModal({
       reset();
       onCreated();
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not attach material");
+      showSupabaseError(err, "Could not attach material");
     } finally {
       setSaving(false);
     }
