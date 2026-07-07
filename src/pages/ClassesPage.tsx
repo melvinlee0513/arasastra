@@ -39,28 +39,37 @@ interface SubjectNote {
 }
 
 export function ClassesPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [enrollments, setEnrollments] = useState<EnrolledSubject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState<EnrolledSubject | null>(null);
 
   useEffect(() => {
     fetchEnrollments();
-  }, [profile?.id]);
+  }, [profile?.id, user?.id]);
 
   const fetchEnrollments = async () => {
     setIsLoading(true);
     try {
-      if (profile?.id) {
-        // Fetch enrolled subjects for authenticated user
+      if (user?.id) {
+        // Canonical: pull enrolled classes and derive unique subjects
         const { data, error } = await supabase
-          .from("enrollments")
-          .select("id, subject:subjects(id, name, icon, color, description)")
-          .eq("student_id", profile.id)
-          .eq("is_active", true);
+          .from("class_enrollments")
+          .select("class_id, classes:classes!class_enrollments_class_id_fkey(id, subject:subjects(id, name, icon, color, description))")
+          .eq("student_user_id", user.id)
+          .eq("status", "active");
 
         if (error) throw error;
-        setEnrollments((data || []) as unknown as EnrolledSubject[]);
+        const seen = new Set<string>();
+        const uniq: EnrolledSubject[] = [];
+        for (const row of (data || []) as any[]) {
+          const s = row.classes?.subject;
+          if (s && !seen.has(s.id)) {
+            seen.add(s.id);
+            uniq.push({ id: row.class_id, subject: s });
+          }
+        }
+        setEnrollments(uniq);
       } else {
         // Fetch all active subjects for unauthenticated users
         const { data, error } = await supabase

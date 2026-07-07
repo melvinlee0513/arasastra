@@ -14,29 +14,34 @@ export function useAccess() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (user?.id) {
       fetchEnrollments();
     } else {
       setEnrolledSubjects([]);
       setIsLoading(false);
     }
-  }, [profile?.id]);
+  }, [user?.id]);
 
   const fetchEnrollments = async () => {
     try {
+      // Canonical: derive subjects from enrolled classes
       const { data, error } = await supabase
-        .from("enrollments")
-        .select("subject_id, is_active, subject:subjects(id, name)")
-        .eq("student_id", profile!.id)
-        .eq("is_active", true);
+        .from("class_enrollments")
+        .select("classes:classes!class_enrollments_class_id_fkey(subject:subjects(id, name))")
+        .eq("student_user_id", user!.id)
+        .eq("status", "active");
 
       if (error) throw error;
 
-      const mapped: EnrolledSubject[] = (data || []).map((e) => ({
-        subject_id: e.subject_id,
-        subject_name: (e.subject as any)?.name || "Unknown",
-        is_active: e.is_active ?? false,
-      }));
+      const seen = new Set<string>();
+      const mapped: EnrolledSubject[] = [];
+      for (const row of (data || []) as any[]) {
+        const s = row.classes?.subject;
+        if (s?.id && !seen.has(s.id)) {
+          seen.add(s.id);
+          mapped.push({ subject_id: s.id, subject_name: s.name || "Unknown", is_active: true });
+        }
+      }
 
       setEnrolledSubjects(mapped);
     } catch (error) {

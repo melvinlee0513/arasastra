@@ -96,12 +96,12 @@ export function StudentDashboard() {
       setLiveClasses(liveNow);
       setUpcomingClasses(upcoming.slice(0, 5)); // Show only next 5
 
-      // Fetch enrolled subjects with progress calculation
+      // Canonical: derive enrolled subjects from class_enrollments -> classes -> subjects
       const { data: enrollmentData } = await supabase
-        .from("enrollments")
-        .select("id, subject:subjects(id, name, icon, color)")
-        .eq("student_id", profile!.id)
-        .eq("is_active", true);
+        .from("class_enrollments")
+        .select("id, classes:classes!class_enrollments_class_id_fkey(id, subject:subjects(id, name, icon, color))")
+        .eq("student_user_id", user!.id)
+        .eq("status", "active");
 
       // Fetch progress for enrolled subjects
       const { data: progressData } = await supabase
@@ -109,8 +109,13 @@ export function StudentDashboard() {
         .select("class_id, completed, classes(subject_id)")
         .eq("student_id", profile!.id);
 
-      // Calculate progress per subject
-      const subjectsWithProgress = (enrollmentData || []).map((enrollment) => {
+      // Deduplicate to unique subjects, then calculate progress per subject
+      const seen = new Map<string, any>();
+      for (const row of (enrollmentData || []) as any[]) {
+        const s = row.classes?.subject;
+        if (s?.id && !seen.has(s.id)) seen.set(s.id, { id: row.id, subject: s });
+      }
+      const subjectsWithProgress = Array.from(seen.values()).map((enrollment) => {
         const subjectId = enrollment.subject?.id;
         const subjectProgress = (progressData || []).filter(
           (p) => (p.classes as { subject_id: string | null } | null)?.subject_id === subjectId
