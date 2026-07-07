@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { BookOpen, GraduationCap, Plus, Users, ChevronRight } from "lucide-react";
+import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Subject = { id: string; name: string; description: string | null };
@@ -43,6 +43,7 @@ export default function CurriculumManager() {
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [assignTutorsOpen, setAssignTutorsOpen] = useState(false);
 
   useEffect(() => {
     if (!currentTenantId) return;
@@ -221,14 +222,24 @@ export default function CurriculumManager() {
             </div>
             <div className="flex items-center gap-2">
               {selectedClass && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEnrollModalOpen(true)}
-                  className="rounded-full h-8 px-3"
-                >
-                  <Users className="h-4 w-4 mr-1" /> Enroll students
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAssignTutorsOpen(true)}
+                    className="rounded-full h-8 px-3"
+                  >
+                    <UserCog className="h-4 w-4 mr-1" /> Assign tutors
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEnrollModalOpen(true)}
+                    className="rounded-full h-8 px-3"
+                  >
+                    <Users className="h-4 w-4 mr-1" /> Enroll students
+                  </Button>
+                </>
               )}
               <Button
                 size="sm"
@@ -330,6 +341,19 @@ export default function CurriculumManager() {
           classId={selectedClass.id}
           onDone={() => {
             setEnrollModalOpen(false);
+            if (selectedSubjectId) void loadClasses(selectedSubjectId);
+          }}
+        />
+      )}
+      {selectedClass && (
+        <AssignTutorsModal
+          open={assignTutorsOpen}
+          onOpenChange={setAssignTutorsOpen}
+          centerId={currentTenantId}
+          classId={selectedClass.id}
+          tutors={tutors}
+          onDone={() => {
+            setAssignTutorsOpen(false);
             if (selectedSubjectId) void loadClasses(selectedSubjectId);
           }}
         />
@@ -580,8 +604,8 @@ function EnrollModal({
       .order("full_name");
     const list = (profs ?? [])
       .filter((p: any) => studentUserIds.has(p.user_id))
-      .map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email }));
-    setStudents(list);
+      .map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email, user_id: p.user_id }));
+    setStudents(list as any);
     setAlreadyEnrolled(new Set((enr ?? []).map((e: any) => e.student_id)));
     setSelected(new Set());
     setLoading(false);
@@ -607,18 +631,31 @@ function EnrollModal({
   async function submit() {
     if (selected.size === 0) return;
     setSaving(true);
-    const rows = Array.from(selected).map((student_id) => ({
-      student_id,
+    const chosen = students.filter((s) => selected.has(s.id));
+    const legacyRows = chosen.map((s) => ({
+      student_id: s.id,
       class_id: classId,
       is_active: true,
     }));
-    const { error } = await supabase.from("enrollments").insert(rows);
+    const { error } = await supabase.from("enrollments").insert(legacyRows);
+    // Dual-write to new class_enrollments (canonical). Ignore duplicate errors.
+    const canonicalRows = chosen
+      .filter((s: any) => s.user_id)
+      .map((s: any) => ({
+        center_id: centerId,
+        class_id: classId,
+        student_user_id: s.user_id,
+        status: "active",
+      }));
+    if (canonicalRows.length) {
+      await supabase.from("class_enrollments").insert(canonicalRows);
+    }
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success(`Enrolled ${rows.length} student${rows.length > 1 ? "s" : ""}`);
+    toast.success(`Enrolled ${legacyRows.length} student${legacyRows.length > 1 ? "s" : ""}`);
     onDone();
   }
 
@@ -694,6 +731,151 @@ function EnrollModal({
             style={{ backgroundColor: ELECTRIC_BLUE }}
           >
             {saving ? "Enrolling…" : `Enroll ${selected.size || ""}`.trim()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Assign Tutors Modal ─── */
+function AssignTutorsModal({
+  open,
+  onOpenChange,
+  centerId,
+  classId,
+  tutors,
+  onDone,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  centerId: string;
+  classId: string;
+  tutors: Tutor[];
+  onDone: () => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, classId]);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("class_tutors")
+      .select("tutor_user_id")
+      .eq("class_id", classId);
+    setSelected(new Set((data ?? []).map((r: any) => r.tutor_user_id)));
+    setLoading(false);
+  }
+
+  function toggle(userId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  async function submit() {
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("class_tutors")
+        .select("tutor_user_id")
+        .eq("class_id", classId);
+      const currentSet = new Set((existing ?? []).map((r: any) => r.tutor_user_id));
+      const toAdd = Array.from(selected).filter((id) => !currentSet.has(id));
+      const toRemove = Array.from(currentSet).filter((id) => !selected.has(id));
+
+      if (toAdd.length) {
+        const rows = toAdd.map((tutor_user_id) => ({
+          center_id: centerId,
+          class_id: classId,
+          tutor_user_id,
+        }));
+        const { error } = await supabase.from("class_tutors").insert(rows);
+        if (error) throw error;
+      }
+      if (toRemove.length) {
+        const { error } = await supabase
+          .from("class_tutors")
+          .delete()
+          .eq("class_id", classId)
+          .in("tutor_user_id", toRemove);
+        if (error) throw error;
+      }
+      toast.success("Tutor assignments updated");
+      onDone();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update assignments");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const assignableTutors = tutors.filter((t) => t.user_id);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Assign tutors to class</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Assigned tutors can add resources, videos, notes, quizzes, and flashcards for this
+            specific class. Tutors cannot enroll students.
+          </p>
+          <div className="border border-slate-200 rounded-2xl max-h-80 overflow-y-auto divide-y divide-slate-100">
+            {loading ? (
+              <div className="p-6 text-sm text-slate-400">Loading…</div>
+            ) : assignableTutors.length === 0 ? (
+              <div className="p-6 text-sm text-slate-400">
+                No tutors in this centre yet. Invite tutors from the Users page.
+              </div>
+            ) : (
+              assignableTutors.map((t) => {
+                const isSelected = selected.has(t.user_id as string);
+                return (
+                  <label key={t.id} className="flex items-center gap-3 p-3 cursor-pointer">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggle(t.user_id as string)}
+                    />
+                    <div className="text-sm font-medium text-slate-900">{t.name}</div>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          <div className="text-xs text-slate-500">{selected.size} assigned</div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={saving}
+            onClick={submit}
+            className="rounded-full text-white hover:opacity-90"
+            style={{ backgroundColor: ELECTRIC_BLUE }}
+          >
+            {saving ? "Saving…" : "Save assignments"}
           </Button>
         </DialogFooter>
       </DialogContent>
