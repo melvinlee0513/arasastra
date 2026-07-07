@@ -635,13 +635,12 @@ function AssignmentDialog({
 
   const addEnrollment = async () => {
     if (!newClass || isSubmitting) return;
-    // CRITICAL: enrollments.student_id references profiles.id (NOT auth.users.id).
-    // Validate before we even touch the network so the FK can never trip.
-    const profileId = user.id;
-    if (!profileId || !UUID_RE.test(profileId)) {
+    // Canonical class_enrollments uses auth user_id (student_user_id).
+    const studentUserId = user.user_id;
+    if (!studentUserId || !UUID_RE.test(studentUserId)) {
       toast({
-        title: "Invalid user profile",
-        description: "This user has no valid profile ID. Refresh and try again.",
+        title: "Invalid user",
+        description: "This user is missing an auth id. Refresh and try again.",
         variant: "destructive",
       });
       return;
@@ -651,8 +650,13 @@ function AssignmentDialog({
       return;
     }
     const klass = classes.find((c) => c.id === newClass);
+    const centerId = user.center_id;
+    if (!centerId) {
+      toast({ title: "Missing center", description: "User has no center assigned.", variant: "destructive" });
+      return;
+    }
     const optimistic: Enrollment = {
-      id: `tmp-${Date.now()}`, student_id: profileId,
+      id: `tmp-${Date.now()}`, student_id: studentUserId,
       class_id: newClass, subject_id: klass?.subject_id || null,
     };
 
@@ -660,39 +664,32 @@ function AssignmentDialog({
     setEnrollments((p) => [...p, optimistic]);
 
     try {
-      const { data, error } = await (supabase as any).from("enrollments").insert({
-        student_id: profileId,
+      const { data, error } = await (supabase as any).from("class_enrollments").insert({
+        center_id: centerId,
         class_id: newClass,
-        subject_id: klass?.subject_id || null,
-        is_active: true,
+        student_user_id: studentUserId,
+        status: "active",
       }).select().single();
 
       if (error) throw error;
 
-      // Reconcile optimistic row with DB row; keep modal open on success too so
-      // the admin can queue additional enrollments in one sitting.
-      setEnrollments((p) => p.map((e) => e.id === optimistic.id ? data : e));
+      setEnrollments((p) => p.map((e) => e.id === optimistic.id
+        ? { id: data.id, student_id: data.student_user_id, class_id: data.class_id, subject_id: klass?.subject_id || null }
+        : e));
       setNewClass("");
       toast({ title: "✅ Enrolled" });
     } catch (err: any) {
-      // Rollback: remove ONLY the optimistic row we added; leave the rest of
-      // the grid untouched so it continues to mirror the database.
       setEnrollments((p) => p.filter((e) => e.id !== optimistic.id));
-
-      const isDuplicateEnrollment =
-        err?.code === '23505' ||
-        (typeof err?.message === 'string' && err.message.includes('enrollments_student_id_class_id_key')) ||
-        (typeof err?.details === 'string' && err.details.includes('enrollments_student_id_class_id_key'));
-
-      toast({
-        title: "Enrollment failed",
-        description: isDuplicateEnrollment
-          ? "Student is already enrolled in this class instance."
-          : "Failed to enroll student. Please try again.",
-        variant: "destructive",
-      });
-      // Do NOT call onClose(): the modal must stay open so the admin can pick
-      // another time slot without losing their selection context.
+      const { showSupabaseError } = await import("@/lib/supabaseErrors");
+      if (err?.code === '23505') {
+        toast({
+          title: "Enrollment failed",
+          description: "Student is already enrolled in this class instance.",
+          variant: "destructive",
+        });
+      } else {
+        showSupabaseError(err, "Enrollment failed");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -702,8 +699,12 @@ function AssignmentDialog({
   const removeEnrollment = async (id: string) => {
     const prev = enrollments;
     setEnrollments((p) => p.filter((e) => e.id !== id));
-    const { error } = await (supabase as any).from("enrollments").delete().eq("id", id);
-    if (error) { setEnrollments(prev); toast({ title: "Failed", description: error.message, variant: "destructive" }); }
+    const { error } = await (supabase as any).from("class_enrollments").delete().eq("id", id);
+    if (error) {
+      setEnrollments(prev);
+      const { showSupabaseError } = await import("@/lib/supabaseErrors");
+      showSupabaseError(error, "Remove failed");
+    }
   };
 
   const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name || "Unknown";
