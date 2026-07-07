@@ -222,14 +222,24 @@ export default function CurriculumManager() {
             </div>
             <div className="flex items-center gap-2">
               {selectedClass && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEnrollModalOpen(true)}
-                  className="rounded-full h-8 px-3"
-                >
-                  <Users className="h-4 w-4 mr-1" /> Enroll students
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAssignTutorsOpen(true)}
+                    className="rounded-full h-8 px-3"
+                  >
+                    <UserCog className="h-4 w-4 mr-1" /> Assign tutors
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEnrollModalOpen(true)}
+                    className="rounded-full h-8 px-3"
+                  >
+                    <Users className="h-4 w-4 mr-1" /> Enroll students
+                  </Button>
+                </>
               )}
               <Button
                 size="sm"
