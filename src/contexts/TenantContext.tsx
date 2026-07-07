@@ -37,6 +37,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [availableCenters, setAvailableCenters] = useState<TenantCenter[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
