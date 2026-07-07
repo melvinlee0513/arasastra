@@ -106,11 +106,28 @@ export function mapSupabaseError(err: MaybeErr): FriendlyError {
     return { title: "Network problem", description: "Check your connection and try again." };
   }
 
+  // Fallback signature-based detection (message-only errors without a `code`).
+  if (m.includes("duplicate key value") || m.includes("already exists")) {
+    return { title: "Already exists", description: "That entry already exists. Please review and try again." };
+  }
+  if (m.includes("violates row-level security") || m.includes("permission denied")) {
+    return { title: "Not allowed", description: "You don't have permission to do that." };
+  }
+  if (m.includes("foreign key")) {
+    return { title: "Cannot complete", description: "This item is linked to other data. Remove those links first." };
+  }
+  if (m.includes("null value") && m.includes("not-null")) {
+    return { title: "Missing required field", description: "Please fill in every required field before saving." };
+  }
+
+  // Never leak raw Postgres text — use a soft generic when the message looks technical.
+  const looksTechnical = /pgrst|postgres|constraint|relation|syntax|sql/i.test(message);
   return {
     title: "Something went wrong",
-    description: message || "Please try again in a moment.",
+    description: !message || looksTechnical ? "Please try again in a moment." : message,
   };
 }
+
 
 /** Toast a friendly version of a Supabase / PostgREST / auth error. */
 export function showSupabaseError(err: MaybeErr, fallbackTitle?: string): FriendlyError {
