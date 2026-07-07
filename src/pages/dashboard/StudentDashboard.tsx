@@ -158,7 +158,14 @@ export function StudentDashboard() {
           <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
         <div className="hidden md:flex items-center gap-3">
-          <StreakFlame streak={userProgress.streak} />
+          <XPLevelChip
+            level={gamification.level}
+            totalXp={gamification.totalXp}
+            progressPct={gamification.progressPct}
+            xpToNextLevel={gamification.xpToNextLevel}
+          />
+          <StreakFlame streak={gamification.currentStreak || userProgress.streak} />
+
           {attendanceScore !== null && (
             <Card className="p-3 bg-card border-border flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-accent" />
