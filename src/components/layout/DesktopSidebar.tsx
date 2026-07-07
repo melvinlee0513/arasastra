@@ -16,10 +16,6 @@ const navItems = [{
   icon: Calendar,
   label: "Timetable"
 }, {
-  path: "/dashboard/classes",
-  icon: BookOpen,
-  label: "Classes"
-}, {
   path: "/inbox",
   icon: Inbox,
   label: "Inbox"
