@@ -120,7 +120,7 @@ const App = () => (
             {/* Public/Student Pages with MainLayout */}
             <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
             <Route path="/timetable" element={<MainLayout><TimetablePage /></MainLayout>} />
-            <Route path="/classes" element={<MainLayout><ClassesPage /></MainLayout>} />
+            <Route path="/classes" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/inbox" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><InboxPage /></MainLayout></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><AccountPage /></MainLayout></ProtectedRoute>} />
 
