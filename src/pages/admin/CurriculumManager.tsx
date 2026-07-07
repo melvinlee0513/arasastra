@@ -818,7 +818,7 @@ function AssignTutorsModal({
       toast.success("Tutor assignments updated");
       onDone();
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update assignments");
+      showSupabaseError(err, "Failed to update assignments");
     } finally {
       setSaving(false);
     }
