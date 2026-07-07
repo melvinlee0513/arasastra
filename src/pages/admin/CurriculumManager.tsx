@@ -604,8 +604,8 @@ function EnrollModal({
       .order("full_name");
     const list = (profs ?? [])
       .filter((p: any) => studentUserIds.has(p.user_id))
-      .map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email }));
-    setStudents(list);
+      .map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email, user_id: p.user_id }));
+    setStudents(list as any);
     setAlreadyEnrolled(new Set((enr ?? []).map((e: any) => e.student_id)));
     setSelected(new Set());
     setLoading(false);
