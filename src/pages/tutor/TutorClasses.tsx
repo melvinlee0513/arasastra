@@ -103,6 +103,9 @@ export function TutorClasses() {
                       </a>
                     </Button>
                   )}
+                  <Button size="sm" asChild className="rounded-full">
+                    <Link to={`/tutor/classes/${cls.id}/resources`}>Manage materials</Link>
+                  </Button>
                 </div>
               </Card>
             );
