@@ -47,9 +47,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
+  const [subdomainResolved, setSubdomainResolved] = useState(false);
 
   const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
   const subdomainSlug = subdomainInfo.slug;
+
 
   // Resolve the tenant tied to the current subdomain (works for anon visitors too).
   useEffect(() => {
