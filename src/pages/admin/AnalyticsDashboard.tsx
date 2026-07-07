@@ -154,7 +154,7 @@ export function AnalyticsDashboard() {
         attendanceRes,
       ] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("enrollments").select("id, enrolled_at", { count: "exact" }),
+        supabase.from("class_enrollments").select("id, enrolled_at", { count: "exact" }).eq("status", "active"),
         supabase.from("classes").select("id", { count: "exact", head: true }),
         supabase.from("notes").select("id", { count: "exact", head: true }),
         supabase.from("payment_submissions").select("id", { count: "exact", head: true }).eq("status", "pending"),
