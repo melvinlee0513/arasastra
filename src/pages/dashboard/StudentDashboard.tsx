@@ -57,6 +57,7 @@ export function StudentDashboard() {
   const [attendanceScore, setAttendanceScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { progress: userProgress } = useUserProgress();
+  const gamification = useGamification();
 
   useEffect(() => {
     if (profile?.id) {
