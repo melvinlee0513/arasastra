@@ -631,12 +631,25 @@ function EnrollModal({
   async function submit() {
     if (selected.size === 0) return;
     setSaving(true);
-    const rows = Array.from(selected).map((student_id) => ({
-      student_id,
+    const chosen = students.filter((s) => selected.has(s.id));
+    const legacyRows = chosen.map((s) => ({
+      student_id: s.id,
       class_id: classId,
       is_active: true,
     }));
-    const { error } = await supabase.from("enrollments").insert(rows);
+    const { error } = await supabase.from("enrollments").insert(legacyRows);
+    // Dual-write to new class_enrollments (canonical). Ignore duplicate errors.
+    const canonicalRows = chosen
+      .filter((s: any) => s.user_id)
+      .map((s: any) => ({
+        center_id: centerId,
+        class_id: classId,
+        student_user_id: s.user_id,
+        status: "active",
+      }));
+    if (canonicalRows.length) {
+      await supabase.from("class_enrollments").insert(canonicalRows);
+    }
     setSaving(false);
     if (error) {
       toast.error(error.message);
