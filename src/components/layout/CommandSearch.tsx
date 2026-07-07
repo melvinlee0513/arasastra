@@ -23,7 +23,7 @@ const staticPages: SearchResult[] = [
   { id: "home", title: "Home", type: "page", subtitle: "Landing page", path: "/" },
   { id: "dashboard", title: "Dashboard", type: "page", subtitle: "Student dashboard", path: "/dashboard" },
   { id: "timetable", title: "Timetable", type: "page", subtitle: "Class schedule", path: "/timetable" },
-  { id: "classes", title: "Classes", type: "page", subtitle: "Subject hub", path: "/classes" },
+  { id: "classes", title: "Classes", type: "page", subtitle: "Subject hub", path: "/dashboard/classes" },
   { id: "notes", title: "Notes Bank", type: "page", subtitle: "Study materials", path: "/dashboard/learning/notes" },
   { id: "quizzes", title: "Quizzes", type: "page", subtitle: "Test your knowledge", path: "/dashboard/learning/quizzes" },
   { id: "flashcards", title: "Flashcards", type: "page", subtitle: "Rapid recall", path: "/dashboard/learning/flashcards" },
