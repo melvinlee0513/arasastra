@@ -655,7 +655,7 @@ function EnrollModal({
       toast.error(error.message);
       return;
     }
-    toast.success(`Enrolled ${rows.length} student${rows.length > 1 ? "s" : ""}`);
+    toast.success(`Enrolled ${legacyRows.length} student${legacyRows.length > 1 ? "s" : ""}`);
     onDone();
   }
 
