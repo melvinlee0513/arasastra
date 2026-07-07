@@ -163,7 +163,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   // Block downstream renders while we resolve the tenant for an authed user,
   // so screens never flash a `currentTenantId === null` state mid-request.
-  const shouldGate = (authLoading || (!!user && isLoading));
+  // Only gate on the FIRST resolution. Background refetches (e.g. auth token
+  // refresh on tab focus) must be invisible — never unmount the app tree.
+  const shouldGate = !hasResolvedOnce && (authLoading || (!!user && isLoading));
 
   return (
     <TenantContext.Provider value={value}>
