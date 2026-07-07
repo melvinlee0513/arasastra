@@ -485,7 +485,8 @@ function ClassModal({
     });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      showSupabaseError(error, "Could not create class");
+
       return;
     }
     setTitle("");
