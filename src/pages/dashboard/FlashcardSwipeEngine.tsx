@@ -139,7 +139,7 @@ export function FlashcardSwipeEngine() {
         saveProgress(card.id, "review");
       }
     },
-    [isAnimating, isComplete, queue, currentIndex, saveProgress],
+    [isAnimating, isComplete, queue, currentIndex, saveProgress, recordActivity],
   );
 
   // Called when the exit animation finishes. This is the ONLY place where the
