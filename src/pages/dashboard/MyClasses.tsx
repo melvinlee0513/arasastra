@@ -16,13 +16,21 @@ interface EnrolledClass {
   tutor_name: string | null;
 }
 
-const PLACEHOLDER_BANNERS = [
-  "https://images.unsplash.com/photo-1509869175650-a1d97972541a?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?auto=format&fit=crop&w=900&q=70",
-  "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=900&q=70",
+// Deterministic soft-gradient banner per class — no external stock imagery.
+const BANNER_GRADIENTS = [
+  "from-sky-100 via-white to-cyan-100",
+  "from-indigo-100 via-white to-sky-100",
+  "from-emerald-100 via-white to-teal-100",
+  "from-amber-100 via-white to-rose-100",
+  "from-violet-100 via-white to-fuchsia-100",
+  "from-slate-100 via-white to-sky-50",
 ];
+function bannerFor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return BANNER_GRADIENTS[h % BANNER_GRADIENTS.length];
+}
+
 
 export function MyClasses() {
   const { user } = useAuth();
