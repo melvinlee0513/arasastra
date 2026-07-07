@@ -230,14 +230,18 @@ export function AnalyticsDashboard() {
       }
       setWeeklyEnrollments(weeklyData);
 
-      // Enrollments by subject
+      // Enrollments by subject (canonical: derive via classes.subject_id)
       const subjects = subjectsRes.data || [];
       const subjectEnrollments = await Promise.all(
         subjects.map(async (subject) => {
+          const { data: cls } = await supabase.from("classes").select("id").eq("subject_id", subject.id);
+          const ids = (cls || []).map((c) => c.id);
+          if (ids.length === 0) return { name: subject.name, count: 0 };
           const { count } = await supabase
-            .from("enrollments")
+            .from("class_enrollments")
             .select("id", { count: "exact", head: true })
-            .eq("subject_id", subject.id);
+            .eq("status", "active")
+            .in("class_id", ids);
           return { name: subject.name, count: count || 0 };
         })
       );
