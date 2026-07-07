@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 
 interface InviteUserModalProps {
   open: boolean;
