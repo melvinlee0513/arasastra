@@ -60,7 +60,6 @@ async function countScoped(
 
 async function countEnrollments(centerId: string | null): Promise<number> {
   if (!centerId) {
-  if (!centerId) {
     const { count } = await supabase
       .from("class_enrollments")
       .select("id", { count: "exact", head: true })
