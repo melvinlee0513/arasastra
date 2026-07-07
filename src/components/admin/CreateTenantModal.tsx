@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Building2, Copy, Mail } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Building2, Copy, Globe, Mail } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import {
+  normalizeSlugInput,
+  validateSubdomainSlug,
+  tenantUrlFor,
+  ROOT_DOMAIN,
+} from "@/lib/tenantSubdomain";
 
 interface CreateTenantModalProps {
   open: boolean;
