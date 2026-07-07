@@ -28,21 +28,32 @@ export function MyClasses() {
   const { user } = useAuth();
 
   const { data: classes, isLoading } = useQuery({
-    queryKey: ["student-enrollments", user?.id],
+    queryKey: ["student-enrolled-classes", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Pull every enrollment for this student that targets a specific class instance.
+      // enrollments.student_id references profiles.id (not auth.uid()).
+      // Resolve the caller's profile id first so we don't miss enrollments
+      // for users whose profile row uses a distinct id.
+      const { data: profile, error: profileErr } = await (supabase as any)
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (profileErr) throw profileErr;
+      const profileId = profile?.id ?? user!.id;
+
       const { data: rows, error } = await (supabase as any)
         .from("enrollments")
         .select(
-          "class_id, classes:classes!enrollments_class_id_fkey(id,title,scheduled_at,cohort_label,subject_id,standard_id,tutor_id)",
+          "class_id, is_active, classes:classes!enrollments_class_id_fkey(id,title,scheduled_at,cohort_label,subject_id,standard_id,tutor_id)",
         )
-        .eq("student_id", user!.id)
+        .eq("student_id", profileId)
         .not("class_id", "is", null);
 
       if (error) throw error;
 
       const list = (rows || [])
+        .filter((r: any) => r.is_active !== false)
         .map((r: any) => r.classes)
         .filter(Boolean) as any[];
 
