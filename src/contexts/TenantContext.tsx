@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getTenantSubdomain, tenantUrlFor } from "@/lib/tenantSubdomain";
 
 export type TenantCenter = {
   id: string;
@@ -25,6 +26,12 @@ type TenantContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshCenters: () => Promise<void>;
+  /** Slug resolved from the current hostname, if any. */
+  subdomainSlug: string | null;
+  /** Tenant matched from the subdomain (unauth or cross-check). */
+  subdomainTenant: TenantCenter | null;
+  /** True when the signed-in user does NOT belong to this subdomain tenant. */
+  isTenantMismatch: boolean;
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
