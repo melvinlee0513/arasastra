@@ -195,8 +195,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
-  // On a tenant subdomain, prefer the subdomain-resolved tenant for branding.
+  // On a tenant subdomain, the subdomain tenant is authoritative for branding
+  // AND for locking the session context — even for superadmins visiting that host.
   const effectiveCenter = subdomainTenant ?? center;
+
+  // Superadmins on a tenant subdomain get scoped to just that tenant (no switcher).
+  const scopedAvailableCenters = subdomainTenant ? [subdomainTenant] : availableCenters;
 
   const isTenantMismatch =
     !!user &&
@@ -205,12 +209,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     !!center &&
     subdomainTenant.id !== center.id;
 
+  // Slug present in URL but no active tenant matched — show unknown-tenant screen.
+  const isUnknownTenant = !!subdomainSlug && subdomainResolved && !subdomainTenant;
+
   const value = useMemo<TenantContextValue>(
     () => ({
       center: effectiveCenter,
       currentTenantId: effectiveCenter?.id ?? null,
       setCurrentTenantId,
-      availableCenters,
+      availableCenters: scopedAvailableCenters,
       isSuperAdmin,
       isLoading,
       error,
@@ -221,7 +228,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     }),
     [
       effectiveCenter,
-      availableCenters,
+      scopedAvailableCenters,
       isSuperAdmin,
       isLoading,
       error,
@@ -231,18 +238,23 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  const shouldGate = !hasResolvedOnce && (authLoading || (!!user && isLoading));
+  const shouldGate =
+    !hasResolvedOnce &&
+    (authLoading || (!!user && isLoading) || (!!subdomainSlug && !subdomainResolved));
 
   return (
     <TenantContext.Provider value={value}>
       {shouldGate ? (
         <TenantResolvingScreen />
+      ) : isUnknownTenant ? (
+        <UnknownTenantScreen slug={subdomainSlug!} />
       ) : isTenantMismatch ? (
         <TenantMismatchScreen expected={subdomainTenant} actual={center} />
       ) : (
         children
       )}
     </TenantContext.Provider>
+
   );
 }
 
