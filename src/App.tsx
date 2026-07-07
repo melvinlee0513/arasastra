@@ -81,7 +81,14 @@ const QuizAnalytics = lazy(() => import("@/pages/admin/QuizAnalytics").then(m =>
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const CurriculumManager = lazy(() => import("@/pages/admin/CurriculumManager"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+  },
+});
 
 function PageLoader() {
   return (
