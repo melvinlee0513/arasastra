@@ -113,17 +113,15 @@ export function MyClasses() {
                 to={`/dashboard/classes/${c.id}`}
                 className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
               >
-                <div className="relative aspect-video overflow-hidden">
-                  <img
-                    src={PLACEHOLDER_BANNERS[i % PLACEHOLDER_BANNERS.length]}
-                    alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent" />
+                <div
+                  className={`relative aspect-video overflow-hidden bg-gradient-to-br ${bannerFor(c.id)}`}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <GraduationCap className="w-14 h-14 text-slate-400/50" strokeWidth={1.25} />
+                  </div>
                   <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5">
                     {c.subject_name && (
-                      <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white">
+                      <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
                         {c.subject_name}
                       </Badge>
                     )}
@@ -134,6 +132,7 @@ export function MyClasses() {
                     )}
                   </div>
                 </div>
+
                 <div className="p-5 flex-1 flex flex-col gap-2">
                   <h3 className="font-semibold text-slate-900 line-clamp-1">{c.title}</h3>
                   {c.cohort_label && (
