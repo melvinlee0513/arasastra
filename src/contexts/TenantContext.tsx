@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getTenantSubdomain } from "@/lib/tenantSubdomain";
 
 export type TenantCenter = {
   id: string;
@@ -25,6 +26,12 @@ type TenantContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshCenters: () => Promise<void>;
+  /** Slug resolved from the current hostname, if any. */
+  subdomainSlug: string | null;
+  /** Tenant matched from the subdomain (unauth or cross-check). */
+  subdomainTenant: TenantCenter | null;
+  /** True when the signed-in user does NOT belong to this subdomain tenant. */
+  isTenantMismatch: boolean;
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
@@ -39,6 +46,40 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
+
+  const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
+  const subdomainSlug = subdomainInfo.slug;
+
+  // Resolve the tenant tied to the current subdomain (works for anon visitors too).
+  useEffect(() => {
+    if (!subdomainSlug) {
+      setSubdomainTenant(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error: rpcErr } = await (supabase as any).rpc(
+        "resolve_tenant_by_subdomain",
+        { _slug: subdomainSlug },
+      );
+      if (cancelled) return;
+      if (rpcErr) {
+        console.error("[TenantProvider] subdomain resolve failed", rpcErr);
+        setSubdomainTenant(null);
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setSubdomainTenant({ id: row.id, name: row.name, logoUrl: row.logo_url ?? null });
+      } else {
+        setSubdomainTenant(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [subdomainSlug]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -147,29 +188,53 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
+  // On a tenant subdomain, prefer the subdomain-resolved tenant for branding.
+  const effectiveCenter = subdomainTenant ?? center;
+
+  const isTenantMismatch =
+    !!user &&
+    !isSuperAdmin &&
+    !!subdomainTenant &&
+    !!center &&
+    subdomainTenant.id !== center.id;
+
   const value = useMemo<TenantContextValue>(
     () => ({
-      center,
-      currentTenantId: center?.id ?? null,
+      center: effectiveCenter,
+      currentTenantId: effectiveCenter?.id ?? null,
       setCurrentTenantId,
       availableCenters,
       isSuperAdmin,
       isLoading,
       error,
       refreshCenters,
+      subdomainSlug,
+      subdomainTenant,
+      isTenantMismatch,
     }),
-    [center, availableCenters, isSuperAdmin, isLoading, error],
+    [
+      effectiveCenter,
+      availableCenters,
+      isSuperAdmin,
+      isLoading,
+      error,
+      subdomainSlug,
+      subdomainTenant,
+      isTenantMismatch,
+    ],
   );
 
-  // Block downstream renders while we resolve the tenant for an authed user,
-  // so screens never flash a `currentTenantId === null` state mid-request.
-  // Only gate on the FIRST resolution. Background refetches (e.g. auth token
-  // refresh on tab focus) must be invisible — never unmount the app tree.
   const shouldGate = !hasResolvedOnce && (authLoading || (!!user && isLoading));
 
   return (
     <TenantContext.Provider value={value}>
-      {shouldGate ? <TenantResolvingScreen /> : children}
+      {shouldGate ? (
+        <TenantResolvingScreen />
+      ) : isTenantMismatch ? (
+        <TenantMismatchScreen expected={subdomainTenant} actual={center} />
+      ) : (
+        children
+      )}
     </TenantContext.Provider>
   );
 }
@@ -183,6 +248,41 @@ function TenantResolvingScreen() {
           style={{ borderTopColor: "#0052FF" }}
         />
         <p className="text-sm text-slate-500">Loading your organisation…</p>
+      </div>
+    </div>
+  );
+}
+
+function TenantMismatchScreen({
+  expected,
+  actual,
+}: {
+  expected: TenantCenter | null;
+  actual: TenantCenter | null;
+}) {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-rose-50 p-8">
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-xl font-semibold">
+          !
+        </div>
+        <h1 className="text-xl font-semibold text-[#0F172A]">
+          You don't have access to {expected?.name ?? "this workspace"}
+        </h1>
+        <p className="text-sm text-slate-500">
+          Your account belongs to {actual?.name ?? "another centre"}. Sign in on your own centre's
+          subdomain instead.
+        </p>
+        <button
+          onClick={() => {
+            void supabase.auth.signOut().then(() => {
+              window.location.href = "/auth";
+            });
+          }}
+          className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 text-sm font-medium"
+        >
+          Sign out
+        </button>
       </div>
     </div>
   );

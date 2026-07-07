@@ -1213,21 +1213,33 @@ export type Database = {
       tuition_centers: {
         Row: {
           created_at: string
+          created_by: string | null
+          domain_status: string
+          domain_verified_at: string | null
           id: string
           logo_url: string | null
           name: string
+          subdomain_slug: string | null
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          domain_status?: string
+          domain_verified_at?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          subdomain_slug?: string | null
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          domain_status?: string
+          domain_verified_at?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          subdomain_slug?: string | null
         }
         Relationships: []
       }
@@ -1512,6 +1524,15 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: never; Returns: boolean }
+      resolve_tenant_by_subdomain: {
+        Args: { _slug: string }
+        Returns: {
+          domain_status: string
+          id: string
+          logo_url: string
+          name: string
+        }[]
+      }
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean

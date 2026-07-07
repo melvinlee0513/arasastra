@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Building2, Copy, Mail } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Building2, Copy, Globe, Mail } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import {
+  normalizeSlugInput,
+  validateSubdomainSlug,
+  tenantUrlFor,
+  ROOT_DOMAIN,
+} from "@/lib/tenantSubdomain";
 
 interface CreateTenantModalProps {
   open: boolean;
@@ -24,14 +30,21 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
   const [name, setName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [subdomain, setSubdomain] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!isSuperAdmin) return null;
+
+  const slugError = useMemo(
+    () => (subdomain ? validateSubdomainSlug(subdomain) : "Subdomain is required"),
+    [subdomain],
+  );
 
   const reset = () => {
     setName("");
     setLogoUrl("");
     setAdminEmail("");
+    setSubdomain("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,9 +53,15 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
     const trimmedName = name.trim();
     const trimmedEmail = adminEmail.trim().toLowerCase();
     const trimmedLogo = logoUrl.trim();
+    const cleanSlug = normalizeSlugInput(subdomain);
 
     if (!trimmedName || trimmedName.length > 120) {
       toast.error("Please enter a valid centre name");
+      return;
+    }
+    const slugErr = validateSubdomainSlug(cleanSlug);
+    if (slugErr) {
+      toast.error(slugErr);
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
@@ -56,17 +75,25 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
 
     setSubmitting(true);
     try {
-      // Step 1: create tuition centre
-      const { data: centre, error: centreError } = await supabase
+      // Step 1: create tuition centre (with subdomain slug, active by default so
+      // the manually-provisioned DNS record starts routing immediately).
+      const { data: centre, error: centreError } = await (supabase as any)
         .from("tuition_centers")
         .insert({
           name: trimmedName,
           logo_url: trimmedLogo || null,
+          subdomain_slug: cleanSlug,
+          domain_status: "active",
         })
         .select("id")
         .single();
 
-      if (centreError) throw centreError;
+      if (centreError) {
+        if ((centreError as any).code === "23505") {
+          throw new Error("That subdomain is already taken — pick another slug.");
+        }
+        throw centreError;
+      }
 
       // Step 2: create pending admin invitation tied to the new centre
       const { data: invite, error: inviteError } = await supabase
@@ -82,7 +109,7 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
 
       if (inviteError) throw inviteError;
 
-      const link = `${window.location.origin}/invite?token=${invite.id}`;
+      const link = `${tenantUrlFor(cleanSlug)}/invite?token=${invite.id}`;
 
       toast.success("Tenant created", {
         description: link,
@@ -138,6 +165,43 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
               className="rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
             />
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="centre-subdomain" className="text-[#0F172A] font-medium">
+              Tenant subdomain
+            </Label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                id="centre-subdomain"
+                required
+                value={subdomain}
+                onChange={(e) => setSubdomain(normalizeSlugInput(e.target.value))}
+                maxLength={50}
+                placeholder="srisarjana"
+                autoComplete="off"
+                className="pl-10 pr-28 rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
+              />
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                .{ROOT_DOMAIN}
+              </span>
+            </div>
+            {subdomain ? (
+              slugError ? (
+                <p className="text-xs text-rose-500">{slugError}</p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Preview:{" "}
+                  <span className="font-medium text-[#0052FF]">{tenantUrlFor(subdomain)}</span>
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-slate-400">
+                Lowercase letters, numbers, hyphens. 3–50 chars.
+              </p>
+            )}
+          </div>
+
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="centre-logo" className="text-[#0F172A] font-medium">
