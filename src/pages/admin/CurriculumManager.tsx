@@ -100,10 +100,10 @@ export default function CurriculumManager() {
     const ids = list.map((c) => c.id);
     if (ids.length) {
       const { data: enr } = await supabase
-        .from("enrollments")
+        .from("class_enrollments")
         .select("class_id")
         .in("class_id", ids)
-        .eq("is_active", true);
+        .eq("status", "active");
       const counts: EnrollmentCount = {};
       (enr ?? []).forEach((e: any) => {
         counts[e.class_id] = (counts[e.class_id] ?? 0) + 1;
