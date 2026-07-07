@@ -73,10 +73,10 @@ export function TimetablePage() {
       if (role === "student" && profile?.id) {
         const { data: enr, error: enrErr } = await withTimeout(
           supabase
-            .from("enrollments")
+            .from("class_enrollments")
             .select("class_id")
-            .eq("student_id", profile.id)
-            .eq("is_active", true)
+            .eq("student_user_id", user.id)
+            .eq("status", "active")
         );
         if (enrErr) throw enrErr;
         const ids = (enr || []).map((e: { class_id: string | null }) => e.class_id).filter(Boolean) as string[];

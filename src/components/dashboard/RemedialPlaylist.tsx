@@ -27,23 +27,16 @@ export function RemedialPlaylist() {
     queryKey: ["student-recommended-videos", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<RecommendedVideo[]> => {
-      // Resolve profile id (enrollments.student_id → profiles.id)
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      const profileId = profile?.id ?? user!.id;
-
+      // Canonical enrollment read
       const { data: enrolls } = await (supabase as any)
-        .from("enrollments")
-        .select("class_id, is_active")
-        .eq("student_id", profileId)
-        .not("class_id", "is", null);
+        .from("class_enrollments")
+        .select("class_id, status")
+        .eq("student_user_id", user!.id)
+        .eq("status", "active");
 
       const classIds = (enrolls || [])
-        .filter((e: any) => e.is_active !== false && e.class_id)
-        .map((e: any) => e.class_id as string);
+        .map((e: any) => e.class_id as string)
+        .filter(Boolean);
 
       if (classIds.length === 0) return [];
 

@@ -26,12 +26,13 @@ export function ClassRoom() {
     queryKey: ["classroom", classId, user?.id],
     enabled: !!classId && !!user,
     queryFn: async () => {
-      // 1. Verify enrollment
+      // 1. Verify enrollment (canonical class_enrollments)
       const { data: enrol } = await (supabase as any)
-        .from("enrollments")
+        .from("class_enrollments")
         .select("id")
-        .eq("student_id", user!.id)
+        .eq("student_user_id", user!.id)
         .eq("class_id", classId)
+        .eq("status", "active")
         .maybeSingle();
 
       // 2. Pull class meta + materials in parallel

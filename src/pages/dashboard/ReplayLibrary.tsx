@@ -70,28 +70,16 @@ export function ReplayLibrary() {
     queryKey: ["student-replays", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<ClassReplay[]> => {
-      // Resolve profile id (enrollments.student_id references profiles.id)
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("id, center_id")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      const profileId = profile?.id ?? user!.id;
-
-      // Enrolled class IDs
+      // Canonical: class_enrollments by student_user_id
       const { data: enrolls, error: enrollErr } = await (supabase as any)
-        .from("enrollments")
-        .select("class_id, is_active")
-        .eq("student_id", profileId)
-        .not("class_id", "is", null);
+        .from("class_enrollments")
+        .select("class_id, status")
+        .eq("student_user_id", user!.id)
+        .eq("status", "active");
       if (enrollErr) throw enrollErr;
 
       const classIds = Array.from(
-        new Set(
-          (enrolls || [])
-            .filter((e: any) => e.is_active !== false && e.class_id)
-            .map((e: any) => e.class_id as string),
-        ),
+        new Set((enrolls || []).map((e: any) => e.class_id as string).filter(Boolean)),
       );
       if (classIds.length === 0) return [];
 
