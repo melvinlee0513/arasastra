@@ -84,11 +84,11 @@ export function TutorDashboard() {
       let uniqueStudents = new Set<string>();
       if (classIds.length > 0) {
         const { data: enrollments } = await supabase
-          .from("enrollments")
-          .select("student_id")
-          .eq("is_active", true)
+          .from("class_enrollments")
+          .select("student_user_id")
+          .eq("status", "active")
           .in("class_id", classIds);
-        uniqueStudents = new Set((enrollments || []).map((e) => e.student_id));
+        uniqueStudents = new Set((enrollments || []).map((e) => e.student_user_id));
       }
 
       setStats({
