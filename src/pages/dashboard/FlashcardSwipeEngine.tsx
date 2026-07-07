@@ -410,8 +410,8 @@ export function FlashcardSwipeEngine() {
                 : { opacity: 1, scale: 1, y: 0, x: 0, rotate: 0 }
             }
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            onAnimationComplete={handleAnimationComplete}
             className="cursor-grab active:cursor-grabbing touch-none rounded-3xl will-change-transform"
+
             role="button"
             tabIndex={0}
             aria-label={isFlipped ? "Answer side, tap to flip" : "Question side, tap to flip"}
