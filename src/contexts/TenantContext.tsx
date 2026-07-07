@@ -37,6 +37,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [availableCenters, setAvailableCenters] = useState<TenantCenter[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,7 +113,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setError("Failed to resolve organisation");
         setCenter(null);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setHasResolvedOnce(true);
+        }
       }
     })();
 
@@ -159,7 +163,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   // Block downstream renders while we resolve the tenant for an authed user,
   // so screens never flash a `currentTenantId === null` state mid-request.
-  const shouldGate = (authLoading || (!!user && isLoading));
+  // Only gate on the FIRST resolution. Background refetches (e.g. auth token
+  // refresh on tab focus) must be invisible — never unmount the app tree.
+  const shouldGate = !hasResolvedOnce && (authLoading || (!!user && isLoading));
 
   return (
     <TenantContext.Provider value={value}>
