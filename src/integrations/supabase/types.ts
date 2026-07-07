@@ -191,20 +191,99 @@ export type Database = {
         }
         Relationships: []
       }
+      class_enrollments: {
+        Row: {
+          center_id: string
+          class_id: string
+          enrolled_at: string
+          enrolled_by: string | null
+          id: string
+          status: string
+          student_user_id: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          enrolled_at?: string
+          enrolled_by?: string | null
+          id?: string
+          status?: string
+          student_user_id: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          enrolled_at?: string
+          enrolled_by?: string | null
+          id?: string
+          status?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_tutors: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          center_id: string
+          class_id: string
+          id: string
+          tutor_user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          center_id: string
+          class_id: string
+          id?: string
+          tutor_user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          center_id?: string
+          class_id?: string
+          id?: string
+          tutor_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_tutors_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
+          academic_year: string | null
           center_id: string | null
+          class_name: string | null
           class_tag: string | null
           cohort_label: string | null
+          cohort_name: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           duration_minutes: number | null
           id: string
           is_live: boolean | null
           is_published: boolean | null
           live_url: string | null
+          schedule_label: string | null
           scheduled_at: string
           standard_id: string | null
+          status: string
           subject_id: string | null
           title: string
           tutor_id: string | null
@@ -212,18 +291,24 @@ export type Database = {
           zoom_link: string | null
         }
         Insert: {
+          academic_year?: string | null
           center_id?: string | null
+          class_name?: string | null
           class_tag?: string | null
           cohort_label?: string | null
+          cohort_name?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
           id?: string
           is_live?: boolean | null
           is_published?: boolean | null
           live_url?: string | null
+          schedule_label?: string | null
           scheduled_at: string
           standard_id?: string | null
+          status?: string
           subject_id?: string | null
           title: string
           tutor_id?: string | null
@@ -231,18 +316,24 @@ export type Database = {
           zoom_link?: string | null
         }
         Update: {
+          academic_year?: string | null
           center_id?: string | null
+          class_name?: string | null
           class_tag?: string | null
           cohort_label?: string | null
+          cohort_name?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
           id?: string
           is_live?: boolean | null
           is_published?: boolean | null
           live_url?: string | null
+          schedule_label?: string | null
           scheduled_at?: string
           standard_id?: string | null
+          status?: string
           subject_id?: string | null
           title?: string
           tutor_id?: string | null
@@ -1097,6 +1188,7 @@ export type Database = {
       }
       subjects: {
         Row: {
+          archived_at: string | null
           center_id: string | null
           color: string | null
           created_at: string | null
@@ -1105,8 +1197,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          status: string
         }
         Insert: {
+          archived_at?: string | null
           center_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -1115,8 +1209,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          status?: string
         }
         Update: {
+          archived_at?: string | null
           center_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -1125,6 +1221,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          status?: string
         }
         Relationships: [
           {
@@ -1524,6 +1621,7 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: never; Returns: boolean }
+      is_tutor_of_class: { Args: { _class_id: string }; Returns: boolean }
       resolve_tenant_by_subdomain: {
         Args: { _slug: string }
         Returns: {
