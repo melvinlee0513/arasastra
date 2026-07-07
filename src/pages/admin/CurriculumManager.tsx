@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { showSupabaseError } from "@/lib/supabaseErrors";
+
 import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
