@@ -43,6 +43,7 @@ export default function CurriculumManager() {
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [assignTutorsOpen, setAssignTutorsOpen] = useState(false);
 
   useEffect(() => {
     if (!currentTenantId) return;
