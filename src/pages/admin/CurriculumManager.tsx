@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { BookOpen, GraduationCap, Plus, Users, ChevronRight } from "lucide-react";
+import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Subject = { id: string; name: string; description: string | null };
