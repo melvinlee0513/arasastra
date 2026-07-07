@@ -389,7 +389,7 @@ function SubjectModal({
       .insert({ name: name.trim(), description: description.trim() || null, center_id: centerId, is_active: true });
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      showSupabaseError(error, "Could not create subject");
       return;
     }
     setName("");
