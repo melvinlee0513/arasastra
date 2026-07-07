@@ -307,6 +307,32 @@ function TenantMismatchScreen({
   );
 }
 
+function UnknownTenantScreen({ slug }: { slug: string }) {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50 p-8">
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-xl font-semibold">
+          ?
+        </div>
+        <h1 className="text-xl font-semibold text-[#0F172A]">
+          "{slug}" isn't an Aras A+ workspace
+        </h1>
+        <p className="text-sm text-slate-500">
+          This subdomain isn't linked to an active centre yet. Check the URL or head to the main
+          site to find your workspace.
+        </p>
+        <a
+          href="https://arasaplus.info"
+          className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 inline-flex items-center text-sm font-medium"
+        >
+          Go to arasaplus.info
+        </a>
+      </div>
+    </div>
+  );
+}
+
+
 export function useTenant() {
   const ctx = useContext(TenantContext);
   if (!ctx) throw new Error("useTenant must be used inside <TenantProvider>");
