@@ -47,17 +47,21 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
+  const [subdomainResolved, setSubdomainResolved] = useState(false);
 
   const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
   const subdomainSlug = subdomainInfo.slug;
+
 
   // Resolve the tenant tied to the current subdomain (works for anon visitors too).
   useEffect(() => {
     if (!subdomainSlug) {
       setSubdomainTenant(null);
+      setSubdomainResolved(true);
       return;
     }
     let cancelled = false;
+    setSubdomainResolved(false);
     (async () => {
       const { data, error: rpcErr } = await (supabase as any).rpc(
         "resolve_tenant_by_subdomain",
@@ -67,6 +71,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       if (rpcErr) {
         console.error("[TenantProvider] subdomain resolve failed", rpcErr);
         setSubdomainTenant(null);
+        setSubdomainResolved(true);
         return;
       }
       const row = Array.isArray(data) ? data[0] : data;
@@ -75,11 +80,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       } else {
         setSubdomainTenant(null);
       }
+      setSubdomainResolved(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [subdomainSlug]);
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -188,8 +195,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
-  // On a tenant subdomain, prefer the subdomain-resolved tenant for branding.
+  // On a tenant subdomain, the subdomain tenant is authoritative for branding
+  // AND for locking the session context — even for superadmins visiting that host.
   const effectiveCenter = subdomainTenant ?? center;
+
+  // Superadmins on a tenant subdomain get scoped to just that tenant (no switcher).
+  const scopedAvailableCenters = subdomainTenant ? [subdomainTenant] : availableCenters;
 
   const isTenantMismatch =
     !!user &&
@@ -198,12 +209,15 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     !!center &&
     subdomainTenant.id !== center.id;
 
+  // Slug present in URL but no active tenant matched — show unknown-tenant screen.
+  const isUnknownTenant = !!subdomainSlug && subdomainResolved && !subdomainTenant;
+
   const value = useMemo<TenantContextValue>(
     () => ({
       center: effectiveCenter,
       currentTenantId: effectiveCenter?.id ?? null,
       setCurrentTenantId,
-      availableCenters,
+      availableCenters: scopedAvailableCenters,
       isSuperAdmin,
       isLoading,
       error,
@@ -214,7 +228,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     }),
     [
       effectiveCenter,
-      availableCenters,
+      scopedAvailableCenters,
       isSuperAdmin,
       isLoading,
       error,
@@ -224,18 +238,23 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  const shouldGate = !hasResolvedOnce && (authLoading || (!!user && isLoading));
+  const shouldGate =
+    !hasResolvedOnce &&
+    (authLoading || (!!user && isLoading) || (!!subdomainSlug && !subdomainResolved));
 
   return (
     <TenantContext.Provider value={value}>
       {shouldGate ? (
         <TenantResolvingScreen />
+      ) : isUnknownTenant ? (
+        <UnknownTenantScreen slug={subdomainSlug!} />
       ) : isTenantMismatch ? (
         <TenantMismatchScreen expected={subdomainTenant} actual={center} />
       ) : (
         children
       )}
     </TenantContext.Provider>
+
   );
 }
 
@@ -287,6 +306,32 @@ function TenantMismatchScreen({
     </div>
   );
 }
+
+function UnknownTenantScreen({ slug }: { slug: string }) {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50 p-8">
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-xl font-semibold">
+          ?
+        </div>
+        <h1 className="text-xl font-semibold text-[#0F172A]">
+          "{slug}" isn't an Aras A+ workspace
+        </h1>
+        <p className="text-sm text-slate-500">
+          This subdomain isn't linked to an active centre yet. Check the URL or head to the main
+          site to find your workspace.
+        </p>
+        <a
+          href="https://arasaplus.info"
+          className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 inline-flex items-center text-sm font-medium"
+        >
+          Go to arasaplus.info
+        </a>
+      </div>
+    </div>
+  );
+}
+
 
 export function useTenant() {
   const ctx = useContext(TenantContext);
