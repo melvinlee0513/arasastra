@@ -9,7 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { getTenantSubdomain, tenantUrlFor } from "@/lib/tenantSubdomain";
+import { getTenantSubdomain } from "@/lib/tenantSubdomain";
 
 export type TenantCenter = {
   id: string;
