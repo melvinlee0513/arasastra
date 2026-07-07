@@ -129,10 +129,9 @@ export function CreateTenantModal({ open, onClose }: CreateTenantModalProps) {
       reset();
       onClose();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create tenant";
-      toast.error(message);
+      showSupabaseError(err as any, "Failed to create centre");
     } finally {
+
       setSubmitting(false);
     }
   };
