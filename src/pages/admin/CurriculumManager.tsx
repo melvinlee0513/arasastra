@@ -594,7 +594,11 @@ function EnrollModal({
     setLoading(true);
     const [{ data: roleRows }, { data: enr }] = await Promise.all([
       supabase.from("user_roles").select("user_id").eq("role", "student"),
-      supabase.from("enrollments").select("student_id").eq("class_id", classId).eq("is_active", true),
+      supabase
+        .from("class_enrollments")
+        .select("student_user_id")
+        .eq("class_id", classId)
+        .eq("status", "active"),
     ]);
     const studentUserIds = new Set((roleRows ?? []).map((r: any) => r.user_id));
     const { data: profs } = await supabase
@@ -606,7 +610,8 @@ function EnrollModal({
       .filter((p: any) => studentUserIds.has(p.user_id))
       .map((p: any) => ({ id: p.id, full_name: p.full_name, email: p.email, user_id: p.user_id }));
     setStudents(list as any);
-    setAlreadyEnrolled(new Set((enr ?? []).map((e: any) => e.student_id)));
+    // Track already enrolled by user_id (canonical identity)
+    setAlreadyEnrolled(new Set((enr ?? []).map((e: any) => e.student_user_id)));
     setSelected(new Set());
     setLoading(false);
   }
@@ -632,13 +637,7 @@ function EnrollModal({
     if (selected.size === 0) return;
     setSaving(true);
     const chosen = students.filter((s) => selected.has(s.id));
-    const legacyRows = chosen.map((s) => ({
-      student_id: s.id,
-      class_id: classId,
-      is_active: true,
-    }));
-    const { error } = await supabase.from("enrollments").insert(legacyRows);
-    // Dual-write to new class_enrollments (canonical). Ignore duplicate errors.
+    // Canonical-only write to class_enrollments.
     const canonicalRows = chosen
       .filter((s: any) => s.user_id)
       .map((s: any) => ({
@@ -647,15 +646,18 @@ function EnrollModal({
         student_user_id: s.user_id,
         status: "active",
       }));
+    let error: any = null;
     if (canonicalRows.length) {
-      await supabase.from("class_enrollments").insert(canonicalRows);
+      const res = await supabase.from("class_enrollments").insert(canonicalRows);
+      error = res.error;
     }
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      const { showSupabaseError } = await import("@/lib/supabaseErrors");
+      showSupabaseError(error, "Enrollment failed");
       return;
     }
-    toast.success(`Enrolled ${legacyRows.length} student${legacyRows.length > 1 ? "s" : ""}`);
+    toast.success(`Enrolled ${canonicalRows.length} student${canonicalRows.length > 1 ? "s" : ""}`);
     onDone();
   }
 
