@@ -177,36 +177,10 @@ export function useAdminPaymentSubmissions() {
 
     if (subError) throw subError;
 
-    // AUTO-ENROLLMENT: Get user's profile ID and enroll them in all active subjects
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
-
-    if (profileData?.id) {
-      // Get all active subjects
-      const { data: subjects } = await supabase
-        .from("subjects")
-        .select("id")
-        .eq("is_active", true);
-
-      // Create enrollments for each subject (ignore duplicates)
-      if (subjects && subjects.length > 0) {
-        const enrollments = subjects.map((subject) => ({
-          student_id: profileData.id,
-          subject_id: subject.id,
-          is_active: true,
-        }));
-
-        await supabase
-          .from("enrollments")
-          .upsert(enrollments, { 
-            onConflict: "student_id,subject_id",
-            ignoreDuplicates: true 
-          });
-      }
-    }
+    // NOTE: Auto-enrollment on payment approval has been removed.
+    // Class enrollment is now admin-controlled via class_enrollments in
+    // /admin/curriculum. Approving payment activates the subscription only;
+    // admins pick the exact class instances the student should join.
 
     // Trigger receipt email via edge function
     const submission = submissions.find((s) => s.id === submissionId);
