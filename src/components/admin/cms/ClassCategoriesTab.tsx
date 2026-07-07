@@ -74,7 +74,6 @@ export function ClassCategoriesTab() {
 
       if (subjectIds.length > 0) {
         const enrollmentPromises = subjectIds.map(async (id) => {
-        const enrollmentPromises = subjectIds.map(async (id) => {
           const { data: cls } = await supabase.from("classes").select("id").eq("subject_id", id);
           const cids = (cls || []).map((c) => c.id);
           if (cids.length === 0) return { id, count: 0 };
