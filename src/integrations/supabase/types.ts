@@ -229,6 +229,74 @@ export type Database = {
           },
         ]
       }
+      class_resources: {
+        Row: {
+          center_id: string
+          class_id: string
+          created_at: string
+          description: string | null
+          embed_url: string | null
+          external_url: string | null
+          file_path: string | null
+          file_url: string | null
+          id: string
+          published_at: string | null
+          resource_type: string
+          source_type: string
+          status: string
+          subject_id: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          created_at?: string
+          description?: string | null
+          embed_url?: string | null
+          external_url?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          published_at?: string | null
+          resource_type?: string
+          source_type?: string
+          status?: string
+          subject_id?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          embed_url?: string | null
+          external_url?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          published_at?: string | null
+          resource_type?: string
+          source_type?: string
+          status?: string
+          subject_id?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_resources_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_tutors: {
         Row: {
           assigned_at: string
@@ -1047,28 +1115,78 @@ export type Database = {
           },
         ]
       }
+      quiz_options: {
+        Row: {
+          center_id: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          option_text: string
+          order_index: number
+          question_id: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_text: string
+          order_index?: number
+          question_id: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_text?: string
+          order_index?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions: {
         Row: {
+          center_id: string | null
           correct_answer: string
           id: string
           options: Json
+          order_index: number | null
+          points: number
           question: string
+          question_type: string
           quiz_id: string
           sort_order: number | null
         }
         Insert: {
+          center_id?: string | null
           correct_answer: string
           id?: string
           options?: Json
+          order_index?: number | null
+          points?: number
           question: string
+          question_type?: string
           quiz_id: string
           sort_order?: number | null
         }
         Update: {
+          center_id?: string | null
           correct_answer?: string
           id?: string
           options?: Json
+          order_index?: number | null
+          points?: number
           question?: string
+          question_type?: string
           quiz_id?: string
           sort_order?: number | null
         }
@@ -1084,26 +1202,38 @@ export type Database = {
       }
       quiz_results: {
         Row: {
+          center_id: string | null
+          class_id: string | null
           completed_at: string | null
           id: string
+          percentage: number | null
           quiz_id: string
           score: number
+          total_points: number | null
           total_questions: number
           user_id: string
         }
         Insert: {
+          center_id?: string | null
+          class_id?: string | null
           completed_at?: string | null
           id?: string
+          percentage?: number | null
           quiz_id: string
           score?: number
+          total_points?: number | null
           total_questions?: number
           user_id: string
         }
         Update: {
+          center_id?: string | null
+          class_id?: string | null
           completed_at?: string | null
           id?: string
+          percentage?: number | null
           quiz_id?: string
           score?: number
+          total_points?: number | null
           total_questions?: number
           user_id?: string
         }
@@ -1123,27 +1253,45 @@ export type Database = {
           center_id: string
           class_id: string | null
           created_at: string | null
+          created_by: string | null
+          description: string | null
           id: string
+          published_at: string | null
           sound_theme: string
+          status: string
+          subject_id: string | null
           title: string
+          total_points: number
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
           center_id: string
           class_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
+          published_at?: string | null
           sound_theme?: string
+          status?: string
+          subject_id?: string | null
           title: string
+          total_points?: number
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
           center_id?: string
           class_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          description?: string | null
           id?: string
+          published_at?: string | null
           sound_theme?: string
+          status?: string
+          subject_id?: string | null
           title?: string
+          total_points?: number
         }
         Relationships: [
           {
@@ -1185,6 +1333,57 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      student_quiz_answers: {
+        Row: {
+          center_id: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          points_awarded: number
+          question_id: string
+          result_id: string
+          selected_answer: string | null
+          selected_option_id: string | null
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          points_awarded?: number
+          question_id: string
+          result_id: string
+          selected_answer?: string | null
+          selected_option_id?: string | null
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          points_awarded?: number
+          question_id?: string
+          result_id?: string
+          selected_answer?: string | null
+          selected_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_quiz_answers_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_results"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
@@ -1385,6 +1584,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tutor_connected_accounts: {
+        Row: {
+          account_email: string | null
+          center_id: string
+          connected_at: string
+          disconnected_at: string | null
+          id: string
+          provider: string
+          tutor_user_id: string
+        }
+        Insert: {
+          account_email?: string | null
+          center_id: string
+          connected_at?: string
+          disconnected_at?: string | null
+          id?: string
+          provider: string
+          tutor_user_id: string
+        }
+        Update: {
+          account_email?: string | null
+          center_id?: string
+          connected_at?: string
+          disconnected_at?: string | null
+          id?: string
+          provider?: string
+          tutor_user_id?: string
+        }
+        Relationships: []
       }
       tutors: {
         Row: {
