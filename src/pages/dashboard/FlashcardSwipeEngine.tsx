@@ -33,6 +33,7 @@ const XP_PER_GOT_IT = 10;
 
 export function FlashcardSwipeEngine() {
   const { user } = useAuth();
+  const { recordActivity } = useGamification();
   const navigate = useNavigate();
 
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
