@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Calendar, Video, Users, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +104,9 @@ export function TutorClasses() {
                       </a>
                     </Button>
                   )}
+                  <Button size="sm" asChild className="rounded-full">
+                    <Link to={`/tutor/classes/${cls.id}/resources`}>Manage materials</Link>
+                  </Button>
                 </div>
               </Card>
             );

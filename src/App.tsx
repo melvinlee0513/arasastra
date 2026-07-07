@@ -60,6 +60,7 @@ const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ 
 const TutorQuizBuilder = lazy(() => import("@/pages/tutor/TutorQuizBuilder").then(m => ({ default: m.TutorQuizBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
+const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
 
 // Guardian
 const ParentOverview = lazy(() => import("@/pages/guardian/ParentOverview").then(m => ({ default: m.ParentOverview })));
@@ -156,6 +157,8 @@ const App = () => (
             {/* Tutor Routes */}
             <Route path="/tutor" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorDashboard /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClasses /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
