@@ -12,8 +12,10 @@ import owlMascot from "@/assets/owl-mascot.png";
 import { Link } from "react-router-dom";
 import { XPLeaderboard } from "@/components/dashboard/XPLeaderboard";
 import { StreakFlame } from "@/components/dashboard/StreakFlame";
+import { XPLevelChip } from "@/components/dashboard/XPLevelChip";
 import { RemedialPlaylist } from "@/components/dashboard/RemedialPlaylist";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { useGamification } from "@/hooks/useGamification";
 
 interface LiveClass {
   id: string;
@@ -55,6 +57,7 @@ export function StudentDashboard() {
   const [attendanceScore, setAttendanceScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { progress: userProgress } = useUserProgress();
+  const gamification = useGamification();
 
   useEffect(() => {
     if (profile?.id) {
@@ -155,7 +158,14 @@ export function StudentDashboard() {
           <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
         <div className="hidden md:flex items-center gap-3">
-          <StreakFlame streak={userProgress.streak} />
+          <XPLevelChip
+            level={gamification.level}
+            totalXp={gamification.totalXp}
+            progressPct={gamification.progressPct}
+            xpToNextLevel={gamification.xpToNextLevel}
+          />
+          <StreakFlame streak={gamification.currentStreak || userProgress.streak} />
+
           {attendanceScore !== null && (
             <Card className="p-3 bg-card border-border flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-accent" />

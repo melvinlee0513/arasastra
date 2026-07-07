@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useGamification } from "@/hooks/useGamification";
 import { useNavigate } from "react-router-dom";
 import { playSwoosh } from "@/lib/swipe-sounds";
 
@@ -32,6 +33,7 @@ const XP_PER_GOT_IT = 10;
 
 export function FlashcardSwipeEngine() {
   const { user } = useAuth();
+  const { recordActivity } = useGamification();
   const navigate = useNavigate();
 
   const [allCards, setAllCards] = useState<Flashcard[]>([]);
@@ -125,6 +127,11 @@ export function FlashcardSwipeEngine() {
         setStreak((s) => s + 1);
         setXp((v) => v + XP_PER_GOT_IT);
         saveProgress(card.id, "known");
+        // Fire-and-forget: award XP + update daily streak server-side.
+        void recordActivity("flashcard_known", XP_PER_GOT_IT, {
+          id: card.id,
+          type: "flashcard",
+        });
       } else {
         setReviewCount((c) => c + 1);
         setStreak(0);
@@ -132,7 +139,7 @@ export function FlashcardSwipeEngine() {
         saveProgress(card.id, "review");
       }
     },
-    [isAnimating, isComplete, queue, currentIndex, saveProgress],
+    [isAnimating, isComplete, queue, currentIndex, saveProgress, recordActivity],
   );
 
   // Called when the exit animation finishes. This is the ONLY place where the
