@@ -161,14 +161,24 @@ export function UsersManagement() {
       (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
       (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
       (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
-      (supabase as any).from("enrollments").select("id,student_id,class_id,subject_id"),
+      (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
       (supabase as any).from("tutors").select("id,user_id"),
     ]);
     setSubjects(subsRes.data || []);
     setStandards(stdsRes.data || []);
     setClasses(classesRes.data || []);
     setAssignments(assignsRes.data || []);
-    setEnrollments(enrolRes.data || []);
+    // Normalize canonical rows into the Enrollment shape used by filters/UI:
+    // student_id here holds the auth user_id; subject_id is derived from class.
+    const classMap = new Map((classesRes.data || []).map((c: any) => [c.id, c.subject_id]));
+    setEnrollments(
+      (enrolRes.data || []).map((e: any) => ({
+        id: e.id,
+        student_id: e.student_user_id,
+        class_id: e.class_id,
+        subject_id: (classMap.get(e.class_id) as string | null) ?? null,
+      })),
+    );
     setTutors(tutorsRes.data || []);
   };
 
@@ -256,16 +266,16 @@ export function UsersManagement() {
           const t = tutors.find((tt) => tt.user_id === u.user_id);
           if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
         } else if (u.role === "student") {
-          const studentClassIds = enrollments.filter((e) => e.student_id === u.id).map((e) => e.class_id);
+          const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
-            || enrollments.some((e) => e.student_id === u.id && e.subject_id === subjectFilter);
+            || enrollments.some((e) => e.student_id === u.user_id && e.subject_id === subjectFilter);
           if (!hasSubject) return false;
         } else { return false; }
       }
 
       if (classFilter !== "all") {
         if (u.role !== "student") return false;
-        if (!enrollments.some((e) => e.student_id === u.id && e.class_id === classFilter)) return false;
+        if (!enrollments.some((e) => e.student_id === u.user_id && e.class_id === classFilter)) return false;
       }
 
       if (!q) return true;
@@ -421,7 +431,7 @@ export function UsersManagement() {
                 ) : filteredUsers.map((user) => {
                   const tutor = tutors.find((t) => t.user_id === user.user_id);
                   const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.id && e.class_id);
+                  const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/60">
@@ -591,7 +601,7 @@ function AssignmentDialog({
   const tutor = tutors.find((t) => t.user_id === user.user_id);
 
   const tutorRows = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
-  const studentRows = enrollments.filter((e) => e.student_id === user.id && e.class_id);
+  const studentRows = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
   const addTutorAssignment = async () => {
     if (!tutor || !newSubject) return;
