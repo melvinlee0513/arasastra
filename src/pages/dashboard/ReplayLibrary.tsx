@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Play, Calendar, Search, Filter, AlertCircle, Lock, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Play, Calendar, Search, Filter, AlertCircle, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,24 +15,22 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
-import { toast } from "sonner";
-import { useAccess } from "@/hooks/useAccess";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 
 interface ClassReplay {
   id: string;
   title: string;
   description: string | null;
-  video_url: string | null;
-  scheduled_at: string;
-  duration_minutes: number;
+  video_url: string;
+  thumbnail_url: string | null;
+  created_at: string;
+  duration_seconds: number | null;
   subject_id: string | null;
-  subject?: { name: string; icon: string | null } | null;
-  tutor?: { name: string; avatar_url: string | null } | null;
-}
-
-interface Subject {
-  id: string;
-  name: string;
+  subject_name: string | null;
+  class_title: string | null;
+  tutor_name: string | null;
+  tutor_avatar: string | null;
 }
 
 /**
@@ -44,7 +42,6 @@ function isValidMediaUrl(raw: string | null | undefined): raw is string {
   if (!raw || typeof raw !== "string") return false;
   const v = raw.trim();
   if (!v) return false;
-  // Bare 11-char YouTube ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return true;
   try {
     const url = new URL(v);
@@ -55,58 +52,123 @@ function isValidMediaUrl(raw: string | null | undefined): raw is string {
 }
 
 export function ReplayLibrary() {
-  const [replays, setReplays] = useState<ClassReplay[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<{
     url: string;
     title: string;
     classId: string;
   } | null>(null);
 
-  const { hasAccess, isLoading: accessLoading } = useAccess();
+  const {
+    data: replays = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["student-replays", user?.id],
+    enabled: !!user,
+    queryFn: async (): Promise<ClassReplay[]> => {
+      // Resolve profile id (enrollments.student_id references profiles.id)
+      const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("id, center_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      const profileId = profile?.id ?? user!.id;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+      // Enrolled class IDs
+      const { data: enrolls, error: enrollErr } = await (supabase as any)
+        .from("enrollments")
+        .select("class_id, is_active")
+        .eq("student_id", profileId)
+        .not("class_id", "is", null);
+      if (enrollErr) throw enrollErr;
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const [classesRes, subjectsRes] = await Promise.all([
-        supabase
-          .from("classes")
-          .select(
-            "id, title, description, video_url, scheduled_at, duration_minutes, subject_id, subject:subjects(name, icon), tutor:tutors(name, avatar_url)"
-          )
-          .eq("is_published", true)
-          .not("video_url", "is", null)
-          .neq("video_url", "")
-          .order("scheduled_at", { ascending: false }),
-        supabase.from("subjects").select("id, name").eq("is_active", true),
-      ]);
+      const classIds = Array.from(
+        new Set(
+          (enrolls || [])
+            .filter((e: any) => e.is_active !== false && e.class_id)
+            .map((e: any) => e.class_id as string),
+        ),
+      );
+      if (classIds.length === 0) return [];
 
-      if (classesRes.error) throw classesRes.error;
-      if (subjectsRes.error) throw subjectsRes.error;
+      // Fetch published videos for enrolled classes.
+      // RLS + explicit center_id filter enforce tenant isolation.
+      const { data: vids, error: vidErr } = await (supabase as any)
+        .from("video_resources")
+        .select(
+          "id,title,description,video_url,thumbnail_url,duration_seconds,created_at,subject_id,class_id,created_by,is_published",
+        )
+        .in("class_id", classIds)
+        .eq("is_published", true)
+        .not("video_url", "is", null)
+        .neq("video_url", "")
+        .order("created_at", { ascending: false });
+      if (vidErr) throw vidErr;
 
-      // Belt-and-suspenders: filter out any invalid media on the client too.
-      const clean = (classesRes.data || []).filter((c: any) =>
-        isValidMediaUrl(c.video_url)
+      const cleaned = (vids || []).filter((v: any) => isValidMediaUrl(v.video_url));
+      if (cleaned.length === 0) return [];
+
+      const subjectIds = Array.from(
+        new Set(cleaned.map((v: any) => v.subject_id).filter(Boolean)),
+      );
+      const classIdSet = Array.from(new Set(cleaned.map((v: any) => v.class_id).filter(Boolean)));
+      const creatorIds = Array.from(
+        new Set(cleaned.map((v: any) => v.created_by).filter(Boolean)),
       );
 
-      setReplays(clean as ClassReplay[]);
-      setSubjects(subjectsRes.data || []);
-    } catch (error) {
-      if (import.meta.env.DEV) console.error("[ReplayLibrary]", error);
-      setLoadError("We couldn't load your replays. Please try again in a moment.");
-    } finally {
-      setIsLoading(false);
+      const [subsRes, classesRes, tutorsRes] = await Promise.all([
+        subjectIds.length
+          ? (supabase as any).from("subjects").select("id,name").in("id", subjectIds)
+          : Promise.resolve({ data: [] }),
+        classIdSet.length
+          ? (supabase as any).from("classes").select("id,title").in("id", classIdSet)
+          : Promise.resolve({ data: [] }),
+        creatorIds.length
+          ? (supabase as any)
+              .from("tutors")
+              .select("user_id,name,avatar_url")
+              .in("user_id", creatorIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const subjMap = new Map<string, string>(
+        (subsRes.data || []).map((s: any) => [s.id, s.name]),
+      );
+      const classMap = new Map<string, string>(
+        (classesRes.data || []).map((c: any) => [c.id, c.title]),
+      );
+      const tutorMap = new Map<string, { name: string; avatar_url: string | null }>(
+        (tutorsRes.data || []).map((t: any) => [t.user_id, { name: t.name, avatar_url: t.avatar_url }]),
+      );
+
+      return cleaned.map<ClassReplay>((v: any) => ({
+        id: v.id,
+        title: v.title,
+        description: v.description,
+        video_url: v.video_url,
+        thumbnail_url: v.thumbnail_url,
+        created_at: v.created_at,
+        duration_seconds: v.duration_seconds,
+        subject_id: v.subject_id,
+        subject_name: subjMap.get(v.subject_id) ?? null,
+        class_title: classMap.get(v.class_id) ?? null,
+        tutor_name: tutorMap.get(v.created_by)?.name ?? null,
+        tutor_avatar: tutorMap.get(v.created_by)?.avatar_url ?? null,
+      }));
+    },
+  });
+
+  const subjectOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const r of replays) {
+      if (r.subject_name && !seen.has(r.subject_name)) seen.set(r.subject_name, r.subject_name);
     }
-  };
+    return Array.from(seen.keys());
+  }, [replays]);
 
   const filteredReplays = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -114,9 +176,10 @@ export function ReplayLibrary() {
       const matchesSearch =
         !q ||
         replay.title.toLowerCase().includes(q) ||
-        (replay.tutor?.name.toLowerCase().includes(q) ?? false);
+        (replay.tutor_name?.toLowerCase().includes(q) ?? false) ||
+        (replay.class_title?.toLowerCase().includes(q) ?? false);
       const matchesSubject =
-        selectedSubject === "all" || replay.subject?.name === selectedSubject;
+        selectedSubject === "all" || replay.subject_name === selectedSubject;
       return matchesSearch && matchesSubject;
     });
   }, [replays, searchQuery, selectedSubject]);
@@ -125,18 +188,7 @@ export function ReplayLibrary() {
 
   const handleWatch = (replay: ClassReplay) => {
     if (!isValidMediaUrl(replay.video_url)) return;
-    const isExclusive = replay.subject_id ? !hasAccess(replay.subject_id) : false;
-    if (isExclusive) {
-      toast.error("Enroll in this subject to watch the full replay.", {
-        description: "This is exclusive content for enrolled students.",
-      });
-      return;
-    }
-    setActiveVideo({
-      url: replay.video_url,
-      title: replay.title,
-      classId: replay.id,
-    });
+    setActiveVideo({ url: replay.video_url, title: replay.title, classId: replay.id });
   };
 
   return (
@@ -157,34 +209,36 @@ export function ReplayLibrary() {
         </p>
       </div>
 
-      {/* Filters — mobile-first stack */}
-      <Card className="p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-slate-200/70 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by title or tutor…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-full bg-white border-slate-200"
-            />
+      {/* Filters */}
+      {(replays.length > 0 || isSearching) && (
+        <Card className="p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-slate-200/70 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by title, tutor, or class…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 rounded-full bg-white border-slate-200"
+              />
+            </div>
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+              <SelectTrigger className="w-full sm:w-48 rounded-full bg-white border-slate-200">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {subjectOptions.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-            <SelectTrigger className="w-full sm:w-48 rounded-full bg-white border-slate-200">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="All Subjects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map((subject) => (
-                <SelectItem key={subject.id} value={subject.name}>
-                  {subject.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* States */}
       {isLoading ? (
@@ -200,13 +254,13 @@ export function ReplayLibrary() {
             </Card>
           ))}
         </div>
-      ) : loadError ? (
+      ) : error ? (
         <EmptyPanel
           icon={<AlertCircle className="w-8 h-8 text-rose-500" />}
           title="Something went wrong"
-          body={loadError}
+          body="We couldn't load your replays. Please try again in a moment."
           action={
-            <Button onClick={fetchData} className="rounded-full">
+            <Button onClick={() => refetch()} className="rounded-full">
               Try again
             </Button>
           }
@@ -233,73 +287,60 @@ export function ReplayLibrary() {
         ) : (
           <EmptyPanel
             icon={<Sparkles className="w-8 h-8 text-[#00D1FF]" />}
-            title="No replays yet"
-            body="Your recorded classes will appear here as soon as they're published."
+            title="No replays available yet"
+            body="Published class replays from your enrolled classes will appear here once your tutors upload them."
           />
         )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredReplays.map((replay) => {
-            const isExclusive = replay.subject_id
-              ? !accessLoading && !hasAccess(replay.subject_id)
-              : false;
-            return (
-              <ReplayCard
-                key={replay.id}
-                replay={replay}
-                isExclusive={isExclusive}
-                onWatch={() => handleWatch(replay)}
-              />
-            );
-          })}
+          {filteredReplays.map((replay) => (
+            <ReplayCard key={replay.id} replay={replay} onWatch={() => handleWatch(replay)} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
+function formatDuration(secs: number | null): string | null {
+  if (!secs || secs <= 0) return null;
+  const m = Math.round(secs / 60);
+  return `${m} min`;
+}
+
 function ReplayCard({
   replay,
-  isExclusive,
   onWatch,
 }: {
   replay: ClassReplay;
-  isExclusive: boolean;
   onWatch: () => void;
 }) {
+  const durationLabel = formatDuration(replay.duration_seconds);
   return (
     <Card className="overflow-hidden bg-white/85 backdrop-blur-xl border border-slate-200/70 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all group">
-      {/* Thumbnail — never an <iframe> or <video>; safe placeholder */}
       <button
         type="button"
         onClick={onWatch}
         aria-label={`Watch ${replay.title}`}
         className="relative aspect-video w-full block bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
       >
+        {replay.thumbnail_url ? (
+          <img
+            src={replay.thumbnail_url}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-90"
+            loading="lazy"
+          />
+        ) : null}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00D1FF] flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_10px_30px_-8px_rgba(0,209,255,0.7)]">
-            {isExclusive ? (
-              <Lock className="w-6 h-6 text-white" />
-            ) : (
-              <Play className="w-7 h-7 text-white fill-current ml-0.5" />
-            )}
+            <Play className="w-7 h-7 text-white fill-current ml-0.5" />
           </div>
         </div>
-        <div className="absolute top-2 left-2">
-          <Badge
-            className={
-              isExclusive
-                ? "bg-amber-500/95 hover:bg-amber-500 text-white border-0 rounded-full"
-                : "bg-emerald-500/95 hover:bg-emerald-500 text-white border-0 rounded-full"
-            }
-          >
-            {isExclusive ? "Exclusive" : "Demo"}
-          </Badge>
-        </div>
-        {replay.duration_minutes ? (
+        {durationLabel ? (
           <div className="absolute bottom-2 right-2">
             <Badge className="bg-black/60 hover:bg-black/60 text-white border-0 rounded-full">
-              {replay.duration_minutes} min
+              {durationLabel}
             </Badge>
           </div>
         ) : null}
@@ -307,40 +348,44 @@ function ReplayCard({
 
       <div className="p-4 space-y-3">
         <div>
-          <Badge
-            variant="outline"
-            className="mb-2 text-xs rounded-full border-slate-200"
-          >
-            {replay.subject?.name || "General"}
-          </Badge>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {replay.subject_name && (
+              <Badge variant="outline" className="text-xs rounded-full border-slate-200">
+                {replay.subject_name}
+              </Badge>
+            )}
+            {replay.class_title && (
+              <Badge variant="outline" className="text-xs rounded-full border-slate-200 text-slate-600">
+                {replay.class_title}
+              </Badge>
+            )}
+          </div>
           <h3 className="font-semibold text-slate-900 line-clamp-2 break-words">
             {replay.title}
           </h3>
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          {replay.tutor ? (
+          {replay.tutor_name ? (
             <div className="flex items-center gap-2 min-w-0">
               <Avatar className="w-6 h-6 shrink-0">
-                <AvatarImage src={replay.tutor.avatar_url || undefined} />
+                <AvatarImage src={replay.tutor_avatar || undefined} />
                 <AvatarFallback className="text-[10px] bg-[#00D1FF] text-white">
-                  {replay.tutor.name
+                  {replay.tutor_name
                     .split(" ")
                     .map((n) => n[0])
                     .join("")
                     .slice(0, 2)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm text-slate-600 truncate">
-                {replay.tutor.name}
-              </span>
+              <span className="text-sm text-slate-600 truncate">{replay.tutor_name}</span>
             </div>
           ) : (
             <span className="text-sm text-slate-400">Tutor TBA</span>
           )}
           <div className="flex items-center gap-1 text-xs text-slate-500 shrink-0">
             <Calendar className="w-3 h-3" />
-            {format(new Date(replay.scheduled_at), "MMM d")}
+            {format(new Date(replay.created_at), "MMM d")}
           </div>
         </div>
 
@@ -348,15 +393,7 @@ function ReplayCard({
           onClick={onWatch}
           className="w-full rounded-full h-11 bg-[#00D1FF] hover:bg-[#00b8e0] text-white shadow-[0_6px_20px_-6px_rgba(0,209,255,0.6)]"
         >
-          {isExclusive ? (
-            <>
-              <Lock className="w-4 h-4 mr-2" /> Enroll to Watch
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 mr-2 fill-current" /> Watch Replay
-            </>
-          )}
+          <Play className="w-4 h-4 mr-2 fill-current" /> Watch Replay
         </Button>
       </div>
     </Card>
