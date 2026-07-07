@@ -57,9 +57,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!subdomainSlug) {
       setSubdomainTenant(null);
+      setSubdomainResolved(true);
       return;
     }
     let cancelled = false;
+    setSubdomainResolved(false);
     (async () => {
       const { data, error: rpcErr } = await (supabase as any).rpc(
         "resolve_tenant_by_subdomain",
@@ -69,6 +71,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       if (rpcErr) {
         console.error("[TenantProvider] subdomain resolve failed", rpcErr);
         setSubdomainTenant(null);
+        setSubdomainResolved(true);
         return;
       }
       const row = Array.isArray(data) ? data[0] : data;
@@ -77,11 +80,13 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       } else {
         setSubdomainTenant(null);
       }
+      setSubdomainResolved(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [subdomainSlug]);
+
 
   useEffect(() => {
     if (authLoading) return;
