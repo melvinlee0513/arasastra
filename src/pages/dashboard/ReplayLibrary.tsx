@@ -145,7 +145,7 @@ export function ReplayLibrary() {
         (tutorsRes.data || []).map((t: any) => [t.user_id, { name: t.name, avatar_url: t.avatar_url }]),
       );
 
-      return cleaned.map<ClassReplay>((v: any) => ({
+      return cleaned.map((v: any): ClassReplay => ({
         id: v.id,
         title: v.title,
         description: v.description,
