@@ -345,6 +345,19 @@ export default function CurriculumManager() {
           }}
         />
       )}
+      {selectedClass && (
+        <AssignTutorsModal
+          open={assignTutorsOpen}
+          onOpenChange={setAssignTutorsOpen}
+          centerId={currentTenantId}
+          classId={selectedClass.id}
+          tutors={tutors}
+          onDone={() => {
+            setAssignTutorsOpen(false);
+            if (selectedSubjectId) void loadClasses(selectedSubjectId);
+          }}
+        />
+      )}
     </div>
   );
 }
