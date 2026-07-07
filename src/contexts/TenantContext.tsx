@@ -113,7 +113,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setError("Failed to resolve organisation");
         setCenter(null);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setHasResolvedOnce(true);
+        }
       }
     })();
 
