@@ -58,8 +58,9 @@ export function AuthPage() {
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
 
-    // Pre-login redirect: if we're on the HQ apex and this email belongs to a
-    // tenant user, bounce them to their tenant subdomain BEFORE signing in.
+    // Pre-login redirect: on the HQ apex, ask the DB whether this email
+    // routes to a tenant. Response is intentionally generic — no user id,
+    // center id, or superadmin flag exposed to anon callers.
     const info = getTenantSubdomain();
     const onHQApex = info.isApex && !info.isPreview;
     if (onHQApex) {
@@ -69,19 +70,24 @@ export function AuthPage() {
           { _email: data.email },
         );
         const row = Array.isArray(rows) ? rows[0] : rows;
-        if (row && row.subdomain_slug && !row.is_superadmin) {
+        if (row?.destination === "tenant" && row.subdomain_slug) {
+          // Never authenticate on HQ — Supabase session in localStorage is
+          // origin-scoped and won't cross to the tenant host. Hand off with
+          // just a prefilled email in the query string.
           const target = tenantHrefFor(
             row.subdomain_slug,
-            `/auth${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`,
+            `/auth?email=${encodeURIComponent(data.email)}${
+              safeNext ? `&next=${encodeURIComponent(safeNext)}` : ""
+            }`,
           );
           window.location.replace(target);
-          return; // stop here — session will be created on the tenant host
+          return;
         }
       } catch (e) {
-        // Non-fatal — fall through to normal sign-in.
         console.warn("[auth] pre-login tenant redirect failed", e);
       }
     }
+
 
     const { error } = await signIn(data.email, data.password);
     setIsLoading(false);
