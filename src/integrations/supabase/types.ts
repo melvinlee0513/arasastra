@@ -1909,7 +1909,6 @@ export type Database = {
       get_invite_redirect: {
         Args: { _token: string }
         Returns: {
-          center_id: string
           subdomain_slug: string
         }[]
       }
@@ -1917,8 +1916,7 @@ export type Database = {
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
-          center_id: string
-          is_superadmin: boolean
+          destination: string
           subdomain_slug: string
         }[]
       }
