@@ -10,7 +10,10 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { getTenantSubdomain, tenantHrefFor } from "@/lib/tenantSubdomain";
 import owlMascot from "@/assets/owl-mascot.png";
+
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
