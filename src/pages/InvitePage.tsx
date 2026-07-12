@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getTenantSubdomain, tenantHrefFor } from "@/lib/tenantSubdomain";
 
 interface Invitation {
   id: string;
@@ -34,6 +35,26 @@ export default function InvitePage() {
         setLoading(false);
         return;
       }
+
+      // 1) Resolve the tenant this invite belongs to. If we're on the wrong
+      //    host (e.g. the HQ apex), bounce to the tenant's canonical subdomain
+      //    while preserving the token — signup must complete on the tenant host.
+      try {
+        const { data: redirRows } = await (supabase as any).rpc("get_invite_redirect", {
+          _token: token,
+        });
+        const redir = Array.isArray(redirRows) ? redirRows[0] : redirRows;
+        const info = getTenantSubdomain();
+        const targetSlug: string | null = redir?.subdomain_slug ?? null;
+        if (targetSlug && info.slug !== targetSlug && !info.isPreview) {
+          const target = tenantHrefFor(targetSlug, `/invite?token=${token}`);
+          window.location.replace(target);
+          return;
+        }
+      } catch (e) {
+        console.warn("[invite] redirect resolve failed", e);
+      }
+
       const { data: rows, error: qErr } = await supabase
         .rpc("get_invitation_by_token", { _token: token });
       const data = Array.isArray(rows) ? rows[0] : rows;
@@ -47,6 +68,7 @@ export default function InvitePage() {
     };
     load();
   }, [token]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
