@@ -163,13 +163,18 @@ export function StudentDashboard() {
           <p className="text-muted-foreground">Ready to learn something new today?</p>
         </div>
         <div className="hidden md:flex items-center gap-3">
-          <XPLevelChip
-            level={gamification.level}
-            totalXp={gamification.totalXp}
-            progressPct={gamification.progressPct}
-            xpToNextLevel={gamification.xpToNextLevel}
-          />
-          <StreakFlame streak={gamification.currentStreak || userProgress.streak} />
+          {gamification.enabled && (
+            <>
+              <XPLevelChip
+                level={gamification.level}
+                totalXp={gamification.totalXp}
+                progressPct={gamification.progressPct}
+                xpToNextLevel={gamification.xpToNextLevel}
+              />
+              <StreakFlame streak={gamification.currentStreak || userProgress.streak} />
+            </>
+          )}
+
 
           {attendanceScore !== null && (
             <Card className="p-3 bg-card border-border flex items-center gap-3">
@@ -342,10 +347,13 @@ export function StudentDashboard() {
           )}
         </section>
 
-        {/* XP Leaderboard */}
-        <section>
-          <XPLeaderboard />
-        </section>
+        {/* XP Leaderboard (gated by tenant gamification flag) */}
+        {gamification.enabled && (
+          <section>
+            <XPLeaderboard />
+          </section>
+        )}
+
       </div>
 
       {/* Remedial Playlist — Weak Link Diagnostic */}

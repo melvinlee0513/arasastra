@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
+import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+
 
 
 interface InviteUserModalProps {
@@ -19,7 +21,7 @@ interface InviteUserModalProps {
 type Role = "student" | "tutor";
 
 export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
-  const { currentTenantId } = useTenant();
+  const { currentTenantId, center } = useTenant();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("student");
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +79,11 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
         throw error;
       }
 
-      const link = `https://arasaplus.info/invite?token=${data.id}`;
+      const slug = center?.subdomainSlug ?? null;
+      const link = slug
+        ? tenantHrefFor(slug, `/invite?token=${data.id}`)
+        : hqHrefFor(`/invite?token=${data.id}`);
+
 
       toast.success("Invitation created", {
         description: link,

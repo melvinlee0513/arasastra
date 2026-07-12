@@ -1578,30 +1578,36 @@ export type Database = {
           created_by: string | null
           domain_status: string
           domain_verified_at: string | null
+          feature_flags: Json
           id: string
           logo_url: string | null
           name: string
           subdomain_slug: string | null
+          theme_config: Json
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           domain_status?: string
           domain_verified_at?: string | null
+          feature_flags?: Json
           id?: string
           logo_url?: string | null
           name: string
           subdomain_slug?: string | null
+          theme_config?: Json
         }
         Update: {
           created_at?: string
           created_by?: string | null
           domain_status?: string
           domain_verified_at?: string | null
+          feature_flags?: Json
           id?: string
           logo_url?: string | null
           name?: string
           subdomain_slug?: string | null
+          theme_config?: Json
         }
         Relationships: []
       }
@@ -1900,7 +1906,22 @@ export type Database = {
           status: string
         }[]
       }
+      get_invite_redirect: {
+        Args: { _token: string }
+        Returns: {
+          center_id: string
+          subdomain_slug: string
+        }[]
+      }
       get_profile_id: { Args: never; Returns: string }
+      get_signin_redirect_for_email: {
+        Args: { _email: string }
+        Returns: {
+          center_id: string
+          is_superadmin: boolean
+          subdomain_slug: string
+        }[]
+      }
       get_user_center: { Args: { _user_id?: string }; Returns: string }
       has_role: {
         Args: {
@@ -1930,9 +1951,12 @@ export type Database = {
         Args: { _slug: string }
         Returns: {
           domain_status: string
+          feature_flags: Json
           id: string
           logo_url: string
           name: string
+          subdomain_slug: string
+          theme_config: Json
         }[]
       }
       same_center_as_current_user: {

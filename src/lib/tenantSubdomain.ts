@@ -96,3 +96,22 @@ export function validateSubdomainSlug(slug: string): string | null {
 export function tenantUrlFor(slug: string): string {
   return `https://${slug}.${ROOT_DOMAIN}`;
 }
+
+/** Absolute URL for a path on the given tenant subdomain. */
+export function tenantHrefFor(slug: string, path: string = "/"): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  return `https://${slug}.${ROOT_DOMAIN}${clean}`;
+}
+
+/** Absolute URL to the HQ apex domain. */
+export function hqHrefFor(path: string = "/"): string {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  return `https://${ROOT_DOMAIN}${clean}`;
+}
+
+/** True when this hostname is the HQ apex (arasaplus.info / www.arasaplus.info). */
+export function isHQHostname(hostname?: string): boolean {
+  const info = getTenantSubdomain(hostname);
+  return info.isApex && !info.isPreview;
+}
+

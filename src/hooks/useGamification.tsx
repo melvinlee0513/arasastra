@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 
 const XP_PER_LEVEL = 500;
 
@@ -13,7 +14,10 @@ export interface GamificationState {
   currentStreak: number;
   longestStreak: number;
   isLoading: boolean;
+  /** Whether the current centre has gamification enabled. */
+  enabled: boolean;
 }
+
 
 export type LearningEvent =
   | "flashcard_known"
@@ -22,7 +26,7 @@ export type LearningEvent =
   | "note_read"
   | "homework_submitted";
 
-function derive(totalXp: number, current: number, longest: number, loading = false): GamificationState {
+function derive(totalXp: number, current: number, longest: number, loading = false, enabled = true): GamificationState {
   const level = Math.max(1, Math.floor((totalXp || 0) / XP_PER_LEVEL) + 1);
   const xpIntoLevel = (totalXp || 0) % XP_PER_LEVEL;
   const xpToNextLevel = XP_PER_LEVEL - xpIntoLevel;
@@ -35,16 +39,20 @@ function derive(totalXp: number, current: number, longest: number, loading = fal
     currentStreak: current || 0,
     longestStreak: longest || 0,
     isLoading: loading,
+    enabled,
   };
 }
 
 export function useGamification() {
   const { user } = useAuth();
-  const [state, setState] = useState<GamificationState>(() => derive(0, 0, 0, true));
+  const { featureFlags } = useTenant();
+  const enabled = featureFlags?.gamification !== false;
+  const [state, setState] = useState<GamificationState>(() => derive(0, 0, 0, true, enabled));
+
 
   const refetch = useCallback(async () => {
     if (!user?.id) {
-      setState(derive(0, 0, 0, false));
+      setState(derive(0, 0, 0, false, enabled));
       return;
     }
     const [{ data: profile }, { data: streak }] = await Promise.all([
@@ -61,9 +69,11 @@ export function useGamification() {
         streak?.current_streak || 0,
         streak?.longest_streak || 0,
         false,
+        enabled,
       ),
     );
-  }, [user?.id]);
+  }, [user?.id, enabled]);
+
 
   useEffect(() => {
     refetch();
@@ -98,13 +108,15 @@ export function useGamification() {
             payload.current_streak || 0,
             payload.longest_streak || 0,
             false,
+            enabled,
           ),
         );
       }
       return payload;
     },
-    [user?.id],
+    [user?.id, enabled],
   );
+
 
   return { ...state, refetch, recordActivity };
 }
