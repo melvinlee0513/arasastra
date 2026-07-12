@@ -60,24 +60,20 @@ export function AuthPage() {
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
 
-    // Pre-login redirect: on the HQ apex, ask the DB whether this email
-    // routes to a tenant. Response is intentionally generic — no user id,
-    // center id, or superadmin flag exposed to anon callers.
+    // Pre-login tenant discovery — moved behind an Edge Function
+    // (`tenant-lookup`) with per-IP and per-email rate limits + generic
+    // responses so anonymous callers cannot enumerate accounts.
     const info = getTenantSubdomain();
     const onHQApex = info.isApex && !info.isPreview;
     if (onHQApex) {
       try {
-        const { data: rows } = await (supabase as any).rpc(
-          "get_signin_redirect_for_email",
-          { _email: data.email },
+        const { data: routing, error: rpcErr } = await supabase.functions.invoke(
+          "tenant-lookup",
+          { body: { email: data.email } },
         );
-        const row = Array.isArray(rows) ? rows[0] : rows;
-        if (row?.destination === "tenant" && row.subdomain_slug) {
-          // Never authenticate on HQ — Supabase session in localStorage is
-          // origin-scoped and won't cross to the tenant host. Hand off with
-          // just a prefilled email in the query string.
+        if (!rpcErr && routing?.destination === "tenant" && routing?.slug) {
           const target = tenantHrefFor(
-            row.subdomain_slug,
+            routing.slug,
             `/auth?email=${encodeURIComponent(data.email)}${
               safeNext ? `&next=${encodeURIComponent(safeNext)}` : ""
             }`,
