@@ -9,12 +9,43 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { getTenantSubdomain } from "@/lib/tenantSubdomain";
+import {
+  getTenantSubdomain,
+  tenantHrefFor,
+  ROOT_DOMAIN,
+} from "@/lib/tenantSubdomain";
+
+export type TenantThemeConfig = {
+  primaryColor?: string;
+  accentColor?: string;
+  midnightColor?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  loginHeroTitle?: string;
+  dashboardTitle?: string;
+  cardStyle?: string;
+  navStyle?: string;
+};
+
+export type TenantFeatureFlags = {
+  gamification?: boolean;
+  quizXP?: boolean;
+  leaderboards?: boolean;
+  flashcards?: boolean;
+  videoReplays?: boolean;
+  progressRings?: boolean;
+  googleDrive?: boolean;
+  oneDrive?: boolean;
+  [key: string]: boolean | undefined;
+};
 
 export type TenantCenter = {
   id: string;
   name: string;
   logoUrl: string | null;
+  subdomainSlug?: string | null;
+  themeConfig?: TenantThemeConfig;
+  featureFlags?: TenantFeatureFlags;
 };
 
 type TenantContextValue = {
@@ -26,12 +57,26 @@ type TenantContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshCenters: () => Promise<void>;
-  /** Slug resolved from the current hostname, if any. */
   subdomainSlug: string | null;
-  /** Tenant matched from the subdomain (unauth or cross-check). */
   subdomainTenant: TenantCenter | null;
-  /** True when the signed-in user does NOT belong to this subdomain tenant. */
   isTenantMismatch: boolean;
+  /** Convenience flags for gating UI + auth flows. */
+  isHQHost: boolean;
+  isTenantHost: boolean;
+  canonicalHost: string | null;
+  themeConfig: TenantThemeConfig;
+  featureFlags: TenantFeatureFlags;
+};
+
+const DEFAULT_FLAGS: TenantFeatureFlags = {
+  gamification: true,
+  quizXP: true,
+  leaderboards: true,
+  flashcards: true,
+  videoReplays: true,
+  progressRings: true,
+  googleDrive: false,
+  oneDrive: false,
 };
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
@@ -51,9 +96,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
   const subdomainSlug = subdomainInfo.slug;
+  const isHQHost = subdomainInfo.isApex && !subdomainInfo.isPreview;
+  const isTenantHost = !!subdomainSlug;
 
-
-  // Resolve the tenant tied to the current subdomain (works for anon visitors too).
+  // Resolve tenant tied to current subdomain (works anon).
   useEffect(() => {
     if (!subdomainSlug) {
       setSubdomainTenant(null);
@@ -76,7 +122,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       }
       const row = Array.isArray(data) ? data[0] : data;
       if (row) {
-        setSubdomainTenant({ id: row.id, name: row.name, logoUrl: row.logo_url ?? null });
+        setSubdomainTenant({
+          id: row.id,
+          name: row.name,
+          logoUrl: row.logo_url ?? null,
+          subdomainSlug: row.subdomain_slug ?? subdomainSlug,
+          themeConfig: (row.theme_config ?? {}) as TenantThemeConfig,
+          featureFlags: (row.feature_flags ?? {}) as TenantFeatureFlags,
+        });
       } else {
         setSubdomainTenant(null);
       }
@@ -86,7 +139,6 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [subdomainSlug]);
-
 
   useEffect(() => {
     if (authLoading) return;
@@ -111,7 +163,6 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
-
         if (cancelled) return;
 
         const roleSet = new Set((rolesRes.data ?? []).map((r) => r.role));
@@ -122,17 +173,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         if (superAdmin) {
           const { data } = await supabase
             .from("tuition_centers")
-            .select("id, name, logo_url")
+            .select("id, name, logo_url, subdomain_slug, theme_config, feature_flags")
             .order("name");
-          centers = (data ?? []).map((c) => ({
+          centers = (data ?? []).map((c: any) => ({
             id: c.id,
             name: c.name,
             logoUrl: c.logo_url,
+            subdomainSlug: c.subdomain_slug,
+            themeConfig: (c.theme_config ?? {}) as TenantThemeConfig,
+            featureFlags: (c.feature_flags ?? {}) as TenantFeatureFlags,
           }));
         }
 
-        const userCenterId = (profileRes.data as { center_id: string | null } | null)
-          ?.center_id ?? null;
+        const userCenterId = (profileRes.data as { center_id: string | null } | null)?.center_id ?? null;
 
         let activeCenter: TenantCenter | null = null;
         if (userCenterId) {
@@ -142,11 +195,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           } else {
             const { data: c } = await supabase
               .from("tuition_centers")
-              .select("id, name, logo_url")
+              .select("id, name, logo_url, subdomain_slug, theme_config, feature_flags")
               .eq("id", userCenterId)
               .maybeSingle();
             if (c) {
-              activeCenter = { id: c.id, name: c.name, logoUrl: c.logo_url };
+              const anyC = c as any;
+              activeCenter = {
+                id: anyC.id,
+                name: anyC.name,
+                logoUrl: anyC.logo_url,
+                subdomainSlug: anyC.subdomain_slug,
+                themeConfig: (anyC.theme_config ?? {}) as TenantThemeConfig,
+                featureFlags: (anyC.feature_flags ?? {}) as TenantFeatureFlags,
+              };
               if (!centers.length) centers = [activeCenter];
             }
           }
@@ -184,33 +245,67 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (!isSuperAdmin) return;
     const { data } = await supabase
       .from("tuition_centers")
-      .select("id, name, logo_url")
+      .select("id, name, logo_url, subdomain_slug, theme_config, feature_flags")
       .order("name");
-    const centers = (data ?? []).map((c) => ({
+    const centers = (data ?? []).map((c: any) => ({
       id: c.id,
       name: c.name,
       logoUrl: c.logo_url,
+      subdomainSlug: c.subdomain_slug,
+      themeConfig: (c.theme_config ?? {}) as TenantThemeConfig,
+      featureFlags: (c.feature_flags ?? {}) as TenantFeatureFlags,
     }));
     setAvailableCenters(centers);
     queryClient.invalidateQueries();
   };
 
-  // On a tenant subdomain, the subdomain tenant is authoritative for branding
-  // AND for locking the session context — even for superadmins visiting that host.
   const effectiveCenter = subdomainTenant ?? center;
-
-  // Superadmins on a tenant subdomain get scoped to just that tenant (no switcher).
   const scopedAvailableCenters = subdomainTenant ? [subdomainTenant] : availableCenters;
 
   const isTenantMismatch =
-    !!user &&
-    !isSuperAdmin &&
-    !!subdomainTenant &&
-    !!center &&
-    subdomainTenant.id !== center.id;
-
-  // Slug present in URL but no active tenant matched — show unknown-tenant screen.
+    !!user && !isSuperAdmin && !!subdomainTenant && !!center && subdomainTenant.id !== center.id;
   const isUnknownTenant = !!subdomainSlug && subdomainResolved && !subdomainTenant;
+
+  const themeConfig: TenantThemeConfig = effectiveCenter?.themeConfig ?? {};
+  const featureFlags: TenantFeatureFlags = {
+    ...DEFAULT_FLAGS,
+    ...(effectiveCenter?.featureFlags ?? {}),
+  };
+  const canonicalHost =
+    effectiveCenter?.subdomainSlug
+      ? `${effectiveCenter.subdomainSlug}.${ROOT_DOMAIN}`
+      : isHQHost
+        ? ROOT_DOMAIN
+        : null;
+
+  // Apply theme CSS variables when present (safe fallback to HQ defaults).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const set = (name: string, value?: string) => {
+      if (value) root.style.setProperty(name, value);
+      else root.style.removeProperty(name);
+    };
+    set("--brand-primary", themeConfig.primaryColor);
+    set("--brand-accent", themeConfig.accentColor);
+    set("--brand-midnight", themeConfig.midnightColor);
+  }, [themeConfig.primaryColor, themeConfig.accentColor, themeConfig.midnightColor]);
+
+  // Post-login safety redirect: non-superadmin on HQ apex with a home tenant → send to canonical host.
+  const [isRedirectingHome, setIsRedirectingHome] = useState(false);
+  useEffect(() => {
+    if (!user || authLoading || isLoading) return;
+    if (isSuperAdmin) return;
+    if (!isHQHost) return;
+    const slug = center?.subdomainSlug;
+    if (!slug) return;
+    setIsRedirectingHome(true);
+    const target = tenantHrefFor(
+      slug,
+      window.location.pathname === "/auth" ? "/dashboard" : window.location.pathname + window.location.search,
+    );
+    window.location.replace(target);
+  }, [user, authLoading, isLoading, isSuperAdmin, isHQHost, center?.subdomainSlug]);
 
   const value = useMemo<TenantContextValue>(
     () => ({
@@ -225,6 +320,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       subdomainSlug,
       subdomainTenant,
       isTenantMismatch,
+      isHQHost,
+      isTenantHost,
+      canonicalHost,
+      themeConfig,
+      featureFlags,
     }),
     [
       effectiveCenter,
@@ -235,6 +335,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       subdomainSlug,
       subdomainTenant,
       isTenantMismatch,
+      isHQHost,
+      isTenantHost,
+      canonicalHost,
+      themeConfig,
+      featureFlags,
     ],
   );
 
@@ -244,8 +349,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   return (
     <TenantContext.Provider value={value}>
-      {shouldGate ? (
-        <TenantResolvingScreen />
+      {shouldGate || isRedirectingHome ? (
+        <TenantResolvingScreen redirect={isRedirectingHome} />
       ) : isUnknownTenant ? (
         <UnknownTenantScreen slug={subdomainSlug!} />
       ) : isTenantMismatch ? (
@@ -254,11 +359,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         children
       )}
     </TenantContext.Provider>
-
   );
 }
 
-function TenantResolvingScreen() {
+function TenantResolvingScreen({ redirect }: { redirect?: boolean }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sky-50 p-8">
       <div className="flex flex-col items-center gap-4 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
@@ -266,7 +370,9 @@ function TenantResolvingScreen() {
           className="h-10 w-10 rounded-full border-[3px] border-slate-200 animate-spin"
           style={{ borderTopColor: "#0052FF" }}
         />
-        <p className="text-sm text-slate-500">Loading your organisation…</p>
+        <p className="text-sm text-slate-500">
+          {redirect ? "Redirecting you to your centre…" : "Loading your organisation…"}
+        </p>
       </div>
     </div>
   );
@@ -282,26 +388,33 @@ function TenantMismatchScreen({
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-rose-50 p-8">
       <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
-        <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-xl font-semibold">
-          !
-        </div>
+        <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-xl font-semibold">!</div>
         <h1 className="text-xl font-semibold text-[#0F172A]">
           You don't have access to {expected?.name ?? "this workspace"}
         </h1>
         <p className="text-sm text-slate-500">
-          Your account belongs to {actual?.name ?? "another centre"}. Sign in on your own centre's
-          subdomain instead.
+          Your account belongs to {actual?.name ?? "another centre"}. Sign in on your own centre's subdomain instead.
         </p>
-        <button
-          onClick={() => {
-            void supabase.auth.signOut().then(() => {
-              window.location.href = "/auth";
-            });
-          }}
-          className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 text-sm font-medium"
-        >
-          Sign out
-        </button>
+        <div className="flex gap-3">
+          {actual?.subdomainSlug ? (
+            <a
+              href={tenantHrefFor(actual.subdomainSlug, "/dashboard")}
+              className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 inline-flex items-center text-sm font-medium"
+            >
+              Go to your workspace
+            </a>
+          ) : null}
+          <button
+            onClick={() => {
+              void supabase.auth.signOut().then(() => {
+                window.location.href = "/auth";
+              });
+            }}
+            className="rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 px-6 h-11 text-sm font-medium"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -311,15 +424,10 @@ function UnknownTenantScreen({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50 p-8">
       <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
-        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-xl font-semibold">
-          ?
-        </div>
-        <h1 className="text-xl font-semibold text-[#0F172A]">
-          "{slug}" isn't an Aras A+ workspace
-        </h1>
+        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-xl font-semibold">?</div>
+        <h1 className="text-xl font-semibold text-[#0F172A]">"{slug}" isn't an Aras A+ workspace</h1>
         <p className="text-sm text-slate-500">
-          This subdomain isn't linked to an active centre yet. Check the URL or head to the main
-          site to find your workspace.
+          This subdomain isn't linked to an active centre yet. Check the URL or head to the main site to find your workspace.
         </p>
         <a
           href="https://arasaplus.info"
@@ -331,7 +439,6 @@ function UnknownTenantScreen({ slug }: { slug: string }) {
     </div>
   );
 }
-
 
 export function useTenant() {
   const ctx = useContext(TenantContext);
