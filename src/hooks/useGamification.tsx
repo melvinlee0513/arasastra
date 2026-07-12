@@ -108,13 +108,15 @@ export function useGamification() {
             payload.current_streak || 0,
             payload.longest_streak || 0,
             false,
+            enabled,
           ),
         );
       }
       return payload;
     },
-    [user?.id],
+    [user?.id, enabled],
   );
+
 
   return { ...state, refetch, recordActivity };
 }
