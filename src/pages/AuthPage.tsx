@@ -57,6 +57,32 @@ export function AuthPage() {
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
+
+    // Pre-login redirect: if we're on the HQ apex and this email belongs to a
+    // tenant user, bounce them to their tenant subdomain BEFORE signing in.
+    const info = getTenantSubdomain();
+    const onHQApex = info.isApex && !info.isPreview;
+    if (onHQApex) {
+      try {
+        const { data: rows } = await (supabase as any).rpc(
+          "get_signin_redirect_for_email",
+          { _email: data.email },
+        );
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (row && row.subdomain_slug && !row.is_superadmin) {
+          const target = tenantHrefFor(
+            row.subdomain_slug,
+            `/auth${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`,
+          );
+          window.location.replace(target);
+          return; // stop here — session will be created on the tenant host
+        }
+      } catch (e) {
+        // Non-fatal — fall through to normal sign-in.
+        console.warn("[auth] pre-login tenant redirect failed", e);
+      }
+    }
+
     const { error } = await signIn(data.email, data.password);
     setIsLoading(false);
 
@@ -75,6 +101,7 @@ export function AuthPage() {
       toast({ title: "Welcome back!", description: "Successfully logged in." });
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 flex items-center justify-center p-8">
