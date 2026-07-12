@@ -384,6 +384,52 @@ function TenantResolvingScreen({ redirect }: { redirect?: boolean }) {
   );
 }
 
+function TenantHandoffScreen({
+  tenantName,
+  slug,
+  email,
+}: {
+  tenantName: string;
+  slug: string;
+  email: string | null;
+}) {
+  const [busy, setBusy] = useState(false);
+  const handleContinue = async () => {
+    if (busy) return;
+    setBusy(true);
+    // Origin-scoped localStorage means the HQ session cannot travel to the
+    // tenant subdomain. Sign out here so no stale token lingers on HQ, then
+    // hand off with just a prefilled email (never tokens) in the URL.
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("[tenant-handoff] signOut failed", e);
+    }
+    const emailQs = email ? `?email=${encodeURIComponent(email)}` : "";
+    window.location.replace(`https://${slug}.${ROOT_DOMAIN}/auth${emailQs}`);
+  };
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sky-50 p-8">
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-5 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div className="w-12 h-12 rounded-2xl bg-[color:var(--brand-primary,_#0052FF)]/10 flex items-center justify-center text-[color:var(--brand-primary,_#0052FF)] text-xl font-semibold">→</div>
+        <h1 className="text-xl font-semibold text-[color:var(--brand-midnight,_#0F172A)]">
+          Continue to {tenantName}
+        </h1>
+        <p className="text-sm text-slate-500">
+          Your workspace lives on its own secure subdomain. Sign in there to access {tenantName}.
+        </p>
+        <button
+          onClick={handleContinue}
+          disabled={busy}
+          className="rounded-full bg-[color:var(--brand-primary,_#0052FF)] hover:opacity-90 text-white px-6 h-11 text-sm font-medium disabled:opacity-60"
+        >
+          {busy ? "Redirecting…" : `Go to ${slug}.${ROOT_DOMAIN}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TenantMismatchScreen({
   expected,
   actual,
