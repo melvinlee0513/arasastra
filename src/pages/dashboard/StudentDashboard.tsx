@@ -347,10 +347,13 @@ export function StudentDashboard() {
           )}
         </section>
 
-        {/* XP Leaderboard */}
-        <section>
-          <XPLeaderboard />
-        </section>
+        {/* XP Leaderboard (gated by tenant gamification flag) */}
+        {gamification.enabled && (
+          <section>
+            <XPLeaderboard />
+          </section>
+        )}
+
       </div>
 
       {/* Remedial Playlist — Weak Link Diagnostic */}
