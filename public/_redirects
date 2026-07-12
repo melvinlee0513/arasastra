@@ -1,0 +1,7 @@
+# Netlify / Cloudflare Pages SPA fallback.
+# Serve index.html for every non-asset route so React Router can handle
+# /auth, /invite, /dashboard, /admin, /tutor/classes/:id, etc. on refresh.
+# IMPORTANT: this is a REWRITE (200), not a redirect. Never rewrite one
+# hostname to another — every tenant subdomain (srisarjana.arasaplus.info,
+# etc.) must keep serving its own hostname so tenant routing works.
+/*    /index.html   200
