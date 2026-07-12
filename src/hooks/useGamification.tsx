@@ -52,7 +52,7 @@ export function useGamification() {
 
   const refetch = useCallback(async () => {
     if (!user?.id) {
-      setState(derive(0, 0, 0, false));
+      setState(derive(0, 0, 0, false, enabled));
       return;
     }
     const [{ data: profile }, { data: streak }] = await Promise.all([
@@ -69,9 +69,11 @@ export function useGamification() {
         streak?.current_streak || 0,
         streak?.longest_streak || 0,
         false,
+        enabled,
       ),
     );
-  }, [user?.id]);
+  }, [user?.id, enabled]);
+
 
   useEffect(() => {
     refetch();
