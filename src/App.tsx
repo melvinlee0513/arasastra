@@ -63,6 +63,10 @@ const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ 
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
 const ClassRoomPreview = lazy(() => import("@/pages/dashboard/ClassRoomPreview"));
 const TutorClassRoomPreview = lazy(() => import("@/pages/tutor/TutorClassRoomPreview"));
+const TutorQuizBuilderPreview = lazy(() => import("@/pages/preview/TutorQuizBuilderPreview"));
+const StudentQuizAttemptPreview = lazy(() => import("@/pages/preview/StudentQuizAttemptPreview"));
+const StudentQuizResultsPreview = lazy(() => import("@/pages/preview/StudentQuizResultsPreview"));
+import { DevPreviewGuard } from "@/components/common/DevPreviewGuard";
 
 // Guardian
 const ParentOverview = lazy(() => import("@/pages/guardian/ParentOverview").then(m => ({ default: m.ParentOverview })));
