@@ -152,6 +152,9 @@ const App = () => (
             <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassRoom /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            {/* UI-only preview (isolated mock data, no backend) */}
+            <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassRoomPreview /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/preview" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassRoomPreview /></TutorLayout></TenantGuard></ProtectedRoute>} />
 
             {/* Quiz Routes */}
             <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
