@@ -66,6 +66,7 @@ const TutorClassRoomPreview = lazy(() => import("@/pages/tutor/TutorClassRoomPre
 const TutorQuizBuilderPreview = lazy(() => import("@/pages/preview/TutorQuizBuilderPreview"));
 const StudentQuizAttemptPreview = lazy(() => import("@/pages/preview/StudentQuizAttemptPreview"));
 const StudentQuizResultsPreview = lazy(() => import("@/pages/preview/StudentQuizResultsPreview"));
+const EnrollmentMatrixPreview = lazy(() => import("@/pages/preview/EnrollmentMatrixPreview"));
 import { DevPreviewGuard } from "@/components/common/DevPreviewGuard";
 
 // Guardian
