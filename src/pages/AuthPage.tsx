@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -31,31 +31,58 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [params] = useSearchParams();
   const nextParam = params.get("next");
-  // Only accept a same-origin relative path to avoid open-redirect abuse.
   const safeNext =
     nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, role, isLoading: authLoading, signIn } = useAuth();
+  // Track whether we just signed in so we can show a hydrating screen instead
+  // of a stale login form while role/tenant context loads.
+  const [awaitingHydration, setAwaitingHydration] = useState(false);
+  const hydrationDeadline = useRef<number | null>(null);
 
+  // Redirect once auth is fully hydrated (user + role known, not loading).
   useEffect(() => {
-    if (user && !authLoading && role) {
-      if (safeNext) {
-        window.location.href = safeNext;
-        return;
+    if (!user || authLoading) return;
+    if (!role) {
+      // Session established but role not resolved yet — keep waiting, but
+      // don't wait forever. If role never arrives within ~8s, surface a
+      // friendly access-error toast and let the user retry.
+      if (awaitingHydration && hydrationDeadline.current && Date.now() > hydrationDeadline.current) {
+        setAwaitingHydration(false);
+        toast({
+          title: "We couldn't finish signing you in",
+          description:
+            "We signed you in, but could not load your account access. Please try again.",
+          variant: "destructive",
+        });
       }
-      if (role === "admin" || role === "superadmin") {
-        navigate("/admin");
-      } else if (role === "tutor") {
-        navigate("/tutor");
-      } else {
-        navigate("/dashboard");
-      }
+      return;
     }
-  }, [user, role, authLoading, navigate, safeNext]);
+    if (import.meta.env.DEV) {
+      console.info("[auth] redirect decision", {
+        hostname: typeof window !== "undefined" ? window.location.hostname : null,
+        role,
+        userId: user.id,
+        safeNext,
+      });
+    }
+    setAwaitingHydration(false);
+    if (safeNext) {
+      window.location.href = safeNext;
+      return;
+    }
+    if (role === "admin" || role === "superadmin") {
+      navigate("/admin", { replace: true });
+    } else if (role === "tutor") {
+      navigate("/tutor", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, role, authLoading, navigate, safeNext, awaitingHydration, toast]);
 
   const emailParam = params.get("email") ?? "";
   const loginForm = useForm<LoginFormData>({
@@ -63,13 +90,11 @@ export function AuthPage() {
     defaultValues: { email: emailParam, password: "" },
   });
 
-
   const onLogin = async (data: LoginFormData) => {
-    setIsLoading(true);
+    if (isSubmitting) return; // prevent duplicate submissions
+    setIsSubmitting(true);
 
-    // Pre-login tenant discovery — moved behind an Edge Function
-    // (`tenant-lookup`) with per-IP and per-email rate limits + generic
-    // responses so anonymous callers cannot enumerate accounts.
+    // Pre-login tenant discovery ONLY on the HQ apex (not tenant subdomains).
     const info = getTenantSubdomain();
     const onHQApex = info.isApex && !info.isPreview;
     if (onHQApex) {
@@ -93,28 +118,59 @@ export function AuthPage() {
       }
     }
 
+    if (import.meta.env.DEV) {
+      console.info("[auth] signIn attempt", {
+        hostname: typeof window !== "undefined" ? window.location.hostname : null,
+        onHQApex,
+        subdomainSlug: info.slug,
+      });
+    }
 
     const { error } = await signIn(data.email, data.password);
-    setIsLoading(false);
 
     if (error) {
-      toast({
-        title: "Login failed",
-        description:
-          error.message === "Invalid login credentials"
-            ? "Invalid email or password. Please try again."
-            : error.message === "Email not confirmed"
-              ? "Please verify your email before logging in. Check your inbox."
-              : error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({ title: "Welcome back!", description: "Successfully logged in." });
+      setIsSubmitting(false);
+      const raw = (error.message || "").toLowerCase();
+      const friendly =
+        raw.includes("invalid login credentials") || raw.includes("invalid credentials")
+          ? "Incorrect email or password."
+          : raw.includes("email not confirmed")
+            ? "Please verify your email before signing in. Check your inbox."
+            : raw.includes("network") || raw.includes("fetch")
+              ? "Network problem. Please check your connection and try again."
+              : "We couldn't sign you in. Please try again in a moment.";
+      toast({ title: "Sign in failed", description: friendly, variant: "destructive" });
+      // Preserve email; clear password only.
+      loginForm.setValue("password", "");
+      return;
     }
+
+    // Auth succeeded. Keep the "signing in…" state on until role hydrates
+    // and the redirect effect fires. Do NOT clear the form or navigate here.
+    hydrationDeadline.current = Date.now() + 8000;
+    setAwaitingHydration(true);
+    setIsSubmitting(false);
   };
 
+  // While the just-signed-in session hydrates, show a clean progress screen
+  // rather than a stale, empty login form.
+  const showHydrating = awaitingHydration && !!user && (authLoading || !role);
+  if (showHydrating) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sky-50 p-8">
+        <div className="flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+          <Loader2 className="h-8 w-8 animate-spin text-[color:var(--brand-primary,_#0052FF)]" />
+          <p className="text-sm text-slate-500">Signing you in…</p>
+        </div>
+      </div>
+    );
+  }
 
-  return <AuthPageInner {...{ loginForm, onLogin, isLoading, showPassword, setShowPassword }} />;
+  return (
+    <AuthPageInner
+      {...{ loginForm, onLogin, isLoading: isSubmitting, showPassword, setShowPassword }}
+    />
+  );
 }
 
 function AuthPageInner({ loginForm, onLogin, isLoading, showPassword, setShowPassword }: any) {

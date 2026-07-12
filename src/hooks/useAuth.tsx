@@ -44,37 +44,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchingRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // 1. Register listener FIRST so we don't miss the SIGNED_IN event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Prevent double-fetch when both onAuthStateChange and getSession fire
-          if (fetchingRef.current !== session.user.id) {
-            fetchingRef.current = session.user.id;
+      (event, nextSession) => {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        if (nextSession?.user) {
+          // Arm loading again so downstream guards wait for the role to hydrate
+          // instead of briefly seeing user=set/role=null and misrouting.
+          if (fetchingRef.current !== nextSession.user.id) {
+            fetchingRef.current = nextSession.user.id;
+            setIsLoading(true);
             setTimeout(() => {
-              fetchUserData(session.user.id);
+              fetchUserData(nextSession.user.id);
             }, 0);
           }
         } else {
           fetchingRef.current = null;
           setProfile(null);
           setRole(null);
+          setRoles([]);
           setIsLoading(false);
+          if (import.meta.env.DEV) {
+            console.info("[auth] signed out or no session", { event });
+          }
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        if (fetchingRef.current !== session.user.id) {
-          fetchingRef.current = session.user.id;
-          fetchUserData(session.user.id);
+    // 2. THEN check for an existing session.
+    supabase.auth.getSession().then(({ data: { session: existing } }) => {
+      setSession(existing);
+      setUser(existing?.user ?? null);
+      if (existing?.user) {
+        if (fetchingRef.current !== existing.user.id) {
+          fetchingRef.current = existing.user.id;
+          fetchUserData(existing.user.id);
         }
       } else {
         setIsLoading(false);
@@ -85,34 +91,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserData = async (userId: string) => {
+    // Run independently so a failure in one query does NOT prevent the other
+    // from populating state. Previously a Promise.all with .single() on the
+    // profile would reject the whole batch when the profile row was missing
+    // or blocked by RLS, leaving `role` null forever → login loop.
+    const [profileRes, roleRes] = await Promise.allSettled([
+      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
+
     try {
-      // Fetch profile and role in parallel
-      const [profileRes, roleRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .single(),
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userId),
-      ]);
-
-      if (profileRes.data) {
-        setProfile(profileRes.data as Profile);
+      if (profileRes.status === "fulfilled") {
+        if (profileRes.value.error) {
+          console.error("[auth] profile query error", profileRes.value.error);
+        } else if (profileRes.value.data) {
+          setProfile(profileRes.value.data as Profile);
+        }
+      } else {
+        console.error("[auth] profile fetch rejected", profileRes.reason);
       }
 
-      if (roleRes.data) {
-        const rolesList = (roleRes.data as { role: UserRole }[]).map((r) => r.role);
-        setRoles(rolesList);
-        // Priority: superadmin > admin > tutor > student
-        const priority: UserRole[] = ["superadmin", "admin", "tutor", "student"];
-        const primary = priority.find((p) => rolesList.includes(p)) ?? null;
-        setRole(primary);
+      if (roleRes.status === "fulfilled") {
+        if (roleRes.value.error) {
+          console.error("[auth] roles query error", roleRes.value.error);
+        } else if (roleRes.value.data) {
+          const rolesList = (roleRes.value.data as { role: UserRole }[]).map((r) => r.role);
+          setRoles(rolesList);
+          const priority: UserRole[] = ["superadmin", "admin", "tutor", "student"];
+          const primary = priority.find((p) => rolesList.includes(p)) ?? null;
+          setRole(primary);
+          if (import.meta.env.DEV) {
+            console.info("[auth] roles hydrated", { userId, rolesList, primary });
+          }
+        }
+      } else {
+        console.error("[auth] roles fetch rejected", roleRes.reason);
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
     } finally {
       setIsLoading(false);
     }
