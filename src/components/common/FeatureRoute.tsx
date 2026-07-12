@@ -17,6 +17,6 @@ interface FeatureRouteProps {
  */
 export function FeatureRoute({ flag, children, label }: FeatureRouteProps) {
   const enabled = useFeatureEnabled(flag);
-  if (!enabled) return <FeatureUnavailable feature={label ?? flag} />;
+  if (!enabled) return <FeatureUnavailable feature={label ?? String(flag)} />;
   return <>{children}</>;
 }
