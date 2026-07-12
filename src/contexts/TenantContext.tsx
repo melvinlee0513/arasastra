@@ -348,8 +348,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   return (
     <TenantContext.Provider value={value}>
-      {shouldGate || isRedirectingHome ? (
-        <TenantResolvingScreen redirect={isRedirectingHome} />
+      {shouldGate ? (
+        <TenantResolvingScreen />
+      ) : showHandoff && center?.subdomainSlug ? (
+        <TenantHandoffScreen
+          tenantName={center.name}
+          slug={center.subdomainSlug}
+          email={user?.email ?? null}
+        />
       ) : isUnknownTenant ? (
         <UnknownTenantScreen slug={subdomainSlug!} />
       ) : isTenantMismatch ? (
@@ -359,6 +365,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       )}
     </TenantContext.Provider>
   );
+
 }
 
 function TenantResolvingScreen({ redirect }: { redirect?: boolean }) {
