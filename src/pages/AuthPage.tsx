@@ -50,10 +50,12 @@ export function AuthPage() {
     }
   }, [user, role, authLoading, navigate, safeNext]);
 
+  const emailParam = params.get("email") ?? "";
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: emailParam, password: "" },
   });
+
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
