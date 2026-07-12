@@ -266,6 +266,26 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     !!user && !isSuperAdmin && !!subdomainTenant && !!center && subdomainTenant.id !== center.id;
   const isUnknownTenant = !!subdomainSlug && subdomainResolved && !subdomainTenant;
 
+  if (import.meta.env.DEV) {
+    // Trace tenant resolution to help diagnose login/tenant-handoff issues.
+    // Never gated to production users.
+    // eslint-disable-next-line no-console
+    console.debug("[tenant]", {
+      hostname: typeof window !== "undefined" ? window.location.hostname : null,
+      subdomainSlug,
+      isHQHost,
+      isTenantHost,
+      subdomainTenantId: subdomainTenant?.id ?? null,
+      userCenterId: center?.id ?? null,
+      isSuperAdmin,
+      isTenantMismatch,
+      isUnknownTenant,
+      isLoading,
+      hasResolvedOnce,
+      userId: user?.id ?? null,
+    });
+  }
+
   const themeConfig: TenantThemeConfig = effectiveCenter?.themeConfig ?? {};
   const featureFlags: TenantFeatureFlags = {
     ...DEFAULT_FLAGS,
