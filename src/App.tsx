@@ -63,6 +63,10 @@ const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ 
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
 const ClassRoomPreview = lazy(() => import("@/pages/dashboard/ClassRoomPreview"));
 const TutorClassRoomPreview = lazy(() => import("@/pages/tutor/TutorClassRoomPreview"));
+const TutorQuizBuilderPreview = lazy(() => import("@/pages/preview/TutorQuizBuilderPreview"));
+const StudentQuizAttemptPreview = lazy(() => import("@/pages/preview/StudentQuizAttemptPreview"));
+const StudentQuizResultsPreview = lazy(() => import("@/pages/preview/StudentQuizResultsPreview"));
+import { DevPreviewGuard } from "@/components/common/DevPreviewGuard";
 
 // Guardian
 const ParentOverview = lazy(() => import("@/pages/guardian/ParentOverview").then(m => ({ default: m.ParentOverview })));
@@ -152,9 +156,13 @@ const App = () => (
             <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassRoom /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            {/* UI-only preview (isolated mock data, no backend) */}
-            <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassRoomPreview /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/tutor/classes/:classId/preview" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassRoomPreview /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            {/* UI-only previews — superadmin-gated, never linked from production nav. Isolated mock data, no backend calls. */}
+            <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><ClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TutorClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/quizzes/new/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TutorQuizBuilderPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/quizzes/:quizId/edit/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TutorQuizBuilderPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><StudentQuizAttemptPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><StudentQuizResultsPreview /></DevPreviewGuard></ProtectedRoute>} />
 
             {/* Quiz Routes */}
             <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
