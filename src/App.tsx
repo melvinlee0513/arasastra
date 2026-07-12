@@ -67,6 +67,7 @@ const TutorQuizBuilderPreview = lazy(() => import("@/pages/preview/TutorQuizBuil
 const StudentQuizAttemptPreview = lazy(() => import("@/pages/preview/StudentQuizAttemptPreview"));
 const StudentQuizResultsPreview = lazy(() => import("@/pages/preview/StudentQuizResultsPreview"));
 const EnrollmentMatrixPreview = lazy(() => import("@/pages/preview/EnrollmentMatrixPreview"));
+const TenantConfigurationPreview = lazy(() => import("@/pages/preview/TenantConfigurationPreview"));
 import { DevPreviewGuard } from "@/components/common/DevPreviewGuard";
 
 // Guardian
@@ -165,6 +166,7 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><StudentQuizAttemptPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><StudentQuizResultsPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/admin/enrollment-matrix/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><EnrollmentMatrixPreview /></DevPreviewGuard></ProtectedRoute>} />
+            <Route path="/superadmin/tenants/:centerId/configuration/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TenantConfigurationPreview /></DevPreviewGuard></ProtectedRoute>} />
 
             {/* Quiz Routes */}
             <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
