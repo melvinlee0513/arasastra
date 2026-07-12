@@ -49,6 +49,16 @@
 
     --radius: 1rem;
 
+    /* Aras A+ brand tokens (overridable per tenant via theme_config).
+       Tenant theme sets these on <html> at runtime; defaults below stay put. */
+    --brand-primary: #0052FF;
+    --brand-primary-hover: #0047DB;
+    --brand-primary-foreground: #FFFFFF;
+    --brand-accent: #38BDF8;
+    --brand-midnight: #0F172A;
+    --brand-surface: #F8FAFC;
+
+
     /* Sidebar - Navy themed */
     --sidebar-background: 220 45% 18%;
     --sidebar-foreground: 40 25% 95%;
