@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 
 const XP_PER_LEVEL = 500;
 
@@ -13,7 +14,10 @@ export interface GamificationState {
   currentStreak: number;
   longestStreak: number;
   isLoading: boolean;
+  /** Whether the current centre has gamification enabled. */
+  enabled: boolean;
 }
+
 
 export type LearningEvent =
   | "flashcard_known"
