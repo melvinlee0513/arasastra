@@ -108,7 +108,7 @@ export default function InvitePage() {
       <div className="w-full max-w-md">
         {loading ? (
           <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-4 shadow-xl border border-white/20">
-            <Loader2 className="w-8 h-8 animate-spin text-[#0052FF]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[color:var(--brand-primary)]" />
             <p className="text-slate-500">Verifying invitation…</p>
           </div>
         ) : error ? (
@@ -117,11 +117,11 @@ export default function InvitePage() {
               <ShieldAlert className="w-8 h-8 text-red-500" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold text-[#0F172A]">Invalid or Expired Invitation</h1>
+              <h1 className="text-2xl font-semibold text-[color:var(--brand-midnight)]">Invalid or Expired Invitation</h1>
               <p className="text-slate-500">{error}</p>
             </div>
             <Link to="/">
-              <Button className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]">
+              <Button className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]">
                 Return to Home
               </Button>
             </Link>
@@ -129,10 +129,10 @@ export default function InvitePage() {
         ) : invitation ? (
           <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col gap-6 shadow-xl border border-white/20">
             <div className="flex flex-col gap-2">
-              <span className="inline-flex self-start rounded-full bg-[#0052FF]/10 text-[#0052FF] text-xs font-medium px-3 py-1 uppercase tracking-wide">
+              <span className="inline-flex self-start rounded-full bg-[color:var(--brand-primary)]/10 text-[color:var(--brand-primary)] text-xs font-medium px-3 py-1 uppercase tracking-wide">
                 {invitation.role} invitation
               </span>
-              <h1 className="text-2xl font-semibold text-[#0F172A]">You're invited</h1>
+              <h1 className="text-2xl font-semibold text-[color:var(--brand-midnight)]">You're invited</h1>
               <p className="text-slate-500">
                 Finish creating your account to join your organization.
               </p>
@@ -140,7 +140,7 @@ export default function InvitePage() {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div className="flex flex-col gap-2">
-                <Label className="text-[#0F172A] font-medium">Email</Label>
+                <Label className="text-[color:var(--brand-midnight)] font-medium">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
@@ -153,7 +153,7 @@ export default function InvitePage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="full-name" className="text-[#0F172A] font-medium">Full name</Label>
+                <Label htmlFor="full-name" className="text-[color:var(--brand-midnight)] font-medium">Full name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
@@ -161,13 +161,13 @@ export default function InvitePage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Your name"
-                    className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
+                    className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="invite-password" className="text-[#0F172A] font-medium">Create a password</Label>
+                <Label htmlFor="invite-password" className="text-[color:var(--brand-midnight)] font-medium">Create a password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
@@ -177,7 +177,7 @@ export default function InvitePage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 8 characters"
-                    className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
+                    className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
                   />
                 </div>
               </div>
@@ -185,7 +185,7 @@ export default function InvitePage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
+                className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
               >
                 {submitting ? "Creating account…" : "Complete Registration"}
               </Button>

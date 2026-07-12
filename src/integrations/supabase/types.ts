@@ -688,25 +688,34 @@ export type Database = {
           center_id: string
           created_at: string
           email: string
+          expires_at: string
           id: string
+          revoked_at: string | null
           role: string
           status: string
+          used_at: string | null
         }
         Insert: {
           center_id: string
           created_at?: string
           email: string
+          expires_at?: string
           id?: string
+          revoked_at?: string | null
           role?: string
           status?: string
+          used_at?: string | null
         }
         Update: {
           center_id?: string
           created_at?: string
           email?: string
+          expires_at?: string
           id?: string
+          revoked_at?: string | null
           role?: string
           status?: string
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -1957,6 +1966,7 @@ export type Database = {
           theme_config: Json
         }[]
       }
+      revoke_invitation: { Args: { _invitation_id: string }; Returns: boolean }
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean

@@ -111,10 +111,10 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-[480px] bg-white/90 backdrop-blur-xl border-slate-200 rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
         <DialogHeader className="space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#0052FF]/10 flex items-center justify-center">
-            <UserPlus className="w-6 h-6 text-[#0052FF]" />
+          <div className="w-12 h-12 rounded-2xl bg-[color:var(--brand-primary)]/10 flex items-center justify-center">
+            <UserPlus className="w-6 h-6 text-[color:var(--brand-primary)]" />
           </div>
-          <DialogTitle className="text-2xl font-semibold text-[#0F172A]">Invite a new user</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-[color:var(--brand-midnight)]">Invite a new user</DialogTitle>
           <DialogDescription className="text-slate-500">
             Send a token-gated signup link to a student or tutor for your organization.
           </DialogDescription>
@@ -122,7 +122,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 pt-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="invite-email" className="text-[#0F172A] font-medium">Email address</Label>
+            <Label htmlFor="invite-email" className="text-[color:var(--brand-midnight)] font-medium">Email address</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -132,13 +132,13 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="student@example.com"
-                className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[#0052FF]"
+                className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="text-[#0F172A] font-medium">Role</Label>
+            <Label className="text-[color:var(--brand-midnight)] font-medium">Role</Label>
             <Select value={role} onValueChange={(v) => setRole(v as Role)}>
               <SelectTrigger className="rounded-full h-11 border-slate-200">
                 <SelectValue />
@@ -155,14 +155,14 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
               type="button"
               variant="ghost"
               onClick={onClose}
-              className="rounded-full text-slate-600 hover:text-[#0F172A]"
+              className="rounded-full text-slate-600 hover:text-[color:var(--brand-midnight)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={submitting}
-              className="rounded-full bg-[#0052FF] hover:bg-[#0047DB] text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
+              className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
             >
               {submitting ? "Creating…" : (
                 <span className="flex items-center gap-2">
