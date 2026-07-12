@@ -21,7 +21,7 @@ interface InviteUserModalProps {
 type Role = "student" | "tutor";
 
 export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
-  const { currentTenantId } = useTenant();
+  const { currentTenantId, center } = useTenant();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("student");
   const [submitting, setSubmitting] = useState(false);
