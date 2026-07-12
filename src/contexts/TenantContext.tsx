@@ -291,21 +291,20 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     set("--brand-midnight", themeConfig.midnightColor);
   }, [themeConfig.primaryColor, themeConfig.accentColor, themeConfig.midnightColor]);
 
-  // Post-login safety redirect: non-superadmin on HQ apex with a home tenant → send to canonical host.
-  const [isRedirectingHome, setIsRedirectingHome] = useState(false);
+  // Cross-subdomain safety: if a non-superadmin tenant user is authenticated
+  // on the HQ apex, DO NOT try to transfer the session — Supabase stores it
+  // in origin-scoped localStorage. Show an interstitial and let the user
+  // continue to their centre (we sign the HQ session out first so no token
+  // leaks and no stale HQ session hangs around).
+  const [showHandoff, setShowHandoff] = useState(false);
   useEffect(() => {
     if (!user || authLoading || isLoading) return;
     if (isSuperAdmin) return;
     if (!isHQHost) return;
-    const slug = center?.subdomainSlug;
-    if (!slug) return;
-    setIsRedirectingHome(true);
-    const target = tenantHrefFor(
-      slug,
-      window.location.pathname === "/auth" ? "/dashboard" : window.location.pathname + window.location.search,
-    );
-    window.location.replace(target);
+    if (!center?.subdomainSlug) return;
+    setShowHandoff(true);
   }, [user, authLoading, isLoading, isSuperAdmin, isHQHost, center?.subdomainSlug]);
+
 
   const value = useMemo<TenantContextValue>(
     () => ({
