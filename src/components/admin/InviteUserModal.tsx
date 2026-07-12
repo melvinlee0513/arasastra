@@ -79,7 +79,11 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
         throw error;
       }
 
-      const link = `https://arasaplus.info/invite?token=${data.id}`;
+      const slug = center?.subdomainSlug ?? null;
+      const link = slug
+        ? tenantHrefFor(slug, `/invite?token=${data.id}`)
+        : hqHrefFor(`/invite?token=${data.id}`);
+
 
       toast.success("Invitation created", {
         description: link,
