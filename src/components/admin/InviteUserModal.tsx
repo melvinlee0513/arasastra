@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
+import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+
 
 
 interface InviteUserModalProps {
