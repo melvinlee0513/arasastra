@@ -121,21 +121,35 @@ export default function CurriculumManager() {
     const list = (data ?? []) as Class[];
     setClasses(list);
 
-    // Enrollment counts
+    // Enrollment counts + canonical class_tutors assignments (per-tenant).
     const ids = list.map((c) => c.id);
     if (ids.length) {
-      const { data: enr } = await supabase
-        .from("class_enrollments")
-        .select("class_id")
-        .in("class_id", ids)
-        .eq("status", "active");
+      const [enrRes, ctRes] = await Promise.all([
+        supabase
+          .from("class_enrollments")
+          .select("class_id")
+          .in("class_id", ids)
+          .eq("status", "active"),
+        supabase
+          .from("class_tutors")
+          .select("class_id, tutor_user_id")
+          .eq("center_id", currentTenantId)
+          .in("class_id", ids),
+      ]);
       const counts: EnrollmentCount = {};
-      (enr ?? []).forEach((e: any) => {
+      (enrRes.data ?? []).forEach((e: any) => {
         counts[e.class_id] = (counts[e.class_id] ?? 0) + 1;
       });
       setEnrollmentCounts(counts);
+
+      const byClass: Record<string, string[]> = {};
+      (ctRes.data ?? []).forEach((r: any) => {
+        (byClass[r.class_id] ||= []).push(r.tutor_user_id);
+      });
+      setClassTutorsByClassId(byClass);
     } else {
       setEnrollmentCounts({});
+      setClassTutorsByClassId({});
     }
   }
 
