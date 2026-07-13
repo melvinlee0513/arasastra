@@ -26,12 +26,9 @@ export function AccountPage() {
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
 
-  // Tutor-only users should never see the student billing surface — send them
-  // to their dedicated /tutor/account page. Admin+tutor users keep access to
-  // this student view (they might also be managing their own student account).
-  if (!authLoading && user && hasRole("tutor") && !isAdmin && !hasRole("student")) {
-    return <Navigate to="/tutor/account" replace />;
-  }
+  // Redirect handled after all hooks run — see check right above the main return.
+  const shouldRedirectToTutor =
+    !authLoading && !!user && hasRole("tutor") && !isAdmin && !hasRole("student");
 
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
