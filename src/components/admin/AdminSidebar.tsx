@@ -47,7 +47,9 @@ const navItems = [
 
 export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, profile, hasRole } = useAuth();
+
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
