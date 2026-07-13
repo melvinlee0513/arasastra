@@ -67,6 +67,10 @@ export function UsersManagement() {
   const [assignments, setAssignments] = useState<TutorAssignment[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<{ id: string; user_id: string }[]>([]);
+  // Canonical tutor-class assignments (scoped to the active tenant).
+  const [classTutors, setClassTutors] = useState<
+    { class_id: string; tutor_user_id: string; class_subject_id: string | null }[]
+  >([]);
 
   const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student">("student");
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,21 +160,35 @@ export function UsersManagement() {
   };
 
   const fetchRelations = async () => {
-    const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-      (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
-      (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
-      (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
-      (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
-      (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
-      (supabase as any).from("tutors").select("id,user_id"),
-    ]);
+    const classQuery = (supabase as any)
+      .from("classes")
+      .select("id,title,subject_id,standard_id,cohort_label,center_id")
+      .order("scheduled_at", { ascending: false });
+    if (currentTenantId) classQuery.eq("center_id", currentTenantId);
+
+    const classTutorsQuery = (supabase as any)
+      .from("class_tutors")
+      .select("class_id,tutor_user_id,center_id");
+    if (currentTenantId) classTutorsQuery.eq("center_id", currentTenantId);
+
+    const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes, classTutorsRes] =
+      await Promise.all([
+        (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
+        (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
+        classQuery,
+        (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
+        (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
+        (supabase as any).from("tutors").select("id,user_id"),
+        classTutorsQuery,
+      ]);
     setSubjects(subsRes.data || []);
     setStandards(stdsRes.data || []);
-    setClasses(classesRes.data || []);
+    const classRows = classesRes.data || [];
+    setClasses(classRows);
     setAssignments(assignsRes.data || []);
     // Normalize canonical rows into the Enrollment shape used by filters/UI:
     // student_id here holds the auth user_id; subject_id is derived from class.
-    const classMap = new Map((classesRes.data || []).map((c: any) => [c.id, c.subject_id]));
+    const classMap = new Map(classRows.map((c: any) => [c.id, c.subject_id]));
     setEnrollments(
       (enrolRes.data || []).map((e: any) => ({
         id: e.id,
@@ -180,6 +198,13 @@ export function UsersManagement() {
       })),
     );
     setTutors(tutorsRes.data || []);
+    setClassTutors(
+      (classTutorsRes.data || []).map((r: any) => ({
+        class_id: r.class_id,
+        tutor_user_id: r.tutor_user_id,
+        class_subject_id: (classMap.get(r.class_id) as string | null) ?? null,
+      })),
+    );
   };
 
   const fetchAll = async () => {
@@ -271,8 +296,11 @@ export function UsersManagement() {
 
       if (subjectFilter !== "all") {
         if (u.role === "tutor") {
-          const t = tutors.find((tt) => tt.user_id === u.user_id);
-          if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
+          // Canonical: derive tutor subjects from class_tutors → classes.subject_id.
+          const hasSubject = classTutors.some(
+            (ct) => ct.tutor_user_id === u.user_id && ct.class_subject_id === subjectFilter,
+          );
+          if (!hasSubject) return false;
         } else if (u.role === "student") {
           const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
@@ -292,7 +320,7 @@ export function UsersManagement() {
         || (u.form_year || "").toLowerCase().includes(q)
         || (u.phone || "").toLowerCase().includes(q);
     });
-  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes]);
+  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes, classTutors]);
 
   const clearFilters = () => {
     setSearchQuery(""); setRoleFilter("all"); setStandardFilter("all");
@@ -437,8 +465,10 @@ export function UsersManagement() {
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.map((user) => {
-                  const tutor = tutors.find((t) => t.user_id === user.user_id);
-                  const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
+                  // Canonical class-level assignment count from class_tutors (tenant-scoped).
+                  const tutorClassAssignmentCount = classTutors.filter(
+                    (ct) => ct.tutor_user_id === user.user_id,
+                  ).length;
                   const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
                   return (
@@ -480,7 +510,7 @@ export function UsersManagement() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-xs text-slate-500">
                         {user.role === "tutor"
-                          ? `${tutorAssignments.length} assignment${tutorAssignments.length === 1 ? "" : "s"}`
+                          ? `${tutorClassAssignmentCount} assignment${tutorClassAssignmentCount === 1 ? "" : "s"}`
                           : user.role === "student"
                           ? `${studentEnrollments.length} enrolled class${studentEnrollments.length === 1 ? "" : "es"}`
                           : "—"}

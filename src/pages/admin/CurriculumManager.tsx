@@ -40,6 +40,7 @@ export default function CurriculumManager() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [enrollmentCounts, setEnrollmentCounts] = useState<EnrollmentCount>({});
+  const [classTutorsByClassId, setClassTutorsByClassId] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
 
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
@@ -120,21 +121,35 @@ export default function CurriculumManager() {
     const list = (data ?? []) as Class[];
     setClasses(list);
 
-    // Enrollment counts
+    // Enrollment counts + canonical class_tutors assignments (per-tenant).
     const ids = list.map((c) => c.id);
     if (ids.length) {
-      const { data: enr } = await supabase
-        .from("class_enrollments")
-        .select("class_id")
-        .in("class_id", ids)
-        .eq("status", "active");
+      const [enrRes, ctRes] = await Promise.all([
+        supabase
+          .from("class_enrollments")
+          .select("class_id")
+          .in("class_id", ids)
+          .eq("status", "active"),
+        supabase
+          .from("class_tutors")
+          .select("class_id, tutor_user_id")
+          .eq("center_id", currentTenantId)
+          .in("class_id", ids),
+      ]);
       const counts: EnrollmentCount = {};
-      (enr ?? []).forEach((e: any) => {
+      (enrRes.data ?? []).forEach((e: any) => {
         counts[e.class_id] = (counts[e.class_id] ?? 0) + 1;
       });
       setEnrollmentCounts(counts);
+
+      const byClass: Record<string, string[]> = {};
+      (ctRes.data ?? []).forEach((r: any) => {
+        (byClass[r.class_id] ||= []).push(r.tutor_user_id);
+      });
+      setClassTutorsByClassId(byClass);
     } else {
       setEnrollmentCounts({});
+      setClassTutorsByClassId({});
     }
   }
 
@@ -290,7 +305,16 @@ export default function CurriculumManager() {
               <ul className="space-y-2">
                 {classes.map((c) => {
                   const active = c.id === selectedClassId;
-                  const tutor = tutors.find((t) => t.id === c.tutor_id);
+                  const assignedUserIds = classTutorsByClassId[c.id] ?? [];
+                  const assignedNames = assignedUserIds
+                    .map((uid) => tutors.find((t) => t.user_id === uid)?.name || "Tutor")
+                    .filter(Boolean);
+                  const tutorLabel =
+                    assignedNames.length === 0
+                      ? "Unassigned tutor"
+                      : assignedNames.length <= 2
+                        ? assignedNames.join(", ")
+                        : `${assignedNames.length} tutors assigned`;
                   return (
                     <li key={c.id}>
                       <button
@@ -312,8 +336,7 @@ export default function CurriculumManager() {
                             {c.title}
                           </div>
                           <div className="text-xs text-slate-500 mt-0.5 truncate">
-                            {tutor ? tutor.name : "Unassigned tutor"} ·{" "}
-                            {c.cohort_label ?? "Cohort"}
+                            {tutorLabel} · {c.cohort_label ?? "Cohort"}
                           </div>
                         </div>
                         <Badge
