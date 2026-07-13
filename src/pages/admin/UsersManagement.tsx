@@ -296,8 +296,11 @@ export function UsersManagement() {
 
       if (subjectFilter !== "all") {
         if (u.role === "tutor") {
-          const t = tutors.find((tt) => tt.user_id === u.user_id);
-          if (!t || !assignments.some((a) => a.tutor_id === t.id && a.subject_id === subjectFilter)) return false;
+          // Canonical: derive tutor subjects from class_tutors → classes.subject_id.
+          const hasSubject = classTutors.some(
+            (ct) => ct.tutor_user_id === u.user_id && ct.class_subject_id === subjectFilter,
+          );
+          if (!hasSubject) return false;
         } else if (u.role === "student") {
           const studentClassIds = enrollments.filter((e) => e.student_id === u.user_id).map((e) => e.class_id);
           const hasSubject = classes.some((c) => studentClassIds.includes(c.id) && c.subject_id === subjectFilter)
