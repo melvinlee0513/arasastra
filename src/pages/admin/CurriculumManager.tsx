@@ -884,7 +884,7 @@ function AssignTutorsModal({
     }
   }
 
-  const assignableTutors = tutors.filter((t) => t.user_id);
+  const assignableTutors = tutorList.filter((t) => t.user_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -899,8 +899,15 @@ function AssignTutorsModal({
             specific class. Tutors cannot enroll students.
           </p>
           <div className="border border-slate-200 rounded-2xl max-h-80 overflow-y-auto divide-y divide-slate-100">
-            {loading ? (
-              <div className="p-6 text-sm text-slate-400">Loading…</div>
+            {loading || tutorsLoading ? (
+              <div className="p-6 text-sm text-slate-400">Loading tutors…</div>
+            ) : tutorsError ? (
+              <div className="p-6 text-sm text-red-600 flex items-center justify-between gap-3">
+                <span>{tutorsError}</span>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={() => void load()}>
+                  Retry
+                </Button>
+              </div>
             ) : assignableTutors.length === 0 ? (
               <div className="p-6 text-sm text-slate-400">
                 No tutors in this centre yet. Invite tutors from the Users page.
@@ -918,6 +925,7 @@ function AssignTutorsModal({
                   </label>
                 );
               })
+
             )}
           </div>
           <div className="text-xs text-slate-500">{selected.size} assigned</div>
