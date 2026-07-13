@@ -465,8 +465,10 @@ export function UsersManagement() {
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.map((user) => {
-                  const tutor = tutors.find((t) => t.user_id === user.user_id);
-                  const tutorAssignments = tutor ? assignments.filter((a) => a.tutor_id === tutor.id) : [];
+                  // Canonical class-level assignment count from class_tutors (tenant-scoped).
+                  const tutorClassAssignmentCount = classTutors.filter(
+                    (ct) => ct.tutor_user_id === user.user_id,
+                  ).length;
                   const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
                   return (
