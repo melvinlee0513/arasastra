@@ -1905,6 +1905,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
@@ -1967,6 +1968,7 @@ export type Database = {
         }[]
       }
       revoke_invitation: { Args: { _invitation_id: string }; Returns: boolean }
+      revoke_tutor_role: { Args: { _target_user: string }; Returns: Json }
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean

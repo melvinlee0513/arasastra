@@ -197,30 +197,38 @@ export function UsersManagement() {
   const updateUserRole = async (userId: string, newRole: "admin" | "student" | "tutor") => {
     setUpdatingRoleId(userId);
     try {
-      const { data: existing } = await supabase.from("user_roles").select("id").eq("user_id", userId).maybeSingle();
-      if (existing) {
-        const { error } = await supabase.from("user_roles").update({ role: newRole as any }).eq("user_id", userId);
+      if (newRole === "tutor") {
+        // Atomic promotion: preserves existing admin/student roles.
+        const { error } = await (supabase as any).rpc("assign_tutor_role", {
+          _target_user: userId,
+        });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole as any });
-        if (error) throw error;
+        // Additive assignment for admin/student — never overwrite existing roles.
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: newRole as any });
+        if (error && !`${error.message}`.toLowerCase().includes("duplicate")) throw error;
       }
-      // If promoting to tutor and they have no tutor row, create a stub
-      if (newRole === "tutor" && !tutors.find((t) => t.user_id === userId)) {
-        const profile = users.find((u) => u.user_id === userId);
-        const { data: t } = await (supabase as any).from("tutors")
-          .insert({ user_id: userId, name: profile?.full_name || "Tutor" })
-          .select("id,user_id").single();
-        if (t) setTutors((prev) => [...prev, t]);
-      }
-      setUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, role: newRole } : u));
-      toast({ title: "Role updated", description: `Now ${newRole}` });
+      setUsers((prev) =>
+        prev.map((u) => (u.user_id === userId ? { ...u, role: newRole } : u)),
+      );
+      toast({ title: "Role granted", description: `${newRole} role assigned.` });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Failed to update role", variant: "destructive" });
+      toast({
+        title: "Couldn't grant role",
+        description: e?.message?.includes("different centre")
+          ? "That user belongs to another centre."
+          : e?.message?.includes("not an admin")
+            ? "You don't have permission to grant roles."
+            : "Please try again in a moment.",
+        variant: "destructive",
+      });
     } finally {
       setUpdatingRoleId(null);
     }
   };
+
 
   const updateUser = async () => {
     if (!editingUser) return;
