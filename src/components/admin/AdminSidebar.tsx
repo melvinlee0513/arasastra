@@ -111,6 +111,19 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
         <div className="my-4 border-t border-sidebar-border" />
 
         {/* Quick Links */}
+        {hasRole("tutor") && (
+          <button
+            type="button"
+            onClick={() => navigate("/tutor")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200",
+              "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground group"
+            )}
+          >
+            <GraduationCap className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            {!collapsed && <span className="font-medium">Switch to Tutor View</span>}
+          </button>
+        )}
         <NavLink
           to="/"
           className={cn(
@@ -119,8 +132,9 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           )}
         >
           <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          {!collapsed && <span className="font-medium">Student View</span>}
+          {!collapsed && <span className="font-medium">Home</span>}
         </NavLink>
+
       </nav>
 
       {/* User Section */}
