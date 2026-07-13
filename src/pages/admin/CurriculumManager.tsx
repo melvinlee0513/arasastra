@@ -65,35 +65,48 @@ export default function CurriculumManager() {
   async function loadAll() {
     if (!currentTenantId) return;
     setLoading(true);
-    const [{ data: subs }, { data: roleRows }] = await Promise.all([
+    const [subsRes, tutorsRes] = await Promise.all([
       supabase
         .from("subjects")
         .select("id, name, description")
         .eq("center_id", currentTenantId)
         .order("name"),
-      // Canonical source: user_roles joined with same-centre profiles.
-      supabase
-        .from("user_roles")
-        .select("user_id, role, profiles!inner(user_id, full_name, center_id)")
-        .eq("role", "tutor")
-        .eq("profiles.center_id", currentTenantId),
+      // Canonical assignable-tutor list via SECURITY DEFINER RPC. Avoids
+      // depending on a PostgREST embed between user_roles and profiles
+      // (no FK exists between them), which previously returned zero rows
+      // and made the Assign-tutors modal say "No tutors in this centre".
+      supabase.rpc("list_assignable_tutors", {
+        requested_center_id: currentTenantId,
+      }),
     ]);
-    setSubjects((subs ?? []) as Subject[]);
-    const seen = new Set<string>();
-    const centerTutors: Tutor[] = [];
-    (roleRows ?? []).forEach((row: any) => {
-      const uid: string | null = row.user_id ?? row.profiles?.user_id ?? null;
-      const name: string = row.profiles?.full_name ?? "Tutor";
-      if (!uid || seen.has(uid)) return;
-      seen.add(uid);
-      centerTutors.push({ id: uid, name, user_id: uid });
-    });
-    setTutors(centerTutors);
-    if (subs && subs.length && !selectedSubjectId) {
-      setSelectedSubjectId(subs[0].id);
+
+    setSubjects((subsRes.data ?? []) as Subject[]);
+
+    if (tutorsRes.error) {
+      showSupabaseError(tutorsRes.error, "Failed to load tutors");
+      setTutors([]);
+    } else {
+      const rows = (tutorsRes.data ?? []) as Array<{
+        user_id: string;
+        full_name: string | null;
+        email: string | null;
+        avatar_url: string | null;
+      }>;
+      setTutors(
+        rows.map((r) => ({
+          id: r.user_id,
+          name: r.full_name || r.email || "Tutor",
+          user_id: r.user_id,
+        })),
+      );
+    }
+
+    if (subsRes.data && subsRes.data.length && !selectedSubjectId) {
+      setSelectedSubjectId(subsRes.data[0].id);
     }
     setLoading(false);
   }
+
 
 
   async function loadClasses(subjectId: string) {
