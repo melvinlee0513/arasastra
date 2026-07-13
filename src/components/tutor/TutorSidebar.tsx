@@ -26,7 +26,9 @@ const navItems = [
 
 export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
+  const { signOut, profile, isAdmin } = useAuth();
+
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
