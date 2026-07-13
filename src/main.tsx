@@ -7,3 +7,5 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 // Guarded — refuses to register in dev, iframes, Lovable preview, or with ?sw=off.
 registerAppServiceWorker();
+
+// no-op: sync marker
