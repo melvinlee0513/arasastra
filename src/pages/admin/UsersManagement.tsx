@@ -160,21 +160,35 @@ export function UsersManagement() {
   };
 
   const fetchRelations = async () => {
-    const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes] = await Promise.all([
-      (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
-      (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
-      (supabase as any).from("classes").select("id,title,subject_id,standard_id,cohort_label").order("scheduled_at", { ascending: false }),
-      (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
-      (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
-      (supabase as any).from("tutors").select("id,user_id"),
-    ]);
+    const classQuery = (supabase as any)
+      .from("classes")
+      .select("id,title,subject_id,standard_id,cohort_label,center_id")
+      .order("scheduled_at", { ascending: false });
+    if (currentTenantId) classQuery.eq("center_id", currentTenantId);
+
+    const classTutorsQuery = (supabase as any)
+      .from("class_tutors")
+      .select("class_id,tutor_user_id,center_id");
+    if (currentTenantId) classTutorsQuery.eq("center_id", currentTenantId);
+
+    const [subsRes, stdsRes, classesRes, assignsRes, enrolRes, tutorsRes, classTutorsRes] =
+      await Promise.all([
+        (supabase as any).from("subjects").select("id,name").eq("is_active", true).order("name"),
+        (supabase as any).from("standards").select("id,name,sort_order").order("sort_order"),
+        classQuery,
+        (supabase as any).from("tutor_assignments").select("id,tutor_id,subject_id,standard_id"),
+        (supabase as any).from("class_enrollments").select("id,student_user_id,class_id").eq("status", "active"),
+        (supabase as any).from("tutors").select("id,user_id"),
+        classTutorsQuery,
+      ]);
     setSubjects(subsRes.data || []);
     setStandards(stdsRes.data || []);
-    setClasses(classesRes.data || []);
+    const classRows = classesRes.data || [];
+    setClasses(classRows);
     setAssignments(assignsRes.data || []);
     // Normalize canonical rows into the Enrollment shape used by filters/UI:
     // student_id here holds the auth user_id; subject_id is derived from class.
-    const classMap = new Map((classesRes.data || []).map((c: any) => [c.id, c.subject_id]));
+    const classMap = new Map(classRows.map((c: any) => [c.id, c.subject_id]));
     setEnrollments(
       (enrolRes.data || []).map((e: any) => ({
         id: e.id,
@@ -184,6 +198,13 @@ export function UsersManagement() {
       })),
     );
     setTutors(tutorsRes.data || []);
+    setClassTutors(
+      (classTutorsRes.data || []).map((r: any) => ({
+        class_id: r.class_id,
+        tutor_user_id: r.tutor_user_id,
+        class_subject_id: (classMap.get(r.class_id) as string | null) ?? null,
+      })),
+    );
   };
 
   const fetchAll = async () => {
