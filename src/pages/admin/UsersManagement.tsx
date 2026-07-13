@@ -510,7 +510,7 @@ export function UsersManagement() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-xs text-slate-500">
                         {user.role === "tutor"
-                          ? `${tutorAssignments.length} assignment${tutorAssignments.length === 1 ? "" : "s"}`
+                          ? `${tutorClassAssignmentCount} assignment${tutorClassAssignmentCount === 1 ? "" : "s"}`
                           : user.role === "student"
                           ? `${studentEnrollments.length} enrolled class${studentEnrollments.length === 1 ? "" : "es"}`
                           : "—"}
