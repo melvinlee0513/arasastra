@@ -40,6 +40,7 @@ export default function CurriculumManager() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [enrollmentCounts, setEnrollmentCounts] = useState<EnrollmentCount>({});
+  const [classTutorsByClassId, setClassTutorsByClassId] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
 
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
