@@ -175,6 +175,7 @@ const App = () => (
             {/* Tutor Routes */}
             <Route path="/tutor" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorDashboard /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClasses /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassRoom /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
