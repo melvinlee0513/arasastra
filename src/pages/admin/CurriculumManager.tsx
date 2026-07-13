@@ -305,7 +305,16 @@ export default function CurriculumManager() {
               <ul className="space-y-2">
                 {classes.map((c) => {
                   const active = c.id === selectedClassId;
-                  const tutor = tutors.find((t) => t.id === c.tutor_id);
+                  const assignedUserIds = classTutorsByClassId[c.id] ?? [];
+                  const assignedNames = assignedUserIds
+                    .map((uid) => tutors.find((t) => t.user_id === uid)?.name || "Tutor")
+                    .filter(Boolean);
+                  const tutorLabel =
+                    assignedNames.length === 0
+                      ? "Unassigned tutor"
+                      : assignedNames.length <= 2
+                        ? assignedNames.join(", ")
+                        : `${assignedNames.length} tutors assigned`;
                   return (
                     <li key={c.id}>
                       <button
@@ -327,8 +336,7 @@ export default function CurriculumManager() {
                             {c.title}
                           </div>
                           <div className="text-xs text-slate-500 mt-0.5 truncate">
-                            {tutor ? tutor.name : "Unassigned tutor"} ·{" "}
-                            {c.cohort_label ?? "Cohort"}
+                            {tutorLabel} · {c.cohort_label ?? "Cohort"}
                           </div>
                         </div>
                         <Badge
