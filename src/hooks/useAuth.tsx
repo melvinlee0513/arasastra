@@ -14,9 +14,11 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   isTutor: boolean;
+  hasRole: (r: UserRole) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+
 }
 
 interface Profile {
