@@ -65,27 +65,36 @@ export default function CurriculumManager() {
   async function loadAll() {
     if (!currentTenantId) return;
     setLoading(true);
-    const [{ data: subs }, { data: tuts }] = await Promise.all([
+    const [{ data: subs }, { data: roleRows }] = await Promise.all([
       supabase
         .from("subjects")
         .select("id, name, description")
         .eq("center_id", currentTenantId)
         .order("name"),
+      // Canonical source: user_roles joined with same-centre profiles.
       supabase
-        .from("tutors")
-        .select("id, name, user_id, profiles:user_id(center_id)")
-        .eq("is_active", true),
+        .from("user_roles")
+        .select("user_id, role, profiles!inner(user_id, full_name, center_id)")
+        .eq("role", "tutor")
+        .eq("profiles.center_id", currentTenantId),
     ]);
     setSubjects((subs ?? []) as Subject[]);
-    const scoped = (tuts ?? []).filter(
-      (t: any) => t.profiles?.center_id === currentTenantId,
-    );
-    setTutors(scoped.map((t: any) => ({ id: t.id, name: t.name, user_id: t.user_id })));
+    const seen = new Set<string>();
+    const centerTutors: Tutor[] = [];
+    (roleRows ?? []).forEach((row: any) => {
+      const uid: string | null = row.user_id ?? row.profiles?.user_id ?? null;
+      const name: string = row.profiles?.full_name ?? "Tutor";
+      if (!uid || seen.has(uid)) return;
+      seen.add(uid);
+      centerTutors.push({ id: uid, name, user_id: uid });
+    });
+    setTutors(centerTutors);
     if (subs && subs.length && !selectedSubjectId) {
       setSelectedSubjectId(subs[0].id);
     }
     setLoading(false);
   }
+
 
   async function loadClasses(subjectId: string) {
     if (!currentTenantId) return;
