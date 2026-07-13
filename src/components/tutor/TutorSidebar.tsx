@@ -85,17 +85,21 @@ export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
 
         <div className="my-4 border-t border-sidebar-border" />
 
-        <NavLink
-          to="/"
-          className={cn(
-            "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200",
-            "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground group"
-          )}
-        >
-          <Home className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          {!collapsed && <span className="font-medium">Home</span>}
-        </NavLink>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => navigate("/admin")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200",
+              "hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-accent-foreground group"
+            )}
+          >
+            <Shield className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            {!collapsed && <span className="font-medium">Switch to Admin View</span>}
+          </button>
+        )}
       </nav>
+
 
       {/* User Section */}
       {!collapsed && profile && (
