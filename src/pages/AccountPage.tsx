@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
