@@ -1946,6 +1946,15 @@ export type Database = {
       }
       is_superadmin: { Args: never; Returns: boolean }
       is_tutor_of_class: { Args: { _class_id: string }; Returns: boolean }
+      list_assignable_tutors: {
+        Args: { requested_center_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       record_learning_activity: {
         Args: {
           _event_type: string
