@@ -784,6 +784,9 @@ function AssignTutorsModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tutorList, setTutorList] = useState<Tutor[]>(tutors);
+  const [tutorsLoading, setTutorsLoading] = useState(false);
+  const [tutorsError, setTutorsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -793,13 +796,47 @@ function AssignTutorsModal({
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    setTutorsLoading(true);
+    setTutorsError(null);
+
+    // 1. Existing assignments for this class (to pre-select).
+    const { data: existing, error: existingErr } = await supabase
       .from("class_tutors")
       .select("tutor_user_id")
       .eq("class_id", classId);
-    setSelected(new Set((data ?? []).map((r: any) => r.tutor_user_id)));
+    if (existingErr) {
+      showSupabaseError(existingErr, "Failed to load current assignments");
+    }
+    setSelected(new Set((existing ?? []).map((r: any) => r.tutor_user_id)));
     setLoading(false);
+
+    // 2. Assignable tutor candidates via RPC (tenant-scoped, admin-gated).
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      "list_assignable_tutors",
+      { requested_center_id: centerId },
+    );
+    if (rpcErr) {
+      setTutorsError("We couldn't load tutors for this centre. Please try again.");
+      showSupabaseError(rpcErr, "Failed to load tutors");
+      setTutorList([]);
+    } else {
+      const rows = (rpcData ?? []) as Array<{
+        user_id: string;
+        full_name: string | null;
+        email: string | null;
+        avatar_url: string | null;
+      }>;
+      setTutorList(
+        rows.map((r) => ({
+          id: r.user_id,
+          name: r.full_name || r.email || "Tutor",
+          user_id: r.user_id,
+        })),
+      );
+    }
+    setTutorsLoading(false);
   }
+
 
   function toggle(userId: string) {
     setSelected((prev) => {
