@@ -164,6 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isSuperAdmin = role === "superadmin" || roles.includes("superadmin");
   const isAdmin = isSuperAdmin || role === "admin" || roles.includes("admin");
+  const isTutor = role === "tutor" || roles.includes("tutor");
+  const hasRole = (r: UserRole) => roles.includes(r) || role === r;
 
   return (
     <AuthContext.Provider
@@ -176,12 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAdmin,
         isSuperAdmin,
-        isTutor: role === "tutor",
+        isTutor,
+        hasRole,
         signIn,
         signUp,
         signOut
       }}
     >
+
       {children}
     </AuthContext.Provider>
   );
