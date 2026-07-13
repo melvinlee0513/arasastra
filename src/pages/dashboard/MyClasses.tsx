@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { GraduationCap, ArrowRight, Calendar, Users } from "lucide-react";
+import { GraduationCap, ArrowRight, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,8 +12,6 @@ interface EnrolledClass {
   cohort_label: string | null;
   scheduled_at: string;
   subject_name: string | null;
-  standard_name: string | null;
-  tutor_name: string | null;
 }
 
 // Deterministic soft-gradient banner per class — no external stock imagery.
@@ -35,45 +33,48 @@ function bannerFor(id: string) {
 export function MyClasses() {
   const { user } = useAuth();
 
-  const { data: classes, isLoading } = useQuery({
+  const { data: classes, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["student-enrolled-classes", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Canonical read: class_enrollments (student_user_id = auth uid, status='active').
-      const { data: rows, error } = await (supabase as any)
+      // Step 1 — canonical enrolments for this student.
+      const { data: enrolments, error: enrErr } = await supabase
         .from("class_enrollments")
-        .select(
-          "class_id, status, classes:classes!class_enrollments_class_id_fkey(id,title,scheduled_at,cohort_label,subject_id,standard_id,tutor_id)",
-        )
+        .select("class_id")
         .eq("student_user_id", user!.id)
         .eq("status", "active");
+      if (enrErr) throw enrErr;
 
-      if (error) throw error;
+      const classIds = (enrolments || []).map((r) => r.class_id).filter(Boolean);
+      if (classIds.length === 0) return [] as EnrolledClass[];
 
-      const list = (rows || [])
-        .map((r: any) => r.classes)
-        .filter(Boolean) as any[];
+      // Step 2 — classes visible under RLS (tenant + enrolment enforced server-side).
+      const { data: classRows, error: classErr } = await supabase
+        .from("classes")
+        .select("id,title,scheduled_at,cohort_label,subject_id")
+        .in("id", classIds);
+      if (classErr) throw classErr;
 
-      if (list.length === 0) return [] as EnrolledClass[];
+      // Step 3 — subjects for those classes.
+      const subjectIds = Array.from(
+        new Set((classRows || []).map((c: any) => c.subject_id).filter(Boolean)),
+      );
+      const subjectMap = new Map<string, string>();
+      if (subjectIds.length) {
+        const { data: subs, error: subErr } = await supabase
+          .from("subjects")
+          .select("id,name")
+          .in("id", subjectIds);
+        if (subErr) throw subErr;
+        for (const s of subs || []) subjectMap.set(s.id as string, s.name as string);
+      }
 
-      const [subjects, standards, tutors] = await Promise.all([
-        (supabase as any).from("subjects").select("id,name"),
-        (supabase as any).from("standards").select("id,name"),
-        (supabase as any).from("tutors").select("id,name"),
-      ]);
-
-      const subj = new Map((subjects.data || []).map((s: any) => [s.id, s.name]));
-      const std = new Map((standards.data || []).map((s: any) => [s.id, s.name]));
-      const tut = new Map((tutors.data || []).map((t: any) => [t.id, t.name]));
-
-      return list.map<EnrolledClass>((c) => ({
+      return (classRows || []).map<EnrolledClass>((c: any) => ({
         id: c.id,
         title: c.title,
         cohort_label: c.cohort_label,
         scheduled_at: c.scheduled_at,
-        subject_name: (subj.get(c.subject_id) as string) || null,
-        standard_name: (std.get(c.standard_id) as string) || null,
-        tutor_name: (tut.get(c.tutor_id) as string) || null,
+        subject_name: c.subject_id ? subjectMap.get(c.subject_id) || null : null,
       }));
     },
   });
@@ -96,6 +97,19 @@ export function MyClasses() {
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-56 rounded-3xl" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="bg-white border border-slate-200 rounded-3xl py-16 text-center">
+            <p className="font-semibold text-slate-800">Couldn't load your classes</p>
+            <p className="text-sm text-slate-500 mt-1">
+              {(error as Error)?.message || "Please try again in a moment."}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 text-sm font-semibold text-primary hover:underline"
+            >
+              Retry
+            </button>
           </div>
         ) : !classes || classes.length === 0 ? (
           <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-3xl py-16 text-center">
@@ -125,11 +139,6 @@ export function MyClasses() {
                         {c.subject_name}
                       </Badge>
                     )}
-                    {c.standard_name && (
-                      <Badge className="rounded-full bg-primary/95 text-primary-foreground hover:bg-primary">
-                        {c.standard_name}
-                      </Badge>
-                    )}
                   </div>
                 </div>
 
@@ -140,13 +149,11 @@ export function MyClasses() {
                   )}
                   <div className="text-xs text-slate-500 flex items-center gap-3 mt-1">
                     <span className="inline-flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" /> {c.tutor_name || "Tutor"}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
-                      {new Date(c.scheduled_at).toLocaleDateString()}
+                      {c.scheduled_at ? new Date(c.scheduled_at).toLocaleDateString() : "Scheduled soon"}
                     </span>
                   </div>
+
                   <span className="mt-3 text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
                     Open class room <ArrowRight className="w-4 h-4" />
                   </span>
