@@ -1,16 +1,12 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Users,
   Calendar,
-  FileText,
-  ClipboardCheck,
-  HelpCircle,
+  User,
   ChevronLeft,
   ChevronRight,
-  Home,
   LogOut,
-  Video,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,14 +20,9 @@ interface TutorSidebarProps {
 const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
-  { path: "/tutor/upload", icon: FileText, label: "Upload Content" },
-  { path: "/tutor/videos", icon: Video, label: "Video Library" },
-  { path: "/tutor/students", icon: Users, label: "My Students" },
-  { path: "/tutor/grading", icon: ClipboardCheck, label: "Grading" },
-  { path: "/tutor/notes", icon: FileText, label: "Upload Notes" },
-  { path: "/tutor/quizzes/new", icon: HelpCircle, label: "Quiz Builder" },
-  { path: "/tutor/questions", icon: HelpCircle, label: "Student Q&A" },
+  { path: "/account", icon: User, label: "Account" },
 ];
+
 
 export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
   const location = useLocation();
