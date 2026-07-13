@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,14 @@ import { OnboardingTour } from "@/components/account/OnboardingTour";
 
 export function AccountPage() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, signOut, hasRole, isAdmin } = useAuth();
   const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
+
+  // Redirect handled after all hooks run — see check right above the main return.
+  const shouldRedirectToTutor =
+    !authLoading && !!user && hasRole("tutor") && !isAdmin && !hasRole("student");
 
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -196,6 +200,10 @@ export function AccountPage() {
   const memberSince = profile?.created_at ? format(new Date(profile.created_at), "MMMM yyyy") : "Recently";
   const showRenewalCard = !isActive || isExpired || subscription?.status === "inactive";
   const showStatusTracker = latestPending && !isActive;
+
+  if (shouldRedirectToTutor) {
+    return <Navigate to="/tutor/account" replace />;
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
