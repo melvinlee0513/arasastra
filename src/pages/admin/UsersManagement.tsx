@@ -67,6 +67,10 @@ export function UsersManagement() {
   const [assignments, setAssignments] = useState<TutorAssignment[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<{ id: string; user_id: string }[]>([]);
+  // Canonical tutor-class assignments (scoped to the active tenant).
+  const [classTutors, setClassTutors] = useState<
+    { class_id: string; tutor_user_id: string; class_subject_id: string | null }[]
+  >([]);
 
   const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student">("student");
   const [searchQuery, setSearchQuery] = useState("");
