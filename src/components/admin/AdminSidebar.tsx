@@ -17,7 +17,9 @@ import {
   Settings,
   Video,
   BookOpen,
+  GraduationCap,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import owlMascot from "@/assets/owl-mascot.png";
