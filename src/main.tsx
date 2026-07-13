@@ -9,3 +9,4 @@ createRoot(document.getElementById("root")!).render(<App />);
 registerAppServiceWorker();
 
 // no-op: sync marker
+// no-op: sync marker 2
