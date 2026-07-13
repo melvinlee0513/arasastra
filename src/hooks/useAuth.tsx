@@ -201,7 +201,8 @@ const defaultAuthContext: AuthContextType = {
   isAdmin: false,
   isSuperAdmin: false,
   isTutor: false,
-  signIn: async () => ({ error: new Error("AuthProvider not mounted") }),
+  hasRole: () => false,
+
   signUp: async () => ({ error: new Error("AuthProvider not mounted") }),
   signOut: async () => {},
 };
