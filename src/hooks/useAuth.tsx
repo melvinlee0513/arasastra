@@ -32,6 +32,7 @@ interface Profile {
   is_registered: boolean;
   parent_name: string | null;
   plan_id: string | null;
+  center_id: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
