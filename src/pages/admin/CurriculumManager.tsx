@@ -65,35 +65,48 @@ export default function CurriculumManager() {
   async function loadAll() {
     if (!currentTenantId) return;
     setLoading(true);
-    const [{ data: subs }, { data: roleRows }] = await Promise.all([
+    const [subsRes, tutorsRes] = await Promise.all([
       supabase
         .from("subjects")
         .select("id, name, description")
         .eq("center_id", currentTenantId)
         .order("name"),
-      // Canonical source: user_roles joined with same-centre profiles.
-      supabase
-        .from("user_roles")
-        .select("user_id, role, profiles!inner(user_id, full_name, center_id)")
-        .eq("role", "tutor")
-        .eq("profiles.center_id", currentTenantId),
+      // Canonical assignable-tutor list via SECURITY DEFINER RPC. Avoids
+      // depending on a PostgREST embed between user_roles and profiles
+      // (no FK exists between them), which previously returned zero rows
+      // and made the Assign-tutors modal say "No tutors in this centre".
+      supabase.rpc("list_assignable_tutors", {
+        requested_center_id: currentTenantId,
+      }),
     ]);
-    setSubjects((subs ?? []) as Subject[]);
-    const seen = new Set<string>();
-    const centerTutors: Tutor[] = [];
-    (roleRows ?? []).forEach((row: any) => {
-      const uid: string | null = row.user_id ?? row.profiles?.user_id ?? null;
-      const name: string = row.profiles?.full_name ?? "Tutor";
-      if (!uid || seen.has(uid)) return;
-      seen.add(uid);
-      centerTutors.push({ id: uid, name, user_id: uid });
-    });
-    setTutors(centerTutors);
-    if (subs && subs.length && !selectedSubjectId) {
-      setSelectedSubjectId(subs[0].id);
+
+    setSubjects((subsRes.data ?? []) as Subject[]);
+
+    if (tutorsRes.error) {
+      showSupabaseError(tutorsRes.error, "Failed to load tutors");
+      setTutors([]);
+    } else {
+      const rows = (tutorsRes.data ?? []) as Array<{
+        user_id: string;
+        full_name: string | null;
+        email: string | null;
+        avatar_url: string | null;
+      }>;
+      setTutors(
+        rows.map((r) => ({
+          id: r.user_id,
+          name: r.full_name || r.email || "Tutor",
+          user_id: r.user_id,
+        })),
+      );
+    }
+
+    if (subsRes.data && subsRes.data.length && !selectedSubjectId) {
+      setSelectedSubjectId(subsRes.data[0].id);
     }
     setLoading(false);
   }
+
 
 
   async function loadClasses(subjectId: string) {
@@ -771,6 +784,9 @@ function AssignTutorsModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tutorList, setTutorList] = useState<Tutor[]>(tutors);
+  const [tutorsLoading, setTutorsLoading] = useState(false);
+  const [tutorsError, setTutorsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -780,13 +796,47 @@ function AssignTutorsModal({
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    setTutorsLoading(true);
+    setTutorsError(null);
+
+    // 1. Existing assignments for this class (to pre-select).
+    const { data: existing, error: existingErr } = await supabase
       .from("class_tutors")
       .select("tutor_user_id")
       .eq("class_id", classId);
-    setSelected(new Set((data ?? []).map((r: any) => r.tutor_user_id)));
+    if (existingErr) {
+      showSupabaseError(existingErr, "Failed to load current assignments");
+    }
+    setSelected(new Set((existing ?? []).map((r: any) => r.tutor_user_id)));
     setLoading(false);
+
+    // 2. Assignable tutor candidates via RPC (tenant-scoped, admin-gated).
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      "list_assignable_tutors",
+      { requested_center_id: centerId },
+    );
+    if (rpcErr) {
+      setTutorsError("We couldn't load tutors for this centre. Please try again.");
+      showSupabaseError(rpcErr, "Failed to load tutors");
+      setTutorList([]);
+    } else {
+      const rows = (rpcData ?? []) as Array<{
+        user_id: string;
+        full_name: string | null;
+        email: string | null;
+        avatar_url: string | null;
+      }>;
+      setTutorList(
+        rows.map((r) => ({
+          id: r.user_id,
+          name: r.full_name || r.email || "Tutor",
+          user_id: r.user_id,
+        })),
+      );
+    }
+    setTutorsLoading(false);
   }
+
 
   function toggle(userId: string) {
     setSelected((prev) => {
@@ -834,7 +884,7 @@ function AssignTutorsModal({
     }
   }
 
-  const assignableTutors = tutors.filter((t) => t.user_id);
+  const assignableTutors = tutorList.filter((t) => t.user_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -849,8 +899,15 @@ function AssignTutorsModal({
             specific class. Tutors cannot enroll students.
           </p>
           <div className="border border-slate-200 rounded-2xl max-h-80 overflow-y-auto divide-y divide-slate-100">
-            {loading ? (
-              <div className="p-6 text-sm text-slate-400">Loading…</div>
+            {loading || tutorsLoading ? (
+              <div className="p-6 text-sm text-slate-400">Loading tutors…</div>
+            ) : tutorsError ? (
+              <div className="p-6 text-sm text-red-600 flex items-center justify-between gap-3">
+                <span>{tutorsError}</span>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={() => void load()}>
+                  Retry
+                </Button>
+              </div>
             ) : assignableTutors.length === 0 ? (
               <div className="p-6 text-sm text-slate-400">
                 No tutors in this centre yet. Invite tutors from the Users page.
@@ -868,6 +925,7 @@ function AssignTutorsModal({
                   </label>
                 );
               })
+
             )}
           </div>
           <div className="text-xs text-slate-500">{selected.size} assigned</div>
