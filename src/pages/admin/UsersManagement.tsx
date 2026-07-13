@@ -320,7 +320,7 @@ export function UsersManagement() {
         || (u.form_year || "").toLowerCase().includes(q)
         || (u.phone || "").toLowerCase().includes(q);
     });
-  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes]);
+  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes, classTutors]);
 
   const clearFilters = () => {
     setSearchQuery(""); setRoleFilter("all"); setStandardFilter("all");
