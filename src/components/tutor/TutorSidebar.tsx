@@ -20,7 +20,7 @@ interface TutorSidebarProps {
 const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
-  { path: "/account", icon: User, label: "Account" },
+  { path: "/tutor/account", icon: User, label: "Account" },
 ];
 
 
