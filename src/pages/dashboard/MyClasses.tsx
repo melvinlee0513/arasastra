@@ -98,6 +98,19 @@ export function MyClasses() {
               <Skeleton key={i} className="h-56 rounded-3xl" />
             ))}
           </div>
+        ) : isError ? (
+          <div className="bg-white border border-slate-200 rounded-3xl py-16 text-center">
+            <p className="font-semibold text-slate-800">Couldn't load your classes</p>
+            <p className="text-sm text-slate-500 mt-1">
+              {(error as Error)?.message || "Please try again in a moment."}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 text-sm font-semibold text-primary hover:underline"
+            >
+              Retry
+            </button>
+          </div>
         ) : !classes || classes.length === 0 ? (
           <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-3xl py-16 text-center">
             <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -126,11 +139,6 @@ export function MyClasses() {
                         {c.subject_name}
                       </Badge>
                     )}
-                    {c.standard_name && (
-                      <Badge className="rounded-full bg-primary/95 text-primary-foreground hover:bg-primary">
-                        {c.standard_name}
-                      </Badge>
-                    )}
                   </div>
                 </div>
 
@@ -141,13 +149,11 @@ export function MyClasses() {
                   )}
                   <div className="text-xs text-slate-500 flex items-center gap-3 mt-1">
                     <span className="inline-flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" /> {c.tutor_name || "Tutor"}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
-                      {new Date(c.scheduled_at).toLocaleDateString()}
+                      {c.scheduled_at ? new Date(c.scheduled_at).toLocaleDateString() : "Scheduled soon"}
                     </span>
                   </div>
+
                   <span className="mt-3 text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
                     Open class room <ArrowRight className="w-4 h-4" />
                   </span>
