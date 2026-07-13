@@ -21,10 +21,17 @@ import { OnboardingTour } from "@/components/account/OnboardingTour";
 
 export function AccountPage() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, signOut, hasRole, isAdmin } = useAuth();
   const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
+
+  // Tutor-only users should never see the student billing surface — send them
+  // to their dedicated /tutor/account page. Admin+tutor users keep access to
+  // this student view (they might also be managing their own student account).
+  if (!authLoading && user && hasRole("tutor") && !isAdmin && !hasRole("student")) {
+    return <Navigate to="/tutor/account" replace />;
+  }
 
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains("dark"));
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
