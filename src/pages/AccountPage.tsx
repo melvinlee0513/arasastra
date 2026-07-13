@@ -201,6 +201,10 @@ export function AccountPage() {
   const showRenewalCard = !isActive || isExpired || subscription?.status === "inactive";
   const showStatusTracker = latestPending && !isActive;
 
+  if (shouldRedirectToTutor) {
+    return <Navigate to="/tutor/account" replace />;
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
       {/* Onboarding Tour (Part 1) */}
