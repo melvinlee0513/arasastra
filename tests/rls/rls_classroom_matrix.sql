@@ -18,7 +18,14 @@
 -- time.
 --
 -- Usage:
---     psql -f tests/rls/rls_classroom_matrix.sql
+--     psql "$SUPABASE_DB_URL" -f tests/rls/rls_classroom_matrix.sql
+--
+-- Requires a role with permission to INSERT into `auth.users` and to
+-- `SET LOCAL ROLE authenticated|anon` (i.e. the Supabase superuser
+-- connection string). The sandbox `sandbox_exec` role does NOT have these
+-- privileges — running this file as sandbox_exec fails at fixture setup
+-- and at role-switching. All writes happen inside a transaction and are
+-- rolled back at the end, so nothing persists.
 -- ============================================================================
 
 \set ON_ERROR_STOP on
