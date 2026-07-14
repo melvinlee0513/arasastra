@@ -24,10 +24,7 @@ const staticPages: SearchResult[] = [
   { id: "dashboard", title: "Dashboard", type: "page", subtitle: "Student dashboard", path: "/dashboard" },
   { id: "timetable", title: "Timetable", type: "page", subtitle: "Class schedule", path: "/timetable" },
   { id: "my-classes", title: "My Classes", type: "page", subtitle: "Subject hub", path: "/dashboard/classes" },
-  { id: "notes", title: "Notes Bank", type: "page", subtitle: "Study materials", path: "/dashboard/learning/notes" },
-  { id: "quizzes", title: "Quizzes", type: "page", subtitle: "Test your knowledge", path: "/dashboard/learning/quizzes" },
-  { id: "flashcards", title: "Flashcards", type: "page", subtitle: "Rapid recall", path: "/dashboard/learning/flashcards" },
-  { id: "replays", title: "Replay Library", type: "page", subtitle: "Watch past classes", path: "/dashboard/learning/replays" },
+  // Notes, quizzes, flashcards and replays are accessed inside each class.
   { id: "account", title: "Account", type: "page", subtitle: "Profile & subscription", path: "/account" },
 ];
 
