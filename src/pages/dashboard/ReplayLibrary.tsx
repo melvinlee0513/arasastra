@@ -21,6 +21,10 @@ import { useFeatureEnabled } from "@/hooks/useFeature";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { useQuery } from "@tanstack/react-query";
+import {
+  VIDEO_RESOURCE_TYPES,
+  resolvePlayableUrl,
+} from "@/lib/classResources";
 
 interface ClassReplay {
   id: string;
@@ -32,27 +36,6 @@ interface ClassReplay {
   class_title: string | null;
   tutor_name: string | null;
   tutor_avatar: string | null;
-}
-
-/** Canonical playable URL for a class_resources row (matches ClassRoom logic). */
-function resolvePlayableUrl(r: {
-  embed_url: string | null;
-  external_url: string | null;
-  file_url: string | null;
-  file_path: string | null;
-}): string | null {
-  const raw = r.embed_url || r.external_url || r.file_url;
-  if (!raw) return null;
-  const v = String(raw).trim();
-  if (!v) return null;
-  if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return `https://www.youtube.com/embed/${v}`;
-  try {
-    const url = new URL(v);
-    if (url.protocol === "http:" || url.protocol === "https:") return v;
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 export function ReplayLibrary() {
