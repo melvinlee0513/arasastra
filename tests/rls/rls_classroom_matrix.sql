@@ -119,6 +119,17 @@ BEGIN
   VALUES (class_a, 'Class A', subj_a, center_a, now(), 'active'),
          (class_b, 'Class B', NULL,   center_b, now(), 'active');
 
+  -- auth.users first (profiles.user_id references it).
+  INSERT INTO auth.users (id, email, instance_id, aud, role) VALUES
+    (admin_a, 'a@a.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (tutor_asg, 't1@a.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (tutor_un, 't2@a.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (stu_enr, 's1@a.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (stu_unen, 's2@a.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (admin_b, 'a@b.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (tutor_b, 't@b.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'),
+    (stu_b, 's@b.test', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated');
+
   -- Profiles (needed by same_center_as_current_user + has_role)
   INSERT INTO public.profiles (id, user_id, email, full_name, center_id, is_registered) VALUES
     (admin_a, admin_a, 'a@a.test', 'Admin A', center_a, true),
