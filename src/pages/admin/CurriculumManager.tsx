@@ -523,7 +523,8 @@ function ClassModal({
       title: title.trim(),
       cohort_label: cohort.trim() || null,
       subject_id: subject.id,
-      tutor_id: tutorId || null,
+      // classes.tutor_id is legacy. Assignments are managed exclusively
+      // through class_tutors via the Assign-tutors modal — do not write it.
       center_id: centerId,
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
       is_published: true,
