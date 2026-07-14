@@ -21,6 +21,10 @@ import { useFeatureEnabled } from "@/hooks/useFeature";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { useQuery } from "@tanstack/react-query";
+import {
+  VIDEO_RESOURCE_TYPES,
+  resolvePlayableUrl,
+} from "@/lib/classResources";
 
 interface ClassReplay {
   id: string;
@@ -32,27 +36,6 @@ interface ClassReplay {
   class_title: string | null;
   tutor_name: string | null;
   tutor_avatar: string | null;
-}
-
-/** Canonical playable URL for a class_resources row (matches ClassRoom logic). */
-function resolvePlayableUrl(r: {
-  embed_url: string | null;
-  external_url: string | null;
-  file_url: string | null;
-  file_path: string | null;
-}): string | null {
-  const raw = r.embed_url || r.external_url || r.file_url;
-  if (!raw) return null;
-  const v = String(raw).trim();
-  if (!v) return null;
-  if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return `https://www.youtube.com/embed/${v}`;
-  try {
-    const url = new URL(v);
-    if (url.protocol === "http:" || url.protocol === "https:") return v;
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 export function ReplayLibrary() {
@@ -90,19 +73,19 @@ export function ReplayLibrary() {
       );
       if (classIds.length === 0) return [];
 
-      // Canonical video source — same table + type used by ClassRoom
-      let resourceQuery = supabase
+      // Canonical video source — same table + normalisation used by ClassRoom.
+      // Tenant scope is enforced by RLS (`same_center_as_current_user`);
+      // we intentionally do NOT add a client-side center_id filter so that a
+      // stale/null tenant context can never hide legitimately visible rows.
+      const { data: rows, error: resErr } = await supabase
         .from("class_resources")
         .select(
-          "id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at,created_at,class_id,subject_id",
+          "id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at,created_at,class_id,subject_id,center_id",
         )
         .in("class_id", classIds)
-        .in("resource_type", ["video", "replay"])
+        .in("resource_type", VIDEO_RESOURCE_TYPES as unknown as string[])
         .eq("status", "published")
         .order("published_at", { ascending: false, nullsFirst: false });
-      if (currentTenantId) resourceQuery = resourceQuery.eq("center_id", currentTenantId);
-
-      const { data: rows, error: resErr } = await resourceQuery;
       if (resErr) throw resErr;
 
       const withUrl = (rows || [])

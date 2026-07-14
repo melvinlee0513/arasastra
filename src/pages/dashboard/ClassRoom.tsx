@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
+import { hasValidSource, resolvePlayableUrl } from "@/lib/classResources";
 
 type ClassRow = {
   id: string;
@@ -44,11 +45,8 @@ type ResourceRow = {
 
 type QuizRow = { id: string; title: string; description: string | null; total_points: number };
 
-function hasValidSource(r: ResourceRow) {
-  return Boolean(r.embed_url || r.external_url || r.file_url || r.file_path);
-}
 function resourceHref(r: ResourceRow) {
-  return r.embed_url || r.external_url || r.file_url || null;
+  return resolvePlayableUrl(r);
 }
 
 export function ClassRoom() {
