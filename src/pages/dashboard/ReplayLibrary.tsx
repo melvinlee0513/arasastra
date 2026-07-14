@@ -73,19 +73,19 @@ export function ReplayLibrary() {
       );
       if (classIds.length === 0) return [];
 
-      // Canonical video source — same table + type used by ClassRoom
-      let resourceQuery = supabase
+      // Canonical video source — same table + normalisation used by ClassRoom.
+      // Tenant scope is enforced by RLS (`same_center_as_current_user`);
+      // we intentionally do NOT add a client-side center_id filter so that a
+      // stale/null tenant context can never hide legitimately visible rows.
+      const { data: rows, error: resErr } = await supabase
         .from("class_resources")
         .select(
-          "id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at,created_at,class_id,subject_id",
+          "id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at,created_at,class_id,subject_id,center_id",
         )
         .in("class_id", classIds)
-        .in("resource_type", ["video", "replay"])
+        .in("resource_type", VIDEO_RESOURCE_TYPES as unknown as string[])
         .eq("status", "published")
         .order("published_at", { ascending: false, nullsFirst: false });
-      if (currentTenantId) resourceQuery = resourceQuery.eq("center_id", currentTenantId);
-
-      const { data: rows, error: resErr } = await resourceQuery;
       if (resErr) throw resErr;
 
       const withUrl = (rows || [])
