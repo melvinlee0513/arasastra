@@ -16,6 +16,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
+import { useFeatureEnabled } from "@/hooks/useFeature";
+import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
+import { showSupabaseError } from "@/lib/supabaseErrors";
 import { useQuery } from "@tanstack/react-query";
 
 interface ClassReplay {
@@ -23,36 +27,38 @@ interface ClassReplay {
   title: string;
   description: string | null;
   video_url: string;
-  thumbnail_url: string | null;
   created_at: string;
-  duration_seconds: number | null;
-  subject_id: string | null;
   subject_name: string | null;
   class_title: string | null;
   tutor_name: string | null;
   tutor_avatar: string | null;
 }
 
-/**
- * Validate that a video URL is renderable. Accepts http(s) links or bare
- * YouTube IDs. Rejects null/empty/malformed values so we never mount a
- * <video> or <iframe> pointing at nothing.
- */
-function isValidMediaUrl(raw: string | null | undefined): raw is string {
-  if (!raw || typeof raw !== "string") return false;
-  const v = raw.trim();
-  if (!v) return false;
-  if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return true;
+/** Canonical playable URL for a class_resources row (matches ClassRoom logic). */
+function resolvePlayableUrl(r: {
+  embed_url: string | null;
+  external_url: string | null;
+  file_url: string | null;
+  file_path: string | null;
+}): string | null {
+  const raw = r.embed_url || r.external_url || r.file_url;
+  if (!raw) return null;
+  const v = String(raw).trim();
+  if (!v) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return `https://www.youtube.com/embed/${v}`;
   try {
     const url = new URL(v);
-    return url.protocol === "http:" || url.protocol === "https:";
+    if (url.protocol === "http:" || url.protocol === "https:") return v;
   } catch {
-    return false;
+    return null;
   }
+  return null;
 }
 
 export function ReplayLibrary() {
   const { user } = useAuth();
+  const { currentTenantId, isLoading: tenantLoading } = useTenant();
+  const replaysOn = useFeatureEnabled("videoReplays");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [activeVideo, setActiveVideo] = useState<{
@@ -64,16 +70,17 @@ export function ReplayLibrary() {
   const {
     data: replays = [],
     isLoading,
+    isError,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["student-replays", user?.id],
-    enabled: !!user,
+    queryKey: ["student-replays", currentTenantId, user?.id],
+    enabled: !!user && !tenantLoading && replaysOn,
     queryFn: async (): Promise<ClassReplay[]> => {
-      // Canonical: class_enrollments by student_user_id
-      const { data: enrolls, error: enrollErr } = await (supabase as any)
+      // Canonical enrolment source
+      const { data: enrolls, error: enrollErr } = await supabase
         .from("class_enrollments")
-        .select("class_id, status")
+        .select("class_id")
         .eq("student_user_id", user!.id)
         .eq("status", "active");
       if (enrollErr) throw enrollErr;
@@ -83,79 +90,90 @@ export function ReplayLibrary() {
       );
       if (classIds.length === 0) return [];
 
-      // Fetch published videos for enrolled classes.
-      // RLS + explicit center_id filter enforce tenant isolation.
-      const { data: vids, error: vidErr } = await (supabase as any)
-        .from("video_resources")
+      // Canonical video source — same table + type used by ClassRoom
+      let resourceQuery = supabase
+        .from("class_resources")
         .select(
-          "id,title,description,video_url,thumbnail_url,duration_seconds,created_at,subject_id,class_id,created_by,is_published",
+          "id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at,created_at,class_id,subject_id",
         )
         .in("class_id", classIds)
-        .eq("is_published", true)
-        .not("video_url", "is", null)
-        .neq("video_url", "")
-        .order("created_at", { ascending: false });
-      if (vidErr) throw vidErr;
+        .in("resource_type", ["video", "replay"])
+        .eq("status", "published")
+        .order("published_at", { ascending: false, nullsFirst: false });
+      if (currentTenantId) resourceQuery = resourceQuery.eq("center_id", currentTenantId);
 
-      const cleaned = (vids || []).filter((v: any) => isValidMediaUrl(v.video_url));
-      if (cleaned.length === 0) return [];
+      const { data: rows, error: resErr } = await resourceQuery;
+      if (resErr) throw resErr;
+
+      const withUrl = (rows || [])
+        .map((r: any) => ({ row: r, url: resolvePlayableUrl(r) }))
+        .filter((x) => !!x.url);
+      if (withUrl.length === 0) return [];
 
       const subjectIds = Array.from(
-        new Set(cleaned.map((v: any) => v.subject_id).filter(Boolean)),
+        new Set(withUrl.map((x) => x.row.subject_id).filter(Boolean)),
       );
-      const classIdSet = Array.from(new Set(cleaned.map((v: any) => v.class_id).filter(Boolean)));
-      const creatorIds = Array.from(
-        new Set(cleaned.map((v: any) => v.created_by).filter(Boolean)),
-      );
+      const classIdSet = Array.from(new Set(withUrl.map((x) => x.row.class_id).filter(Boolean)));
 
-      const [subsRes, classesRes, tutorsRes] = await Promise.all([
+      const [subsRes, classesRes, tutorLinksRes] = await Promise.all([
         subjectIds.length
-          ? (supabase as any).from("subjects").select("id,name").in("id", subjectIds)
-          : Promise.resolve({ data: [] }),
+          ? supabase.from("subjects").select("id,name").in("id", subjectIds)
+          : Promise.resolve({ data: [] as any[] }),
         classIdSet.length
-          ? (supabase as any).from("classes").select("id,title").in("id", classIdSet)
-          : Promise.resolve({ data: [] }),
-        creatorIds.length
-          ? (supabase as any)
-              .from("tutors")
-              .select("user_id,name,avatar_url")
-              .in("user_id", creatorIds)
-          : Promise.resolve({ data: [] }),
+          ? supabase.from("classes").select("id,title").in("id", classIdSet)
+          : Promise.resolve({ data: [] as any[] }),
+        classIdSet.length
+          ? supabase.from("class_tutors").select("class_id,tutor_user_id").in("class_id", classIdSet)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
+      const tutorIds = Array.from(
+        new Set(((tutorLinksRes.data as any[]) || []).map((t) => t.tutor_user_id).filter(Boolean)),
+      );
+      const profilesRes = tutorIds.length
+        ? await supabase
+            .from("profiles")
+            .select("user_id,full_name,avatar_url")
+            .in("user_id", tutorIds)
+        : { data: [] as any[] };
+
       const subjMap = new Map<string, string>(
-        (subsRes.data || []).map((s: any) => [s.id, s.name]),
+        ((subsRes.data as any[]) || []).map((s) => [s.id, s.name]),
       );
       const classMap = new Map<string, string>(
-        (classesRes.data || []).map((c: any) => [c.id, c.title]),
+        ((classesRes.data as any[]) || []).map((c) => [c.id, c.title]),
       );
-      const tutorMap = new Map<string, { name: string; avatar_url: string | null }>(
-        (tutorsRes.data || []).map((t: any) => [t.user_id, { name: t.name, avatar_url: t.avatar_url }]),
+      const profileMap = new Map<string, { name: string; avatar_url: string | null }>(
+        ((profilesRes.data as any[]) || []).map((p) => [
+          p.user_id,
+          { name: p.full_name ?? "Tutor", avatar_url: p.avatar_url ?? null },
+        ]),
       );
+      const tutorByClass = new Map<string, { name: string; avatar_url: string | null }>();
+      for (const link of ((tutorLinksRes.data as any[]) || [])) {
+        if (tutorByClass.has(link.class_id)) continue;
+        const prof = profileMap.get(link.tutor_user_id);
+        if (prof) tutorByClass.set(link.class_id, prof);
+      }
 
-      return cleaned.map((v: any): ClassReplay => ({
-        id: v.id,
-        title: v.title,
-        description: v.description,
-        video_url: v.video_url,
-        thumbnail_url: v.thumbnail_url,
-        created_at: v.created_at,
-        duration_seconds: v.duration_seconds,
-        subject_id: v.subject_id,
-        subject_name: subjMap.get(v.subject_id) ?? null,
-        class_title: classMap.get(v.class_id) ?? null,
-        tutor_name: tutorMap.get(v.created_by)?.name ?? null,
-        tutor_avatar: tutorMap.get(v.created_by)?.avatar_url ?? null,
+      return withUrl.map(({ row, url }): ClassReplay => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        video_url: url!,
+        created_at: row.published_at ?? row.created_at,
+        subject_name: row.subject_id ? subjMap.get(row.subject_id) ?? null : null,
+        class_title: classMap.get(row.class_id) ?? null,
+        tutor_name: tutorByClass.get(row.class_id)?.name ?? null,
+        tutor_avatar: tutorByClass.get(row.class_id)?.avatar_url ?? null,
       }));
     },
   });
 
   const subjectOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const r of replays) {
-      if (r.subject_name && !seen.has(r.subject_name)) seen.set(r.subject_name, r.subject_name);
-    }
-    return Array.from(seen.keys());
+    const seen = new Set<string>();
+    for (const r of replays) if (r.subject_name) seen.add(r.subject_name);
+    return Array.from(seen);
   }, [replays]);
 
   const filteredReplays = useMemo(() => {
@@ -174,8 +192,9 @@ export function ReplayLibrary() {
 
   const isSearching = searchQuery.trim() !== "" || selectedSubject !== "all";
 
+  if (!replaysOn) return <FeatureUnavailable feature="videoReplays" />;
+
   const handleWatch = (replay: ClassReplay) => {
-    if (!isValidMediaUrl(replay.video_url)) return;
     setActiveVideo({ url: replay.video_url, title: replay.title, classId: replay.id });
   };
 
@@ -197,8 +216,7 @@ export function ReplayLibrary() {
         </p>
       </div>
 
-      {/* Filters */}
-      {(replays.length > 0 || isSearching) && (
+      {(replays.length > 0 || isSearching) && !isError && (
         <Card className="p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-slate-200/70 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -228,8 +246,7 @@ export function ReplayLibrary() {
         </Card>
       )}
 
-      {/* States */}
-      {isLoading ? (
+      {isLoading || tenantLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card
@@ -242,13 +259,19 @@ export function ReplayLibrary() {
             </Card>
           ))}
         </div>
-      ) : error ? (
+      ) : isError ? (
         <EmptyPanel
           icon={<AlertCircle className="w-8 h-8 text-rose-500" />}
-          title="Something went wrong"
-          body="We couldn't load your replays. Please try again in a moment."
+          title="Couldn't load replays"
+          body="We hit a problem loading your replays. Please try again in a moment."
           action={
-            <Button onClick={() => refetch()} className="rounded-full">
+            <Button
+              onClick={() => {
+                showSupabaseError(error, "Couldn't load replays");
+                refetch();
+              }}
+              className="rounded-full"
+            >
               Try again
             </Button>
           }
@@ -290,12 +313,6 @@ export function ReplayLibrary() {
   );
 }
 
-function formatDuration(secs: number | null): string | null {
-  if (!secs || secs <= 0) return null;
-  const m = Math.round(secs / 60);
-  return `${m} min`;
-}
-
 function ReplayCard({
   replay,
   onWatch,
@@ -303,7 +320,6 @@ function ReplayCard({
   replay: ClassReplay;
   onWatch: () => void;
 }) {
-  const durationLabel = formatDuration(replay.duration_seconds);
   return (
     <Card className="overflow-hidden bg-white/85 backdrop-blur-xl border border-slate-200/70 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all group">
       <button
@@ -312,26 +328,11 @@ function ReplayCard({
         aria-label={`Watch ${replay.title}`}
         className="relative aspect-video w-full block bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
       >
-        {replay.thumbnail_url ? (
-          <img
-            src={replay.thumbnail_url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-90"
-            loading="lazy"
-          />
-        ) : null}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#00D1FF] flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_10px_30px_-8px_rgba(0,209,255,0.7)]">
             <Play className="w-7 h-7 text-white fill-current ml-0.5" />
           </div>
         </div>
-        {durationLabel ? (
-          <div className="absolute bottom-2 right-2">
-            <Badge className="bg-black/60 hover:bg-black/60 text-white border-0 rounded-full">
-              {durationLabel}
-            </Badge>
-          </div>
-        ) : null}
       </button>
 
       <div className="p-4 space-y-3">
