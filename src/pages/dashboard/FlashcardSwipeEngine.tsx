@@ -193,7 +193,7 @@ export function FlashcardSwipeEngine() {
         e.preventDefault();
         answer("left");
       } else if (e.key === "Escape") {
-        navigate("/dashboard/learning/flashcards");
+        navigate("/dashboard/classes");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -245,7 +245,7 @@ export function FlashcardSwipeEngine() {
           <Button
             variant="ghost"
             className="rounded-full"
-            onClick={() => navigate("/dashboard/learning/flashcards")}
+            onClick={() => navigate("/dashboard/classes")}
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Decks
           </Button>
@@ -292,7 +292,7 @@ export function FlashcardSwipeEngine() {
               <Button
                 variant="outline"
                 className="flex-1 rounded-full border-0 bg-secondary/50"
-                onClick={() => navigate("/dashboard/learning/flashcards")}
+                onClick={() => navigate("/dashboard/classes")}
               >
                 Back to Flashcards
               </Button>
@@ -333,7 +333,7 @@ export function FlashcardSwipeEngine() {
           size="icon"
           aria-label="Back to flashcards"
           className="rounded-full shrink-0 min-h-11 min-w-11"
-          onClick={() => navigate("/dashboard/learning/flashcards")}
+          onClick={() => navigate("/dashboard/classes")}
         >
           <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
         </Button>

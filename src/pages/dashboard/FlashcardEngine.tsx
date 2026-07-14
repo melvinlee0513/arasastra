@@ -191,7 +191,7 @@ export function FlashcardEngine() {
               Your tutors will create flashcard decks for your enrolled subjects soon.
             </p>
             <Button
-              onClick={() => navigate("/dashboard/learning/flashcards/play")}
+              onClick={() => navigate("/dashboard/classes")}
               className="mt-6 rounded-full gap-2 shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
             >
               <Play className="w-4 h-4" strokeWidth={1.5} />
@@ -265,7 +265,7 @@ export function FlashcardEngine() {
                         className="flex-1 rounded-full gap-1.5 text-sm shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/dashboard/learning/flashcards/play?deck=${deck.id}`);
+                          navigate(`/dashboard/classes?deck=${deck.id}`);
                         }}
                       >
                         <Play className="w-3.5 h-3.5" strokeWidth={1.5} />
