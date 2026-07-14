@@ -391,7 +391,7 @@ export function QuizPlay() {
       console.error("Error saving quiz:", e);
     } finally {
       setIsSaving(false);
-      navigate("/dashboard/learning/quizzes");
+      navigate("/dashboard/classes");
     }
   };
 

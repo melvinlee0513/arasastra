@@ -24,10 +24,7 @@ const staticPages: SearchResult[] = [
   { id: "dashboard", title: "Dashboard", type: "page", subtitle: "Student dashboard", path: "/dashboard" },
   { id: "timetable", title: "Timetable", type: "page", subtitle: "Class schedule", path: "/timetable" },
   { id: "my-classes", title: "My Classes", type: "page", subtitle: "Subject hub", path: "/dashboard/classes" },
-  { id: "notes", title: "Notes Bank", type: "page", subtitle: "Study materials", path: "/dashboard/learning/notes" },
-  { id: "quizzes", title: "Quizzes", type: "page", subtitle: "Test your knowledge", path: "/dashboard/learning/quizzes" },
-  { id: "flashcards", title: "Flashcards", type: "page", subtitle: "Rapid recall", path: "/dashboard/learning/flashcards" },
-  { id: "replays", title: "Replay Library", type: "page", subtitle: "Watch past classes", path: "/dashboard/learning/replays" },
+  // Notes, quizzes, flashcards and replays are accessed inside each class.
   { id: "account", title: "Account", type: "page", subtitle: "Profile & subscription", path: "/account" },
 ];
 
@@ -82,14 +79,14 @@ export function CommandSearch() {
         title: c.title,
         type: "class" as const,
         subtitle: (c.subject as { name: string } | null)?.name,
-        path: "/dashboard/learning/replays",
+        path: `/dashboard/classes/${c.id}`,
       })),
       ...(notesRes.data || []).map((n) => ({
         id: n.id,
         title: n.title,
         type: "note" as const,
         subtitle: (n.subject as { name: string } | null)?.name,
-        path: "/dashboard/learning/notes",
+        path: "/dashboard/classes",
       })),
       ...(quizzesRes.data || []).map((q) => ({
         id: q.id,

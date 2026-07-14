@@ -359,43 +359,17 @@ export function StudentDashboard() {
       {/* Remedial Playlist — Weak Link Diagnostic */}
       <RemedialPlaylist />
 
-      {/* Quick Links */}
-      <section className="grid grid-cols-3 gap-4">
-        <Link to="/dashboard/learning/replays">
-          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Play className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-medium text-foreground">Replays</h3>
-                <p className="text-xs text-muted-foreground">Watch past classes</p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-        <Link to="/dashboard/learning/notes">
+      {/* Quick Link — all learning materials live inside enrolled classes */}
+      <section>
+        <Link to="/dashboard/classes">
           <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <h3 className="font-medium text-foreground">Notes Bank</h3>
-                <p className="text-xs text-muted-foreground">Download materials</p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-        <Link to="/dashboard/learning/quizzes">
-          <Card className="p-4 bg-card border-border hover:shadow-md hover:border-accent/30 transition-all cursor-pointer">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <HelpCircle className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-medium text-foreground">Quizzes</h3>
-                <p className="text-xs text-muted-foreground">Test your knowledge</p>
+                <h3 className="font-medium text-foreground">Browse My Classes</h3>
+                <p className="text-xs text-muted-foreground">Replays, notes, quizzes & flashcards for every enrolled class</p>
               </div>
             </div>
           </Card>

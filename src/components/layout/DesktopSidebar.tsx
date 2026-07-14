@@ -34,10 +34,6 @@ const dashboardItems = [{
   icon: GraduationCap,
   label: "My Classes"
 }, {
-  path: "/dashboard/learning",
-  icon: BookOpen,
-  label: "My Learning"
-}, {
   path: "/dashboard/achievements",
   icon: Trophy,
   label: "Achievements"
@@ -81,7 +77,7 @@ export function DesktopSidebar({
         {user && <>
             <div className="my-4 border-t border-sidebar-border" />
             {!collapsed && <p className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">
-                My Learning
+                Student
               </p>}
             {dashboardItems.map(item => {
           const active = isActive(item.path, item.exact);

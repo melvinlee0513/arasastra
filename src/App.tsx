@@ -39,9 +39,7 @@ const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard")
 const ReplayLibrary = lazy(() => import("@/pages/dashboard/ReplayLibrary").then(m => ({ default: m.ReplayLibrary })));
 const QuizList = lazy(() => import("@/pages/dashboard/QuizList").then(m => ({ default: m.QuizList })));
 const NotesBank = lazy(() => import("@/pages/dashboard/NotesBank").then(m => ({ default: m.NotesBank })));
-const LearningHub = lazy(() => import("@/pages/dashboard/LearningHub").then(m => ({ default: m.LearningHub })));
 const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m => ({ default: m.Achievements })));
-const FlashcardSwipeEngine = lazy(() => import("@/pages/dashboard/FlashcardSwipeEngine").then(m => ({ default: m.FlashcardSwipeEngine })));
 const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
 const ClassRoom = lazy(() => import("@/pages/dashboard/ClassRoom").then(m => ({ default: m.ClassRoom })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
@@ -137,19 +135,19 @@ const App = () => (
 
             {/* Student Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentDashboard /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            {/* Learning Hub — canonical parent route with nested tabs */}
-            <Route path="/dashboard/learning" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/learning/notes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/learning/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/learning/flashcards" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/learning/replays" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LearningHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/learning/flashcards/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FlashcardSwipeEngine /></TenantGuard></ProtectedRoute>} />
-
-            {/* Legacy learning paths → redirect to canonical Learning tabs */}
-            <Route path="/dashboard/notes" element={<Navigate to="/dashboard/learning/notes" replace />} />
-            <Route path="/dashboard/quizzes" element={<Navigate to="/dashboard/learning/quizzes" replace />} />
-            <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/learning/flashcards" replace />} />
-            <Route path="/dashboard/replays" element={<Navigate to="/dashboard/learning/replays" replace />} />
+            {/* Retired global "My Learning" hub — students now access
+                learning materials inside their enrolled classes. All legacy
+                URLs redirect to /dashboard/classes. */}
+            <Route path="/dashboard/learning" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/learning/notes" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/learning/quizzes" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/learning/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/learning/replays" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/learning/flashcards/play" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/notes" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/quizzes" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
+            <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
             <Route path="/dashboard/resources" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ResourceHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
