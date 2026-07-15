@@ -114,7 +114,7 @@ export function getYouTubeId(input?: string | null): string | null {
   if (!v) return null;
   if (/^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
   const patterns = [
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([\w-]{11})/,
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/))([\w-]{11})/,
     /(?:youtu\.be\/)([\w-]{11})/,
   ];
   for (const p of patterns) {
@@ -127,6 +127,21 @@ export function getYouTubeId(input?: string | null): string | null {
 export function getYouTubeThumbnail(input?: string | null): string | null {
   const id = getYouTubeId(input);
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}
+
+export function getVimeoId(input?: string | null): string | null {
+  if (!input) return null;
+  const v = String(input).trim();
+  if (!v) return null;
+  const patterns = [
+    /vimeo\.com\/(?:video\/)?(\d{6,})/,
+    /player\.vimeo\.com\/video\/(\d{6,})/,
+  ];
+  for (const p of patterns) {
+    const m = v.match(p);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 export function getHostname(input?: string | null): string | null {
@@ -144,24 +159,44 @@ export function getFaviconUrl(input?: string | null): string | null {
 }
 
 export type ResourceCategory = "video" | "pdf" | "note" | "link" | "file";
+export type VideoProvider = "youtube" | "vimeo" | "generic" | "upload" | null;
+
+function extFromPath(pathish?: string | null): string | null {
+  if (!pathish) return null;
+  const clean = pathish.split("?")[0].split("#")[0];
+  const m = clean.match(/\.([a-zA-Z0-9]{1,6})$/);
+  return m ? m[1].toLowerCase() : null;
+}
 
 export function categoriseResource(r: ClassResourceLike): ResourceCategory {
   const type = (r.resource_type ?? "").toLowerCase();
   if (isVideoResource(r)) return "video";
   if (type === "link") return "link";
   const url = r.external_url || r.file_url || r.file_path || "";
-  if (/\.pdf($|\?)/i.test(url) || type === "worksheet" || type === "pdf") return "pdf";
+  const ext = extFromPath(url);
+  if (ext === "pdf" || type === "worksheet" || type === "pdf") return "pdf";
   if (type === "note") return "note";
   return "file";
 }
 
 export interface ResourcePreview {
   category: ResourceCategory;
+  /** Best-known immutable image URL for the cover (thumbnail). */
   thumbnailUrl: string | null;
+  /** Human-readable hostname when the source is an external URL. */
   hostname: string | null;
+  /** Just the filename component of a stored file. */
   filename: string | null;
+  /** Openable/playable URL (external only — private files use signed URLs). */
   href: string | null;
+  /** Short excerpt drawn from the row description. */
   excerpt: string | null;
+  /** Detected video provider (null for non-video). */
+  provider: VideoProvider;
+  /** Underlying storage/embed URL for PDF thumbnail rendering. */
+  pdfSource: { kind: "external"; url: string } | { kind: "storage"; filePath: string } | null;
+  /** True when the resource has a directly openable source. */
+  isPlayable: boolean;
 }
 
 export function buildResourcePreview(r: ClassResourceLike): ResourcePreview {
@@ -176,16 +211,48 @@ export function buildResourcePreview(r: ClassResourceLike): ResourcePreview {
       .pop() || null;
 
   let thumbnailUrl: string | null = null;
+  let provider: VideoProvider = null;
   if (category === "video") {
-    thumbnailUrl =
-      getYouTubeThumbnail(r.embed_url) ||
-      getYouTubeThumbnail(r.external_url) ||
-      null;
+    const ytId =
+      getYouTubeId(r.embed_url) || getYouTubeId(r.external_url) || null;
+    const vimeoId = getVimeoId(r.embed_url) || getVimeoId(r.external_url) || null;
+    if (ytId) {
+      provider = "youtube";
+      thumbnailUrl = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+    } else if (vimeoId) {
+      provider = "vimeo";
+      // No public thumbnail URL without oEmbed; fall back to generated cover.
+    } else if ((r.source_type ?? "").toLowerCase() === "local_upload" || r.file_path) {
+      provider = "upload";
+    } else {
+      provider = "generic";
+    }
   } else if (category === "link") {
     thumbnailUrl = getFaviconUrl(r.external_url);
   }
 
-  const excerpt = r.description ? String(r.description).slice(0, 220) : null;
+  let pdfSource: ResourcePreview["pdfSource"] = null;
+  if (category === "pdf") {
+    if (r.file_path) pdfSource = { kind: "storage", filePath: r.file_path };
+    else if (r.external_url && /\.pdf($|\?)/i.test(r.external_url)) {
+      pdfSource = { kind: "external", url: r.external_url };
+    } else if (r.file_url && /\.pdf($|\?)/i.test(r.file_url)) {
+      pdfSource = { kind: "external", url: r.file_url };
+    }
+  }
 
-  return { category, thumbnailUrl, hostname, filename, href, excerpt };
+  const excerpt = r.description ? String(r.description).slice(0, 220) : null;
+  const isPlayable = Boolean(href || r.file_path);
+
+  return {
+    category,
+    thumbnailUrl,
+    hostname,
+    filename,
+    href,
+    excerpt,
+    provider,
+    pdfSource,
+    isPlayable,
+  };
 }
