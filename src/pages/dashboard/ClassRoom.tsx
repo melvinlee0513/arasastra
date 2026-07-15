@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight, Home, GraduationCap, Video, FileText, HelpCircle,
-  PlayCircle, Download, ClipboardList, Calendar, Clock, User, BookOpen,
+  PlayCircle, ClipboardList, Calendar, Clock, User, BookOpen,
   ExternalLink, Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
-import { hasValidSource, resolvePlayableUrl, openClassResource } from "@/lib/classResources";
+import { hasValidSource, openClassResource } from "@/lib/classResources";
+import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { toast } from "sonner";
 
 type ClassRow = {
@@ -46,9 +46,6 @@ type ResourceRow = {
 
 type QuizRow = { id: string; title: string; description: string | null; total_points: number };
 
-function resourceHref(r: ResourceRow) {
-  return resolvePlayableUrl(r);
-}
 
 export function ClassRoom() {
   const { classId } = useParams<{ classId: string }>();
@@ -250,46 +247,21 @@ export function ClassRoom() {
               {replays.length === 0 ? (
                 <EmptyState icon={<Video />} label="No replays yet" />
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {replays.map((r) => {
-                    const href = resourceHref(r);
-                    return (
-                      <div key={r.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="aspect-video bg-slate-900">
-                          {r.embed_url ? (
-                            <iframe
-                              className="w-full h-full"
-                              src={r.embed_url}
-                              title={r.title}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : r.source_type === "upload" && href ? (
-                            <video src={href} controls className="w-full h-full object-contain bg-black" />
-                          ) : href ? (
-                            <a href={href} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center text-white/80 gap-2">
-                              <PlayCircle className="w-8 h-8" /> Open video
-                            </a>
-                          ) : null}
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-semibold text-slate-900 line-clamp-1">{r.title}</h4>
-                          {r.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{r.description}</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ResourceGrid items={replays} />
               )}
             </TabsContent>
           )}
 
           <TabsContent value="notes" className="mt-5">
-            <FileList items={notes} emptyIcon={<FileText />} emptyLabel="No notes yet" />
+            {notes.length === 0
+              ? <EmptyState icon={<FileText />} label="No notes yet" />
+              : <ResourceGrid items={notes} />}
           </TabsContent>
 
           <TabsContent value="worksheets" className="mt-5">
-            <FileList items={worksheets} emptyIcon={<ClipboardList />} emptyLabel="No worksheets yet" />
+            {worksheets.length === 0
+              ? <EmptyState icon={<ClipboardList />} label="No worksheets yet" />
+              : <ResourceGrid items={worksheets} />}
           </TabsContent>
 
           <TabsContent value="quizzes" className="mt-5">
@@ -319,7 +291,7 @@ export function ClassRoom() {
 
           {links.length > 0 && (
             <TabsContent value="links" className="mt-5">
-              <FileList items={links} emptyIcon={<ExternalLink />} emptyLabel="No links yet" />
+              <ResourceGrid items={links} />
             </TabsContent>
           )}
 
@@ -345,32 +317,30 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
   );
 }
 
-function FileList({
-  items, emptyIcon, emptyLabel,
-}: { items: ResourceRow[]; emptyIcon: React.ReactNode; emptyLabel: string }) {
-  if (items.length === 0) return <EmptyState icon={emptyIcon} label={emptyLabel} />;
-  async function handleOpen(n: ResourceRow) {
-    const ok = await openClassResource(n);
+function ResourceGrid({ items }: { items: ResourceRow[] }) {
+  async function handleOpen(r: ResourceRow) {
+    const ok = await openClassResource(r);
     if (!ok) toast.error("This file isn't available right now.");
   }
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((n) => (
-        <button
-          key={n.id}
-          type="button"
-          onClick={() => handleOpen(n)}
-          className="text-left bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-start gap-4 group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-slate-900 truncate">{n.title}</h4>
-            {n.description && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{n.description}</p>}
-          </div>
-          <Download className="w-4 h-4 text-slate-400 group-hover:text-primary mt-1" />
-        </button>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((r) => (
+        <ResourcePreviewCard
+          key={r.id}
+          resource={r}
+          role="student"
+          className="flex-col !sm:flex-col"
+          actions={
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full h-8 px-3 text-primary"
+              onClick={() => handleOpen(r)}
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
+            </Button>
+          }
+        />
       ))}
     </div>
   );
