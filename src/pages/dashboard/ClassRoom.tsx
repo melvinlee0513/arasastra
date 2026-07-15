@@ -46,9 +46,6 @@ type ResourceRow = {
 
 type QuizRow = { id: string; title: string; description: string | null; total_points: number };
 
-function resourceHref(r: ResourceRow) {
-  return resolvePlayableUrl(r);
-}
 
 export function ClassRoom() {
   const { classId } = useParams<{ classId: string }>();
