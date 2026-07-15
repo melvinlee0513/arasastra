@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -26,17 +25,39 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
+import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import {
   ArrowLeft,
   Plus,
   FileText,
-  Video,
-  Link as LinkIcon,
   Trash2,
   Eye,
   EyeOff,
   Upload,
+  GripVertical,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  Check,
 } from "lucide-react";
 
 const ELECTRIC_BLUE = "#0052FF";
@@ -54,6 +75,7 @@ type Resource = {
   status: string;
   created_at: string;
   published_at: string | null;
+  display_order: number | null;
 };
 
 type ClassInfo = {
