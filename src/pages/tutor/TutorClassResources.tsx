@@ -573,9 +573,10 @@ function AttachMaterialModal({
       return;
     }
     setSaving(true);
+    let uploadedBucket: string | null = null;
+    let uploadedPath: string | null = null;
     try {
       let file_path: string | null = null;
-      let file_url: string | null = null;
       let external_url: string | null = null;
       let embed_url: string | null = null;
 
@@ -585,18 +586,49 @@ function AttachMaterialModal({
           setSaving(false);
           return;
         }
-        const ext = file.name.split(".").pop();
+        if (file.size === 0) {
+          toast.error("That file is empty");
+          setSaving(false);
+          return;
+        }
+        // Enforce PDF for note/worksheet uploads.
+        if (type === "note" || type === "worksheet") {
+          const isPdf =
+            file.type === "application/pdf" &&
+            /\.pdf$/i.test(file.name);
+          if (!isPdf) {
+            toast.error("Only PDF files are supported for notes and worksheets");
+            setSaving(false);
+            return;
+          }
+          if (file.size > MAX_PDF_BYTES) {
+            toast.error("PDF is too large (max 25 MB)");
+            setSaving(false);
+            return;
+          }
+        }
         const bucket = type === "video" ? "course-videos" : "notes";
-        const path = `${centerId}/${classInfo.id}/${crypto.randomUUID()}.${ext}`;
+        const resourceId = crypto.randomUUID();
+        const safeName = sanitiseFilename(file.name);
+        const objectPath = `${centerId}/${classInfo.id}/${resourceId}/${safeName}`;
         const { error: upErr } = await supabase.storage
           .from(bucket)
-          .upload(path, file, { upsert: false });
-        if (upErr) throw upErr;
-        file_path = `${bucket}/${path}`;
-        const { data: signed } = await supabase.storage
-          .from(bucket)
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        file_url = signed?.signedUrl ?? null;
+          .upload(objectPath, file, {
+            upsert: false,
+            contentType: file.type || undefined,
+          });
+        if (upErr) {
+          if (/row-level security|permission/i.test(upErr.message || "")) {
+            toast.error("You aren't assigned to this class. Ask your admin to assign you.");
+          } else {
+            toast.error(`Upload failed: ${upErr.message}`);
+          }
+          setSaving(false);
+          return;
+        }
+        uploadedBucket = bucket;
+        uploadedPath = objectPath;
+        file_path = `${bucket}/${objectPath}`;
       } else if (source === "youtube") {
         if (!url.trim()) {
           toast.error("Paste a YouTube URL");
@@ -604,7 +636,6 @@ function AttachMaterialModal({
           return;
         }
         external_url = url.trim();
-        // Try to derive embed URL
         const m = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
         if (m) embed_url = `https://www.youtube.com/embed/${m[1]}`;
       } else {
@@ -625,7 +656,7 @@ function AttachMaterialModal({
         description: description.trim() || null,
         resource_type: type,
         source_type: source,
-        file_url,
+        file_url: null, // never persist long-lived signed URLs
         file_path,
         external_url,
         embed_url,
@@ -633,7 +664,22 @@ function AttachMaterialModal({
         published_at: publishNow ? new Date().toISOString() : null,
         display_order: existingCount + 1,
       });
-      if (error) throw error;
+      if (error) {
+        // Cleanup uploaded object so we never leave an orphan
+        if (uploadedBucket && uploadedPath) {
+          const { error: rmErr } = await supabase.storage
+            .from(uploadedBucket)
+            .remove([uploadedPath]);
+          if (rmErr) {
+            console.error("[TutorClassResources] orphaned storage object", {
+              bucket: uploadedBucket,
+              path: uploadedPath,
+              rmErr,
+            });
+          }
+        }
+        throw error;
+      }
 
       toast.success("Material attached");
       reset();
@@ -644,6 +690,7 @@ function AttachMaterialModal({
       setSaving(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
