@@ -536,6 +536,7 @@ function AttachMaterialModal({
   centerId,
   uploaderId,
   onCreated,
+  existingCount,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -543,6 +544,7 @@ function AttachMaterialModal({
   centerId: string;
   uploaderId: string;
   onCreated: () => void;
+  existingCount: number;
 }) {
   const [source, setSource] = useState<
     "local_upload" | "external_link" | "youtube" | "google_drive" | "onedrive"
