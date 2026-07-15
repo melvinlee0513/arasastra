@@ -7,6 +7,64 @@
  * produces identical results in both places.
  */
 
+import { supabase } from "@/integrations/supabase/client";
+
+/** Max PDF size we accept from the tutor form (25 MB). */
+export const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
+/** Split a stored `file_path` ("bucket/name") into bucket + object name. */
+export function splitFilePath(filePath: string): { bucket: string; path: string } | null {
+  const idx = filePath.indexOf("/");
+  if (idx <= 0 || idx === filePath.length - 1) return null;
+  return { bucket: filePath.slice(0, idx), path: filePath.slice(idx + 1) };
+}
+
+/** Sanitise a user-supplied filename for safe storage paths. */
+export function sanitiseFilename(name: string): string {
+  const base = name.split(/[\\/]/).pop() ?? "file";
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
+  return cleaned.length ? cleaned.slice(0, 120) : "file";
+}
+
+/**
+ * Fetch a short-lived signed URL for a private file. Returns null when the
+ * caller isn't authorised (RLS denies) or the path is malformed.
+ */
+export async function getSignedFileUrl(
+  filePath: string,
+  ttlSeconds = 120,
+): Promise<string | null> {
+  const parts = splitFilePath(filePath);
+  if (!parts) return null;
+  const { data, error } = await supabase.storage
+    .from(parts.bucket)
+    .createSignedUrl(parts.path, ttlSeconds);
+  if (error) return null;
+  return data?.signedUrl ?? null;
+}
+
+/**
+ * Open a class resource in a new tab. Uses the external/embed URL when the
+ * row has one; otherwise mints a short-lived signed URL from the private
+ * bucket (RLS enforces authorisation).
+ */
+export async function openClassResource(r: ClassResourceLike): Promise<boolean> {
+  const direct = resolvePlayableUrl(r);
+  if (direct) {
+    window.open(direct, "_blank", "noopener,noreferrer");
+    return true;
+  }
+  if (r.file_path) {
+    const signed = await getSignedFileUrl(r.file_path, 120);
+    if (signed) {
+      window.open(signed, "_blank", "noopener,noreferrer");
+      return true;
+    }
+  }
+  return false;
+}
+
+
 export type ClassResourceLike = {
   resource_type?: string | null;
   source_type?: string | null;
