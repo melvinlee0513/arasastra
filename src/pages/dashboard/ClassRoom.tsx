@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight, Home, GraduationCap, Video, FileText, HelpCircle,
-  PlayCircle, Download, ClipboardList, Calendar, Clock, User, BookOpen,
+  PlayCircle, ClipboardList, Calendar, Clock, User, BookOpen,
   ExternalLink, Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
-import { hasValidSource, resolvePlayableUrl, openClassResource } from "@/lib/classResources";
+import { hasValidSource, openClassResource } from "@/lib/classResources";
+import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { toast } from "sonner";
 
 type ClassRow = {
