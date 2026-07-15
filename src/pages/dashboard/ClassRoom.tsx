@@ -247,36 +247,7 @@ export function ClassRoom() {
               {replays.length === 0 ? (
                 <EmptyState icon={<Video />} label="No replays yet" />
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {replays.map((r) => {
-                    const href = resourceHref(r);
-                    return (
-                      <div key={r.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="aspect-video bg-slate-900">
-                          {r.embed_url ? (
-                            <iframe
-                              className="w-full h-full"
-                              src={r.embed_url}
-                              title={r.title}
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : r.source_type === "upload" && href ? (
-                            <video src={href} controls className="w-full h-full object-contain bg-black" />
-                          ) : href ? (
-                            <a href={href} target="_blank" rel="noreferrer" className="w-full h-full flex items-center justify-center text-white/80 gap-2">
-                              <PlayCircle className="w-8 h-8" /> Open video
-                            </a>
-                          ) : null}
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-semibold text-slate-900 line-clamp-1">{r.title}</h4>
-                          {r.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{r.description}</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ResourceGrid items={replays} />
               )}
             </TabsContent>
           )}
