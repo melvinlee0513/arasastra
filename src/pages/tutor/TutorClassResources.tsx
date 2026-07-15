@@ -26,7 +26,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
-import { MAX_PDF_BYTES, sanitiseFilename, openClassResource } from "@/lib/classResources";
+import {
+  MAX_PDF_BYTES,
+  sanitiseFilename,
+  openClassResource,
+  splitFilePath,
+} from "@/lib/classResources";
 import {
   DndContext,
   DragEndEvent,
@@ -60,9 +65,13 @@ import {
   X,
   Check,
   ExternalLink,
+  Pencil,
 } from "lucide-react";
 
 const ELECTRIC_BLUE = "#0052FF";
+
+type SourceType = "local_upload" | "external_link" | "youtube" | "google_drive" | "onedrive";
+type ResourceType = "note" | "video" | "worksheet" | "link";
 
 type Resource = {
   id: string;
@@ -105,10 +114,11 @@ export default function TutorClassResources() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Resource | null>(null);
   const [tab, setTab] = useState<string>("all");
 
-  // Arrange mode state — draft order edited before Save
+  // Arrange mode
   const [arrangeMode, setArrangeMode] = useState(false);
   const [draftOrder, setDraftOrder] = useState<Resource[]>([]);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -190,6 +200,13 @@ export default function TutorClassResources() {
 
   async function remove(r: Resource) {
     if (!confirm(`Delete "${r.title}"?`)) return;
+    // Try storage cleanup first (best-effort — RLS still enforces access).
+    if (r.file_path) {
+      const parts = splitFilePath(r.file_path);
+      if (parts) {
+        await supabase.storage.from(parts.bucket).remove([parts.path]).catch(() => null);
+      }
+    }
     const { error } = await supabase.from("class_resources").delete().eq("id", r.id);
     if (error) {
       showSupabaseError(error, "Could not delete");
@@ -222,13 +239,17 @@ export default function TutorClassResources() {
   async function saveOrder() {
     if (!classId) return;
     setSavingOrder(true);
-    const { error } = await supabase.rpc("reorder_class_resources", {
+    const { data, error } = await supabase.rpc("reorder_class_resources", {
       requested_class_id: classId,
       ordered_resource_ids: draftOrder.map((r) => r.id),
     });
     setSavingOrder(false);
     if (error) {
       showSupabaseError(error, "Could not save order");
+      return;
+    }
+    if (!data) {
+      toast.error("Order not confirmed by server");
       return;
     }
     toast.success("Order saved");
@@ -290,7 +311,10 @@ export default function TutorClassResources() {
                 <ArrowUpDown className="h-4 w-4 mr-1" /> Arrange materials
               </Button>
               <Button
-                onClick={() => setAddOpen(true)}
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
                 className="rounded-full text-white shadow-sm hover:opacity-90"
                 style={{ backgroundColor: ELECTRIC_BLUE }}
               >
@@ -368,6 +392,18 @@ export default function TutorClassResources() {
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                         <Button
+                          size="icon"
+                          variant="ghost"
+                          className="rounded-full h-8 w-8 text-slate-500"
+                          onClick={() => {
+                            setEditing(r);
+                            setFormOpen(true);
+                          }}
+                          aria-label={`Edit ${r.title}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
                           size="sm"
                           variant="outline"
                           onClick={() => togglePublish(r)}
@@ -403,15 +439,20 @@ export default function TutorClassResources() {
       )}
 
       {classInfo && currentTenantId && (
-        <AttachMaterialModal
-          open={addOpen}
-          onOpenChange={setAddOpen}
+        <ResourceFormModal
+          open={formOpen}
+          onOpenChange={(v) => {
+            setFormOpen(v);
+            if (!v) setEditing(null);
+          }}
           classInfo={classInfo}
           centerId={currentTenantId}
           uploaderId={user!.id}
           existingCount={resources.length}
-          onCreated={() => {
-            setAddOpen(false);
+          editing={editing}
+          onSaved={() => {
+            setFormOpen(false);
+            setEditing(null);
             void load();
           }}
         />
@@ -543,86 +584,134 @@ function SortableRow({
   );
 }
 
-function AttachMaterialModal({
+/* ------------------------------------------------------------------ */
+/* Create + Edit form                                                  */
+/* ------------------------------------------------------------------ */
+
+function validateFile(file: File, type: ResourceType): string | null {
+  if (file.size === 0) return "That file is empty";
+  if (type === "note" || type === "worksheet") {
+    const isPdf = file.type === "application/pdf" && /\.pdf$/i.test(file.name);
+    if (!isPdf) return "Only PDF files are supported for notes and worksheets";
+    if (file.size > MAX_PDF_BYTES) return "PDF is too large (max 25 MB)";
+  }
+  return null;
+}
+
+function extractYouTubeEmbed(u: string): string | null {
+  const m = u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+}
+
+function ResourceFormModal({
   open,
   onOpenChange,
   classInfo,
   centerId,
   uploaderId,
-  onCreated,
+  onSaved,
   existingCount,
+  editing,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   classInfo: ClassInfo;
   centerId: string;
   uploaderId: string;
-  onCreated: () => void;
+  onSaved: () => void;
   existingCount: number;
+  editing: Resource | null;
 }) {
-  const [source, setSource] = useState<
-    "local_upload" | "external_link" | "youtube" | "google_drive" | "onedrive"
-  >("external_link");
-  const [type, setType] = useState<"note" | "video" | "worksheet" | "link">("note");
+  const isEdit = !!editing;
+  const [source, setSource] = useState<SourceType>("external_link");
+  const [type, setType] = useState<ResourceType>("note");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [publishNow, setPublishNow] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  function reset() {
-    setSource("external_link");
-    setType("note");
-    setTitle("");
-    setDescription("");
-    setUrl("");
-    setFile(null);
-    setPublishNow(true);
-  }
+  // Reset / prefill whenever the modal opens (or editing target changes).
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setSource((editing.source_type as SourceType) || "external_link");
+      setType((editing.resource_type as ResourceType) || "note");
+      setTitle(editing.title || "");
+      setDescription(editing.description || "");
+      setUrl(editing.external_url || editing.embed_url || "");
+      setFile(null);
+    } else {
+      setSource("external_link");
+      setType("note");
+      setTitle("");
+      setDescription("");
+      setUrl("");
+      setFile(null);
+    }
+  }, [open, editing]);
 
-  async function submit() {
+  const hasExistingFile = isEdit && !!editing?.file_path;
+  const needsUrl = source !== "local_upload";
+  const needsFile = source === "local_upload" && !hasExistingFile;
+
+  async function save(publish: boolean) {
     if (!title.trim()) {
       toast.error("Give the material a title");
       return;
     }
+    if (needsUrl && !url.trim()) {
+      toast.error(source === "youtube" ? "Paste a YouTube URL" : "Paste a link");
+      return;
+    }
+    if (needsFile && !file) {
+      toast.error("Choose a file to upload");
+      return;
+    }
+    if (file) {
+      const err = validateFile(file, type);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+    }
+
     setSaving(true);
+
+    // Track any newly uploaded object so we can clean up on failure.
     let uploadedBucket: string | null = null;
     let uploadedPath: string | null = null;
-    try {
-      let file_path: string | null = null;
-      let external_url: string | null = null;
-      let embed_url: string | null = null;
 
-      if (source === "local_upload") {
-        if (!file) {
+    try {
+      let file_path: string | null = editing?.file_path ?? null;
+      let external_url: string | null = editing?.external_url ?? null;
+      let embed_url: string | null = editing?.embed_url ?? null;
+
+      // URL-based sources: replace URL/embed. Local file_path becomes null
+      // when moving away from a local upload.
+      if (source === "youtube") {
+        external_url = url.trim();
+        embed_url = extractYouTubeEmbed(url.trim());
+      } else if (source === "external_link") {
+        external_url = url.trim();
+        embed_url = null;
+      } else if (source === "local_upload") {
+        // Ensure valid file source
+        if (!file && !hasExistingFile) {
           toast.error("Choose a file to upload");
           setSaving(false);
           return;
         }
-        if (file.size === 0) {
-          toast.error("That file is empty");
-          setSaving(false);
-          return;
-        }
-        // Enforce PDF for note/worksheet uploads.
-        if (type === "note" || type === "worksheet") {
-          const isPdf =
-            file.type === "application/pdf" &&
-            /\.pdf$/i.test(file.name);
-          if (!isPdf) {
-            toast.error("Only PDF files are supported for notes and worksheets");
-            setSaving(false);
-            return;
-          }
-          if (file.size > MAX_PDF_BYTES) {
-            toast.error("PDF is too large (max 25 MB)");
-            setSaving(false);
-            return;
-          }
-        }
+        external_url = null;
+        embed_url = null;
+      }
+
+      // Upload replacement / initial file
+      let replacedOldPath: string | null = null;
+      let replacedOldBucket: string | null = null;
+      if (source === "local_upload" && file) {
         const bucket = type === "video" ? "course-videos" : "notes";
-        const resourceId = crypto.randomUUID();
+        const resourceId = editing?.id ?? crypto.randomUUID();
         const safeName = sanitiseFilename(file.name);
         const objectPath = `${centerId}/${classInfo.id}/${resourceId}/${safeName}`;
         const { error: upErr } = await supabase.storage
@@ -642,25 +731,85 @@ function AttachMaterialModal({
         }
         uploadedBucket = bucket;
         uploadedPath = objectPath;
+
+        // If we're replacing a previously-uploaded file, remember its path
+        // for cleanup after the DB write succeeds.
+        if (editing?.file_path) {
+          const prev = splitFilePath(editing.file_path);
+          if (prev) {
+            replacedOldBucket = prev.bucket;
+            replacedOldPath = prev.path;
+          }
+        }
         file_path = `${bucket}/${objectPath}`;
-      } else if (source === "youtube") {
-        if (!url.trim()) {
-          toast.error("Paste a YouTube URL");
-          setSaving(false);
-          return;
-        }
-        external_url = url.trim();
-        const m = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
-        if (m) embed_url = `https://www.youtube.com/embed/${m[1]}`;
-      } else {
-        if (!url.trim()) {
-          toast.error("Paste a link");
-          setSaving(false);
-          return;
-        }
-        external_url = url.trim();
       }
 
+      // Final invariant: type/source combination must have a valid source.
+      const hasFile = !!file_path;
+      const hasUrl = !!(external_url || embed_url);
+      if (!hasFile && !hasUrl) {
+        toast.error("A source is required (file or URL)");
+        if (uploadedBucket && uploadedPath) {
+          await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
+        }
+        setSaving(false);
+        return;
+      }
+      if (type === "video" && source === "local_upload" && !hasFile) {
+        toast.error("Upload a video file");
+        setSaving(false);
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      if (isEdit && editing) {
+        // Determine status: publish action always publishes; otherwise keep
+        // existing status.
+        const nextStatus = publish ? "published" : editing.status;
+        const nextPublishedAt =
+          publish && editing.status !== "published"
+            ? now
+            : editing.published_at;
+
+        const { error } = await supabase
+          .from("class_resources")
+          .update({
+            title: title.trim(),
+            description: description.trim() || null,
+            resource_type: type,
+            source_type: source,
+            file_url: null,
+            file_path,
+            external_url,
+            embed_url,
+            status: nextStatus,
+            published_at: nextStatus === "published" ? nextPublishedAt ?? now : null,
+          })
+          .eq("id", editing.id);
+
+        if (error) {
+          if (uploadedBucket && uploadedPath) {
+            await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
+          }
+          throw error;
+        }
+
+        // Only after DB success, remove the previous file
+        if (replacedOldBucket && replacedOldPath) {
+          await supabase.storage
+            .from(replacedOldBucket)
+            .remove([replacedOldPath])
+            .catch(() => null);
+        }
+
+        toast.success(publish && editing.status !== "published" ? "Published" : "Changes saved");
+        onSaved();
+        return;
+      }
+
+      // Create
+      const status = publish ? "published" : "draft";
       const { error } = await supabase.from("class_resources").insert({
         center_id: centerId,
         class_id: classInfo.id,
@@ -670,47 +819,35 @@ function AttachMaterialModal({
         description: description.trim() || null,
         resource_type: type,
         source_type: source,
-        file_url: null, // never persist long-lived signed URLs
+        file_url: null,
         file_path,
         external_url,
         embed_url,
-        status: publishNow ? "published" : "draft",
-        published_at: publishNow ? new Date().toISOString() : null,
+        status,
+        published_at: publish ? now : null,
         display_order: existingCount + 1,
       });
       if (error) {
-        // Cleanup uploaded object so we never leave an orphan
         if (uploadedBucket && uploadedPath) {
-          const { error: rmErr } = await supabase.storage
-            .from(uploadedBucket)
-            .remove([uploadedPath]);
-          if (rmErr) {
-            console.error("[TutorClassResources] orphaned storage object", {
-              bucket: uploadedBucket,
-              path: uploadedPath,
-              rmErr,
-            });
-          }
+          await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
         }
         throw error;
       }
 
-      toast.success("Material attached");
-      reset();
-      onCreated();
+      toast.success(publish ? "Published to students" : "Saved as draft");
+      onSaved();
     } catch (err: any) {
-      showSupabaseError(err, "Could not attach material");
+      showSupabaseError(err, isEdit ? "Could not save changes" : "Could not attach material");
     } finally {
       setSaving(false);
     }
   }
 
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl max-w-lg">
         <DialogHeader>
-          <DialogTitle>Attach material</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit material" : "Attach material"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -772,7 +909,9 @@ function AttachMaterialModal({
 
           {source === "local_upload" ? (
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">File</label>
+              <label className="text-xs text-slate-500 mb-1 block">
+                {hasExistingFile ? "Replace file (optional)" : "File"}
+              </label>
               <div className="border border-dashed border-slate-300 rounded-2xl p-4 flex items-center gap-3 bg-slate-50/50">
                 <Upload className="h-5 w-5 text-slate-400" />
                 <input
@@ -781,6 +920,11 @@ function AttachMaterialModal({
                   className="text-sm text-slate-700 flex-1"
                 />
               </div>
+              {hasExistingFile && !file && (
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Current file will be kept unless you choose a new one.
+                </p>
+              )}
             </div>
           ) : (
             <div>
@@ -793,36 +937,63 @@ function AttachMaterialModal({
               />
             </div>
           )}
-
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={publishNow}
-              onChange={(e) => setPublishNow(e.target.checked)}
-              className="rounded"
-            />
-            Publish to enrolled students immediately
-          </label>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             className="rounded-full"
             onClick={() => onOpenChange(false)}
+            disabled={saving}
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            disabled={saving}
-            onClick={submit}
-            className="rounded-full text-white hover:opacity-90"
-            style={{ backgroundColor: ELECTRIC_BLUE }}
-          >
-            {saving ? "Attaching…" : "Attach"}
-          </Button>
+          {isEdit ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={saving}
+                onClick={() => save(false)}
+              >
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+              {editing?.status !== "published" && (
+                <Button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => save(true)}
+                  className="rounded-full text-white hover:opacity-90"
+                  style={{ backgroundColor: ELECTRIC_BLUE }}
+                >
+                  {saving ? "Saving…" : "Save and publish"}
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={saving}
+                onClick={() => save(false)}
+              >
+                {saving ? "Saving…" : "Save as draft"}
+              </Button>
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={() => save(true)}
+                className="rounded-full text-white hover:opacity-90"
+                style={{ backgroundColor: ELECTRIC_BLUE }}
+              >
+                {saving ? "Publishing…" : "Publish now"}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
