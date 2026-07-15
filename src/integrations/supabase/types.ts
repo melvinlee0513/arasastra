@@ -235,6 +235,7 @@ export type Database = {
           class_id: string
           created_at: string
           description: string | null
+          display_order: number
           embed_url: string | null
           external_url: string | null
           file_path: string | null
@@ -254,6 +255,7 @@ export type Database = {
           class_id: string
           created_at?: string
           description?: string | null
+          display_order?: number
           embed_url?: string | null
           external_url?: string | null
           file_path?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           class_id?: string
           created_at?: string
           description?: string | null
+          display_order?: number
           embed_url?: string | null
           external_url?: string | null
           file_path?: string | null
@@ -1963,6 +1966,13 @@ export type Database = {
           _xp_amount: number
         }
         Returns: Json
+      }
+      reorder_class_resources: {
+        Args: { ordered_resource_ids: string[]; requested_class_id: string }
+        Returns: {
+          display_order: number
+          id: string
+        }[]
       }
       resolve_tenant_by_subdomain: {
         Args: { _slug: string }
