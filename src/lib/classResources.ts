@@ -43,6 +43,27 @@ export async function getSignedFileUrl(
   return data?.signedUrl ?? null;
 }
 
+/**
+ * Open a class resource in a new tab. Uses the external/embed URL when the
+ * row has one; otherwise mints a short-lived signed URL from the private
+ * bucket (RLS enforces authorisation).
+ */
+export async function openClassResource(r: ClassResourceLike): Promise<boolean> {
+  const direct = resolvePlayableUrl(r);
+  if (direct) {
+    window.open(direct, "_blank", "noopener,noreferrer");
+    return true;
+  }
+  if (r.file_path) {
+    const signed = await getSignedFileUrl(r.file_path, 120);
+    if (signed) {
+      window.open(signed, "_blank", "noopener,noreferrer");
+      return true;
+    }
+  }
+  return false;
+}
+
 
 export type ClassResourceLike = {
   resource_type?: string | null;
