@@ -349,32 +349,33 @@ function FileList({
   items, emptyIcon, emptyLabel,
 }: { items: ResourceRow[]; emptyIcon: React.ReactNode; emptyLabel: string }) {
   if (items.length === 0) return <EmptyState icon={emptyIcon} label={emptyLabel} />;
+  async function handleOpen(n: ResourceRow) {
+    const ok = await openClassResource(n);
+    if (!ok) toast.error("This file isn't available right now.");
+  }
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((n) => {
-        const href = resourceHref(n);
-        return (
-          <a
-            key={n.id}
-            href={href || "#"}
-            target="_blank"
-            rel="noreferrer"
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-start gap-4 group"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-slate-900 truncate">{n.title}</h4>
-              {n.description && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{n.description}</p>}
-            </div>
-            <Download className="w-4 h-4 text-slate-400 group-hover:text-primary mt-1" />
-          </a>
-        );
-      })}
+      {items.map((n) => (
+        <button
+          key={n.id}
+          type="button"
+          onClick={() => handleOpen(n)}
+          className="text-left bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-start gap-4 group"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-slate-900 truncate">{n.title}</h4>
+            {n.description && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{n.description}</p>}
+          </div>
+          <Download className="w-4 h-4 text-slate-400 group-hover:text-primary mt-1" />
+        </button>
+      ))}
     </div>
   );
 }
+
 
 function EmptyState({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
