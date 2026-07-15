@@ -26,7 +26,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
-import { MAX_PDF_BYTES, sanitiseFilename, getSignedFileUrl } from "@/lib/classResources";
+import { MAX_PDF_BYTES, sanitiseFilename, openClassResource } from "@/lib/classResources";
 import {
   DndContext,
   DragEndEvent,
