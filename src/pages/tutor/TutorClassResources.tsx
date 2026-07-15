@@ -59,6 +59,7 @@ import {
   ArrowDown,
   X,
   Check,
+  ExternalLink,
 } from "lucide-react";
 
 const ELECTRIC_BLUE = "#0052FF";
