@@ -631,6 +631,7 @@ function AttachMaterialModal({
         embed_url,
         status: publishNow ? "published" : "draft",
         published_at: publishNow ? new Date().toISOString() : null,
+        display_order: existingCount + 1,
       });
       if (error) throw error;
 
