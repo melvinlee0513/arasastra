@@ -15,7 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
-import { hasValidSource, resolvePlayableUrl } from "@/lib/classResources";
+import { hasValidSource, resolvePlayableUrl, openClassResource } from "@/lib/classResources";
+import { toast } from "sonner";
 
 type ClassRow = {
   id: string;
