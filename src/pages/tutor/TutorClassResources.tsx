@@ -106,6 +106,11 @@ export default function TutorClassResources() {
   const [addOpen, setAddOpen] = useState(false);
   const [tab, setTab] = useState<string>("all");
 
+  // Arrange mode state — draft order edited before Save
+  const [arrangeMode, setArrangeMode] = useState(false);
+  const [draftOrder, setDraftOrder] = useState<Resource[]>([]);
+  const [savingOrder, setSavingOrder] = useState(false);
+
   useEffect(() => {
     if (!classId || !user?.id) return;
     void load();
@@ -129,7 +134,6 @@ export default function TutorClassResources() {
     }
     setClassInfo(cls as ClassInfo);
 
-    // Access check: admin in same center, or assigned tutor
     let hasAccess = false;
     if (isAdmin && cls.center_id === currentTenantId) hasAccess = true;
     if (!hasAccess) {
@@ -150,10 +154,12 @@ export default function TutorClassResources() {
     const { data: res } = await supabase
       .from("class_resources")
       .select(
-        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, status, created_at, published_at",
+        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, status, created_at, published_at, display_order",
       )
       .eq("class_id", classId)
-      .order("created_at", { ascending: false });
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
     setResources((res ?? []) as Resource[]);
     setLoading(false);
   }
@@ -176,7 +182,6 @@ export default function TutorClassResources() {
       showSupabaseError(error, "Could not update visibility");
       return;
     }
-
     toast.success(next === "published" ? "Published to students" : "Moved to draft");
     void load();
   }
@@ -188,8 +193,45 @@ export default function TutorClassResources() {
       showSupabaseError(error, "Could not delete");
       return;
     }
-
     toast.success("Deleted");
+    void load();
+  }
+
+  function enterArrangeMode() {
+    setDraftOrder([...resources]);
+    setArrangeMode(true);
+    setTab("all");
+  }
+
+  function cancelArrange() {
+    setArrangeMode(false);
+    setDraftOrder([]);
+  }
+
+  function moveDraft(id: string, dir: -1 | 1) {
+    setDraftOrder((prev) => {
+      const idx = prev.findIndex((r) => r.id === id);
+      const next = idx + dir;
+      if (idx < 0 || next < 0 || next >= prev.length) return prev;
+      return arrayMove(prev, idx, next);
+    });
+  }
+
+  async function saveOrder() {
+    if (!classId) return;
+    setSavingOrder(true);
+    const { error } = await supabase.rpc("reorder_class_resources", {
+      requested_class_id: classId,
+      ordered_resource_ids: draftOrder.map((r) => r.id),
+    });
+    setSavingOrder(false);
+    if (error) {
+      showSupabaseError(error, "Could not save order");
+      return;
+    }
+    toast.success("Order saved");
+    setArrangeMode(false);
+    setDraftOrder([]);
     void load();
   }
 
@@ -219,7 +261,7 @@ export default function TutorClassResources() {
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <button
             onClick={() => navigate(-1)}
@@ -234,47 +276,117 @@ export default function TutorClassResources() {
             Attach notes, replay videos, worksheets, and links for enrolled students.
           </p>
         </div>
-        <Button
-          onClick={() => setAddOpen(true)}
-          className="rounded-full text-white shadow-sm hover:opacity-90"
-          style={{ backgroundColor: ELECTRIC_BLUE }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Attach material
-        </Button>
+        <div className="flex gap-2">
+          {!arrangeMode ? (
+            <>
+              <Button
+                onClick={enterArrangeMode}
+                variant="outline"
+                className="rounded-full"
+                disabled={resources.length < 2}
+              >
+                <ArrowUpDown className="h-4 w-4 mr-1" /> Arrange materials
+              </Button>
+              <Button
+                onClick={() => setAddOpen(true)}
+                className="rounded-full text-white shadow-sm hover:opacity-90"
+                style={{ backgroundColor: ELECTRIC_BLUE }}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Attach material
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={cancelArrange}
+                variant="outline"
+                className="rounded-full"
+                disabled={savingOrder}
+              >
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+              <Button
+                onClick={saveOrder}
+                className="rounded-full text-white"
+                style={{ backgroundColor: ELECTRIC_BLUE }}
+                disabled={savingOrder}
+              >
+                <Check className="h-4 w-4 mr-1" />
+                {savingOrder ? "Saving…" : "Save order"}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="rounded-full bg-slate-100/70 p-1">
-          {RESOURCE_TABS.map((t) => (
-            <TabsTrigger key={t.key} value={t.key} className="rounded-full px-4 text-xs">
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {arrangeMode ? (
+        <ArrangeList
+          items={draftOrder}
+          onReorder={setDraftOrder}
+          onMove={moveDraft}
+        />
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="rounded-full bg-slate-100/70 p-1 flex-wrap h-auto">
+            {RESOURCE_TABS.map((t) => (
+              <TabsTrigger key={t.key} value={t.key} className="rounded-full px-4 text-xs">
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value={tab} className="mt-6">
-          {filtered.length === 0 ? (
-            <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
-              <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-              <p className="font-medium text-slate-900">No materials yet</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Attach your first note, video, or link to this class.
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map((r) => (
-                <ResourceRow
-                  key={r.id}
-                  r={r}
-                  onToggle={() => togglePublish(r)}
-                  onRemove={() => remove(r)}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value={tab} className="mt-6">
+            {filtered.length === 0 ? (
+              <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
+                <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                <p className="font-medium text-slate-900">No materials yet</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Attach your first note, video, or link to this class.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((r) => (
+                  <ResourcePreviewCard
+                    key={r.id}
+                    resource={r}
+                    role="tutor"
+                    actions={
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => togglePublish(r)}
+                          className="rounded-full h-8 px-3"
+                        >
+                          {r.status === "published" ? (
+                            <>
+                              <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3.5 w-3.5 mr-1" /> Publish
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => remove(r)}
+                          className="rounded-full text-slate-500 hover:text-red-600"
+                          aria-label={`Delete ${r.title}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
 
       {classInfo && currentTenantId && (
         <AttachMaterialModal
@@ -283,6 +395,7 @@ export default function TutorClassResources() {
           classInfo={classInfo}
           centerId={currentTenantId}
           uploaderId={user!.id}
+          existingCount={resources.length}
           onCreated={() => {
             setAddOpen(false);
             void load();
@@ -293,88 +406,126 @@ export default function TutorClassResources() {
   );
 }
 
-function ResourceRow({
+function ArrangeList({
+  items,
+  onReorder,
+  onMove,
+}: {
+  items: Resource[];
+  onReorder: (next: Resource[]) => void;
+  onMove: (id: string, dir: -1 | 1) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = items.findIndex((r) => r.id === active.id);
+    const newIdx = items.findIndex((r) => r.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onReorder(arrayMove(items, oldIdx, newIdx));
+  }
+
+  if (items.length === 0) {
+    return (
+      <Card className="p-8 text-center rounded-3xl bg-white/60 border-slate-200">
+        <p className="text-sm text-slate-500">Nothing to arrange.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Drag to reorder, or use the up/down buttons. Save when you're done — students see this exact order.
+      </p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {items.map((r, idx) => (
+              <SortableRow
+                key={r.id}
+                r={r}
+                canMoveUp={idx > 0}
+                canMoveDown={idx < items.length - 1}
+                onUp={() => onMove(r.id, -1)}
+                onDown={() => onMove(r.id, 1)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+function SortableRow({
   r,
-  onToggle,
-  onRemove,
+  canMoveUp,
+  canMoveDown,
+  onUp,
+  onDown,
 }: {
   r: Resource;
-  onToggle: () => void;
-  onRemove: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onUp: () => void;
+  onDown: () => void;
 }) {
-  const Icon =
-    r.resource_type === "video"
-      ? Video
-      : r.resource_type === "link"
-        ? LinkIcon
-        : FileText;
-  const url = r.external_url || r.file_url || r.embed_url || "#";
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: r.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 20 : "auto",
+  };
   return (
-    <Card className="p-4 rounded-2xl bg-white/70 border-slate-200 flex items-center gap-4">
-      <div
-        className="h-10 w-10 rounded-xl flex items-center justify-center"
-        style={{ backgroundColor: `${ELECTRIC_BLUE}12`, color: ELECTRIC_BLUE }}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold text-slate-900 truncate hover:underline"
+    <div ref={setNodeRef} style={style}>
+      <ResourcePreviewCard
+        resource={r}
+        role="tutor"
+        dragHandle={
+          <button
+            type="button"
+            aria-label={`Drag ${r.title}`}
+            className="self-start sm:self-center shrink-0 mt-1 sm:mt-0 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-1 touch-none"
+            {...attributes}
+            {...listeners}
           >
-            {r.title}
-          </a>
-          <Badge
-            variant="outline"
-            className="rounded-full text-[10px] px-2 py-0 border-slate-200 text-slate-500 capitalize"
-          >
-            {r.resource_type}
-          </Badge>
-          {r.status === "published" ? (
-            <Badge
-              className="rounded-full text-[10px] px-2 py-0 border-0"
-              style={{ backgroundColor: `${ELECTRIC_BLUE}15`, color: ELECTRIC_BLUE }}
+            <GripVertical className="h-5 w-5" />
+          </button>
+        }
+        actions={
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full h-8 w-8"
+              onClick={onUp}
+              disabled={!canMoveUp}
+              aria-label={`Move ${r.title} up`}
             >
-              Published
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0">
-              Draft
-            </Badge>
-          )}
-        </div>
-        {r.description && (
-          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{r.description}</p>
-        )}
-      </div>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={onToggle}
-        className="rounded-full h-8 px-3"
-      >
-        {r.status === "published" ? (
-          <>
-            <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
-          </>
-        ) : (
-          <>
-            <Eye className="h-3.5 w-3.5 mr-1" /> Publish
-          </>
-        )}
-      </Button>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={onRemove}
-        className="rounded-full text-slate-500 hover:text-red-600"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </Card>
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full h-8 w-8"
+              onClick={onDown}
+              disabled={!canMoveDown}
+              aria-label={`Move ${r.title} down`}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+      />
+    </div>
   );
 }
 
