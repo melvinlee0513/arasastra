@@ -355,6 +355,18 @@ export default function TutorClassResources() {
                     actions={
                       <>
                         <Button
+                          size="icon"
+                          variant="ghost"
+                          className="rounded-full h-8 w-8 text-slate-500"
+                          onClick={async () => {
+                            const ok = await openClassResource(r);
+                            if (!ok) toast.error("Could not open this file");
+                          }}
+                          aria-label={`Open ${r.title}`}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
                           size="sm"
                           variant="outline"
                           onClick={() => togglePublish(r)}
