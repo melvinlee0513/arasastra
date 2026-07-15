@@ -253,11 +253,15 @@ export function ClassRoom() {
           )}
 
           <TabsContent value="notes" className="mt-5">
-            <FileList items={notes} emptyIcon={<FileText />} emptyLabel="No notes yet" />
+            {notes.length === 0
+              ? <EmptyState icon={<FileText />} label="No notes yet" />
+              : <ResourceGrid items={notes} />}
           </TabsContent>
 
           <TabsContent value="worksheets" className="mt-5">
-            <FileList items={worksheets} emptyIcon={<ClipboardList />} emptyLabel="No worksheets yet" />
+            {worksheets.length === 0
+              ? <EmptyState icon={<ClipboardList />} label="No worksheets yet" />
+              : <ResourceGrid items={worksheets} />}
           </TabsContent>
 
           <TabsContent value="quizzes" className="mt-5">
