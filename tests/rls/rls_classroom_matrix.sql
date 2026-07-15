@@ -298,6 +298,76 @@ BEGIN
     pg_temp.visible_count(format('SELECT 1 FROM public.class_enrollments WHERE class_id=%L', class_a)) = 0);
   PERFORM pg_temp.reset_role();
 
+  -- =====================================================================
+  -- reorder_class_resources RPC — access + validation
+  -- =====================================================================
+
+  -- Assigned tutor can reorder
+  PERFORM pg_temp.assume('authenticated', tutor_asg);
+  PERFORM pg_temp.expect('assigned tutor can reorder class_a resources',
+    pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_drft, res_pub)));
+  PERFORM pg_temp.reset_role();
+
+  -- Same-centre unassigned tutor may NOT reorder
+  PERFORM pg_temp.assume('authenticated', tutor_un);
+  PERFORM pg_temp.expect('unassigned tutor cannot reorder class_a resources',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, res_drft)));
+  PERFORM pg_temp.reset_role();
+
+  -- Enrolled student may NOT reorder
+  PERFORM pg_temp.assume('authenticated', stu_enr);
+  PERFORM pg_temp.expect('enrolled student cannot reorder class_a resources',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, res_drft)));
+  PERFORM pg_temp.reset_role();
+
+  -- Foreign-tenant admin may NOT reorder
+  PERFORM pg_temp.assume('authenticated', admin_b);
+  PERFORM pg_temp.expect('foreign-tenant admin cannot reorder class_a resources',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, res_drft)));
+  PERFORM pg_temp.reset_role();
+
+  -- Anonymous may NOT reorder
+  PERFORM pg_temp.assume('anon', NULL);
+  PERFORM pg_temp.expect('anon cannot reorder class_a resources',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, res_drft)));
+  PERFORM pg_temp.reset_role();
+
+  -- Foreign resource id in the array is rejected
+  PERFORM pg_temp.assume('authenticated', tutor_asg);
+  PERFORM pg_temp.expect('reorder rejects foreign resource id',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, gen_random_uuid())));
+  -- Partial list (wrong count) is rejected
+  PERFORM pg_temp.expect('reorder rejects partial list',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid])',
+      class_a, res_pub)));
+  -- Duplicate ids rejected
+  PERFORM pg_temp.expect('reorder rejects duplicate ids',
+    NOT pg_temp.try(format(
+      'SELECT public.reorder_class_resources(%L, ARRAY[%L::uuid, %L::uuid])',
+      class_a, res_pub, res_pub)));
+  PERFORM pg_temp.reset_role();
+
+  -- Enrolled student sees the confirmed tutor-set order (published rows only)
+  PERFORM pg_temp.assume('authenticated', stu_enr);
+  PERFORM pg_temp.expect('student reads published resource after reorder',
+    pg_temp.visible_count(format(
+      'SELECT 1 FROM public.class_resources WHERE class_id=%L AND status=''published''',
+      class_a)) = 1);
+  PERFORM pg_temp.reset_role();
+
   RAISE NOTICE '════════════════════════════════════════════════════════';
   RAISE NOTICE 'All classroom RLS matrix assertions passed.';
 END;
