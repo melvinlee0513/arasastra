@@ -1970,8 +1970,8 @@ export type Database = {
       reorder_class_resources: {
         Args: { ordered_resource_ids: string[]; requested_class_id: string }
         Returns: {
-          display_order: number
-          id: string
+          new_display_order: number
+          resource_id: string
         }[]
       }
       resolve_tenant_by_subdomain: {
