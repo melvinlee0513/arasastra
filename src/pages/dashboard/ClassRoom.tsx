@@ -101,7 +101,9 @@ export function ClassRoom() {
         .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at")
         .eq("class_id", klass.id)
         .eq("status", "published")
-        .order("published_at", { ascending: false });
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true });
 
       // Published quizzes
       const { data: quizzes } = await supabase
