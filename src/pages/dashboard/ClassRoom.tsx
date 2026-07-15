@@ -317,32 +317,30 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
   );
 }
 
-function FileList({
-  items, emptyIcon, emptyLabel,
-}: { items: ResourceRow[]; emptyIcon: React.ReactNode; emptyLabel: string }) {
-  if (items.length === 0) return <EmptyState icon={emptyIcon} label={emptyLabel} />;
-  async function handleOpen(n: ResourceRow) {
-    const ok = await openClassResource(n);
+function ResourceGrid({ items }: { items: ResourceRow[] }) {
+  async function handleOpen(r: ResourceRow) {
+    const ok = await openClassResource(r);
     if (!ok) toast.error("This file isn't available right now.");
   }
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((n) => (
-        <button
-          key={n.id}
-          type="button"
-          onClick={() => handleOpen(n)}
-          className="text-left bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-start gap-4 group"
-        >
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-slate-900 truncate">{n.title}</h4>
-            {n.description && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{n.description}</p>}
-          </div>
-          <Download className="w-4 h-4 text-slate-400 group-hover:text-primary mt-1" />
-        </button>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((r) => (
+        <ResourcePreviewCard
+          key={r.id}
+          resource={r}
+          role="student"
+          className="flex-col !sm:flex-col"
+          actions={
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full h-8 px-3 text-primary"
+              onClick={() => handleOpen(r)}
+            >
+              <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
+            </Button>
+          }
+        />
       ))}
     </div>
   );
