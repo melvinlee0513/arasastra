@@ -291,7 +291,7 @@ export function ClassRoom() {
 
           {links.length > 0 && (
             <TabsContent value="links" className="mt-5">
-              <FileList items={links} emptyIcon={<ExternalLink />} emptyLabel="No links yet" />
+              <ResourceGrid items={links} />
             </TabsContent>
           )}
 
