@@ -142,9 +142,19 @@ Deno.serve(async (req) => {
       try { await admin.storage.from(bucket).remove(paths); } catch { /* logged below */ }
     }
 
-    // Revoke sessions before deleting the auth row (defence in depth).
-    await updateJob({ current_step: "revoke_sessions" });
-    try { await admin.auth.admin.signOut(targetId, "global"); } catch { /* ignore */ }
+    // NOTE: we deliberately do NOT call admin.auth.admin.signOut here.
+    // The JS admin.signOut(jwt, scope) API requires a valid *access-token JWT*
+    // for the target user; the deleting administrator does not hold that JWT,
+    // and passing a UUID is invalid. Session revocation is instead achieved by
+    // auth.admin.deleteUser below, which removes auth.sessions +
+    // auth.refresh_tokens (blocking refresh) and — via the cleanup RPC + FK
+    // cascades — removes profiles / user_roles / enrolments so every RLS
+    // helper (is_admin, is_tutor_of_class, is_enrolled_in_class,
+    // same_center_as_current_user) returns false even for a still-unexpired
+    // access token. The stale access JWT itself is NOT cryptographically
+    // invalidated and remains parseable until its natural expiry (~1h), but
+    // it can no longer read or mutate tenant data.
+    await updateJob({ current_step: "revoke_sessions_noop" });
 
     // Delete the auth user last. This cascades to remaining CASCADE FKs
     // (profiles, subscriptions, notifications, quiz_results, submissions, etc.)
