@@ -507,8 +507,11 @@ function ArrangeList({
         Drag to reorder, or use the up/down buttons. Save when you're done — students see this exact order.
       </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
+        <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+          >
             {items.map((r, idx) => (
               <SortableRow
                 key={r.id}
