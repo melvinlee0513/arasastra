@@ -106,6 +106,30 @@ export function isVideoResource(r: ClassResourceLike): boolean {
   return (VIDEO_RESOURCE_TYPES as readonly string[]).includes(t);
 }
 
+/**
+ * Canonical mapping from a tutor/student filter tab key to the class_resources
+ * that belong in it. Kept in one place so the tutor arrange view, tutor grid
+ * and student classroom stay in sync.
+ *
+ * Tab keys: "all" | "note" | "video" | "worksheet" | "link".
+ */
+export function matchesResourceTab(r: ClassResourceLike, tab: string): boolean {
+  if (tab === "all") return true;
+  const type = (r.resource_type ?? "").toLowerCase();
+  switch (tab) {
+    case "video":
+      return isVideoResource(r);
+    case "note":
+      return type === "note";
+    case "worksheet":
+      return type === "worksheet";
+    case "link":
+      return type === "link";
+    default:
+      return type === tab;
+  }
+}
+
 export function hasValidSource(r: ClassResourceLike): boolean {
   return Boolean(r.embed_url || r.external_url || r.file_url || r.file_path);
 }

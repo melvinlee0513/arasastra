@@ -32,7 +32,10 @@ import {
   openClassResource,
   splitFilePath,
   generatePdfPreviewBlob,
+  matchesResourceTab,
 } from "@/lib/classResources";
+import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import {
   DndContext,
   DragEndEvent,
@@ -111,6 +114,7 @@ export default function TutorClassResources() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const { currentTenantId } = useTenant();
+  const queryClient = useQueryClient();
 
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -120,7 +124,7 @@ export default function TutorClassResources() {
   const [editing, setEditing] = useState<Resource | null>(null);
   const [tab, setTab] = useState<string>("all");
 
-  // Arrange mode
+  // Arrange mode — draftOrder is the full class order; tab filters the view.
   const [arrangeMode, setArrangeMode] = useState(false);
   const [draftOrder, setDraftOrder] = useState<Resource[]>([]);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -178,10 +182,33 @@ export default function TutorClassResources() {
     setLoading(false);
   }
 
-  const filtered = useMemo(() => {
-    if (tab === "all") return resources;
-    return resources.filter((r) => r.resource_type === tab);
-  }, [resources, tab]);
+  // In arrange mode, the draftOrder is the source of truth so the tutor
+  // sees pending rearrangements across filters. Otherwise show saved order.
+  const viewSource = arrangeMode ? draftOrder : resources;
+
+  const filtered = useMemo(
+    () => viewSource.filter((r) => matchesResourceTab(r, tab)),
+    [viewSource, tab],
+  );
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: viewSource.length };
+    for (const t of RESOURCE_TABS) {
+      if (t.key === "all") continue;
+      counts[t.key] = viewSource.filter((r) => matchesResourceTab(r, t.key)).length;
+    }
+    return counts;
+  }, [viewSource]);
+
+  // Dirty when the draft id sequence differs from the last saved sequence.
+  const isDirty = useMemo(() => {
+    if (!arrangeMode) return false;
+    if (draftOrder.length !== resources.length) return true;
+    for (let i = 0; i < draftOrder.length; i++) {
+      if (draftOrder[i].id !== resources[i].id) return true;
+    }
+    return false;
+  }, [arrangeMode, draftOrder, resources]);
 
   async function togglePublish(r: Resource) {
     const next = r.status === "published" ? "draft" : "published";
@@ -227,7 +254,7 @@ export default function TutorClassResources() {
   function enterArrangeMode() {
     setDraftOrder([...resources]);
     setArrangeMode(true);
-    setTab("all");
+    // Keep the currently active filter tab so the tutor can arrange in context.
   }
 
   function cancelArrange() {
@@ -235,21 +262,41 @@ export default function TutorClassResources() {
     setDraftOrder([]);
   }
 
-  function moveDraft(id: string, dir: -1 | 1) {
+  /**
+   * Merge a reordered filtered subset back into the full draft order.
+   * Non-matching resources keep their existing global slots; the filtered
+   * items simply fill those slots in the new order.
+   */
+  function applyFilteredReorder(newFiltered: Resource[]) {
     setDraftOrder((prev) => {
-      const idx = prev.findIndex((r) => r.id === id);
-      const next = idx + dir;
-      if (idx < 0 || next < 0 || next >= prev.length) return prev;
-      return arrayMove(prev, idx, next);
+      if (tab === "all") return newFiltered;
+      let i = 0;
+      return prev.map((item) =>
+        matchesResourceTab(item, tab) ? newFiltered[i++] ?? item : item,
+      );
     });
+  }
+
+  function moveDraftFiltered(id: string, dir: -1 | 1) {
+    const current = draftOrder.filter((r) => matchesResourceTab(r, tab));
+    const idx = current.findIndex((r) => r.id === id);
+    const next = idx + dir;
+    if (idx < 0 || next < 0 || next >= current.length) return;
+    applyFilteredReorder(arrayMove(current, idx, next));
   }
 
   async function saveOrder() {
     if (!classId) return;
+    // Sanity: every existing resource must be represented exactly once.
+    const ids = draftOrder.map((r) => r.id);
+    if (ids.length !== resources.length || new Set(ids).size !== ids.length) {
+      toast.error("Order is inconsistent — please cancel and retry");
+      return;
+    }
     setSavingOrder(true);
     const { data, error } = await supabase.rpc("reorder_class_resources", {
       requested_class_id: classId,
-      ordered_resource_ids: draftOrder.map((r) => r.id),
+      ordered_resource_ids: ids,
     });
     setSavingOrder(false);
     if (error) {
@@ -260,10 +307,12 @@ export default function TutorClassResources() {
       toast.error("Order not confirmed by server");
       return;
     }
+    await load();
+    // Refetch the student classroom view for this class so learners see it too.
+    await queryClient.invalidateQueries({ queryKey: ["classroom"] });
     toast.success("Order saved");
     setArrangeMode(false);
     setDraftOrder([]);
-    void load();
   }
 
   if (loading || allowed === null) {
@@ -343,7 +392,7 @@ export default function TutorClassResources() {
                 onClick={saveOrder}
                 className="rounded-full text-white"
                 style={{ backgroundColor: ELECTRIC_BLUE }}
-                disabled={savingOrder}
+                disabled={savingOrder || !isDirty}
               >
                 <Check className="h-4 w-4 mr-1" />
                 {savingOrder ? "Saving…" : "Save order"}
@@ -353,99 +402,108 @@ export default function TutorClassResources() {
         </div>
       </div>
 
-      {arrangeMode ? (
-        <ArrangeList
-          items={draftOrder}
-          onReorder={setDraftOrder}
-          onMove={moveDraft}
-        />
-      ) : (
-        <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={setTab}>
+        <div className="flex items-center gap-3 flex-wrap">
           <TabsList className="rounded-full bg-slate-100/70 p-1 flex-wrap h-auto">
             {RESOURCE_TABS.map((t) => (
               <TabsTrigger key={t.key} value={t.key} className="rounded-full px-4 text-xs">
                 {t.label}
+                <span className="ml-1.5 text-[10px] text-slate-500">
+                  {tabCounts[t.key] ?? 0}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
+          {arrangeMode && isDirty && (
+            <Badge className="rounded-full bg-amber-100 text-amber-800 border-0">
+              Unsaved changes
+            </Badge>
+          )}
+        </div>
 
-          <TabsContent value={tab} className="mt-6">
-            {filtered.length === 0 ? (
-              <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
-                <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                <p className="font-medium text-slate-900">No materials yet</p>
-                <p className="text-sm text-slate-500 mt-1">
-                  Attach your first note, video, or link to this class.
-                </p>
-              </Card>
-            ) : (
-              <div
-                className="grid gap-4"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
-              >
-                {filtered.map((r) => (
-                  <ResourcePreviewCard
-                    key={r.id}
-                    resource={r}
-                    role="tutor"
-                    actions={
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full h-9 px-3 text-slate-600"
-                          onClick={async () => {
-                            const ok = await openClassResource(r);
-                            if (!ok) toast.error("Could not open this file");
-                          }}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full h-9 px-3 text-slate-600"
-                          onClick={() => {
-                            setEditing(r);
-                            setFormOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => togglePublish(r)}
-                          className="rounded-full h-9 px-3"
-                        >
-                          {r.status === "published" ? (
-                            <>
-                              <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3.5 w-3.5 mr-1" /> Publish
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => remove(r)}
-                          className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
-                          aria-label={`Delete ${r.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value={tab} className="mt-6">
+          {arrangeMode ? (
+            <ArrangeList
+              items={filtered}
+              tab={tab}
+              onReorder={applyFilteredReorder}
+              onMove={moveDraftFiltered}
+            />
+          ) : filtered.length === 0 ? (
+            <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
+              <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+              <p className="font-medium text-slate-900">No materials yet</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Attach your first note, video, or link to this class.
+              </p>
+            </Card>
+          ) : (
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+            >
+              {filtered.map((r) => (
+                <ResourcePreviewCard
+                  key={r.id}
+                  resource={r}
+                  role="tutor"
+                  actions={
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full h-9 px-3 text-slate-600"
+                        onClick={async () => {
+                          const ok = await openClassResource(r);
+                          if (!ok) toast.error("Could not open this file");
+                        }}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full h-9 px-3 text-slate-600"
+                        onClick={() => {
+                          setEditing(r);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => togglePublish(r)}
+                        className="rounded-full h-9 px-3"
+                      >
+                        {r.status === "published" ? (
+                          <>
+                            <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Publish
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => remove(r)}
+                        className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
+                        aria-label={`Delete ${r.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {classInfo && currentTenantId && (
         <ResourceFormModal
@@ -472,10 +530,12 @@ export default function TutorClassResources() {
 
 function ArrangeList({
   items,
+  tab,
   onReorder,
   onMove,
 }: {
   items: Resource[];
+  tab: string;
   onReorder: (next: Resource[]) => void;
   onMove: (id: string, dir: -1 | 1) => void;
 }) {
@@ -496,7 +556,11 @@ function ArrangeList({
   if (items.length === 0) {
     return (
       <Card className="p-8 text-center rounded-3xl bg-white/60 border-slate-200">
-        <p className="text-sm text-slate-500">Nothing to arrange.</p>
+        <p className="text-sm text-slate-500">
+          {tab === "all"
+            ? "Nothing to arrange."
+            : "No materials in this category. Switch filters to arrange others."}
+        </p>
       </Card>
     );
   }
