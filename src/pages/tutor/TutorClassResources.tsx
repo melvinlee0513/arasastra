@@ -46,7 +46,7 @@ import {
   SortableContext,
   arrayMove,
   useSortable,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
