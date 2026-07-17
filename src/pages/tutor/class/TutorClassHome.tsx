@@ -25,6 +25,8 @@ export function TutorClassHome() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
+  const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canManage);
+
 
   const data = useQuery({
     queryKey: ["tutor-class-home", currentTenantId, classId, user?.id],
