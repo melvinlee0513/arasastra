@@ -379,7 +379,10 @@ export default function TutorClassResources() {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div
+                className="grid gap-4"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+              >
                 {filtered.map((r) => (
                   <ResourcePreviewCard
                     key={r.id}
@@ -388,34 +391,32 @@ export default function TutorClassResources() {
                     actions={
                       <>
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="ghost"
-                          className="rounded-full h-8 w-8 text-slate-500"
+                          className="rounded-full h-9 px-3 text-slate-600"
                           onClick={async () => {
                             const ok = await openClassResource(r);
                             if (!ok) toast.error("Could not open this file");
                           }}
-                          aria-label={`Open ${r.title}`}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
                         </Button>
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="ghost"
-                          className="rounded-full h-8 w-8 text-slate-500"
+                          className="rounded-full h-9 px-3 text-slate-600"
                           onClick={() => {
                             setEditing(r);
                             setFormOpen(true);
                           }}
-                          aria-label={`Edit ${r.title}`}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => togglePublish(r)}
-                          className="rounded-full h-8 px-3"
+                          className="rounded-full h-9 px-3"
                         >
                           {r.status === "published" ? (
                             <>
@@ -431,7 +432,7 @@ export default function TutorClassResources() {
                           size="icon"
                           variant="ghost"
                           onClick={() => remove(r)}
-                          className="rounded-full text-slate-500 hover:text-red-600"
+                          className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
                           aria-label={`Delete ${r.title}`}
                         >
                           <Trash2 className="h-4 w-4" />
