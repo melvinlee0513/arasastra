@@ -246,6 +246,7 @@ export type Database = {
           source_type: string
           status: string
           subject_id: string | null
+          thumbnail_path: string | null
           title: string
           updated_at: string
           uploaded_by: string | null
@@ -266,6 +267,7 @@ export type Database = {
           source_type?: string
           status?: string
           subject_id?: string | null
+          thumbnail_path?: string | null
           title: string
           updated_at?: string
           uploaded_by?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           source_type?: string
           status?: string
           subject_id?: string | null
+          thumbnail_path?: string | null
           title?: string
           updated_at?: string
           uploaded_by?: string | null

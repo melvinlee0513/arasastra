@@ -7,10 +7,14 @@
  * produces identical results in both places.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Max PDF size we accept from the tutor form (25 MB). */
 export const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
+/** Signed URL TTL for private resource previews. */
+export const THUMBNAIL_URL_TTL_SECONDS = 300;
 
 /** Split a stored `file_path` ("bucket/name") into bucket + object name. */
 export function splitFilePath(filePath: string): { bucket: string; path: string } | null {
@@ -44,6 +48,24 @@ export async function getSignedFileUrl(
 }
 
 /**
+ * Cached signed URL for a private thumbnail — we cache well below the URL
+ * TTL so a card can re-render without re-signing on every mount.
+ */
+export function useSignedThumbnailUrl(thumbnailPath: string | null | undefined) {
+  return useQuery({
+    queryKey: ["resource-thumbnail", thumbnailPath ?? null],
+    enabled: !!thumbnailPath,
+    staleTime: (THUMBNAIL_URL_TTL_SECONDS - 30) * 1000,
+    gcTime: THUMBNAIL_URL_TTL_SECONDS * 1000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!thumbnailPath) return null;
+      return await getSignedFileUrl(thumbnailPath, THUMBNAIL_URL_TTL_SECONDS);
+    },
+  });
+}
+
+/**
  * Open a class resource in a new tab. Uses the external/embed URL when the
  * row has one; otherwise mints a short-lived signed URL from the private
  * bucket (RLS enforces authorisation).
@@ -72,6 +94,7 @@ export type ClassResourceLike = {
   file_path?: string | null;
   external_url?: string | null;
   embed_url?: string | null;
+  thumbnail_path?: string | null;
   title?: string | null;
   description?: string | null;
 };
@@ -195,6 +218,8 @@ export interface ResourcePreview {
   provider: VideoProvider;
   /** Underlying storage/embed URL for PDF thumbnail rendering. */
   pdfSource: { kind: "external"; url: string } | { kind: "storage"; filePath: string } | null;
+  /** Pre-generated preview path in private storage, if any. */
+  storedThumbnailPath: string | null;
   /** True when the resource has a directly openable source. */
   isPlayable: boolean;
 }
@@ -253,6 +278,64 @@ export function buildResourcePreview(r: ClassResourceLike): ResourcePreview {
     excerpt,
     provider,
     pdfSource,
+    storedThumbnailPath: r.thumbnail_path ?? null,
     isPlayable,
   };
+}
+
+/* ------------------------- PDF thumbnail generation ------------------------- */
+
+/**
+ * Render the first page of a PDF (File/Blob or URL) to a WebP blob suitable
+ * for upload. Returns null on any failure so callers can fall back gracefully.
+ * The output is intentionally modest (~560px wide, quality 0.82) so it stays
+ * small and fast to load in a grid of cards.
+ */
+export async function generatePdfPreviewBlob(
+  input: File | Blob | string,
+  options: { maxWidth?: number; quality?: number } = {},
+): Promise<Blob | null> {
+  const maxWidth = options.maxWidth ?? 560;
+  const quality = options.quality ?? 0.82;
+  try {
+    const pdfjs: any = await import("pdfjs-dist/build/pdf.mjs");
+    const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
+    const src: any =
+      typeof input === "string"
+        ? { url: input, disableAutoFetch: true, disableStream: true }
+        : { data: new Uint8Array(await (input as Blob).arrayBuffer()) };
+
+    const doc = await pdfjs.getDocument(src).promise;
+    try {
+      const page = await doc.getPage(1);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.min(maxWidth / baseViewport.width, 2);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      const blob: Blob | null = await new Promise((resolve) => {
+        // Prefer WebP; browsers that don't support it fall back to PNG via toBlob.
+        canvas.toBlob(
+          (b) => {
+            if (b) return resolve(b);
+            canvas.toBlob((jpg) => resolve(jpg), "image/jpeg", quality);
+          },
+          "image/webp",
+          quality,
+        );
+      });
+      page.cleanup?.();
+      return blob;
+    } finally {
+      doc.destroy?.();
+    }
+  } catch {
+    return null;
+  }
 }

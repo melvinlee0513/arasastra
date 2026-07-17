@@ -41,6 +41,7 @@ type ResourceRow = {
   file_path: string | null;
   external_url: string | null;
   embed_url: string | null;
+  thumbnail_path: string | null;
   published_at: string | null;
 };
 
@@ -96,7 +97,7 @@ export function ClassRoom() {
       // Published class resources (RLS filters by enrollment)
       const { data: resources } = await supabase
         .from("class_resources")
-        .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at")
+        .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,thumbnail_path,published_at")
         .eq("class_id", klass.id)
         .eq("status", "published")
         .order("display_order", { ascending: true })
@@ -323,18 +324,20 @@ function ResourceGrid({ items }: { items: ResourceRow[] }) {
     if (!ok) toast.error("This file isn't available right now.");
   }
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      className="grid gap-4"
+      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+    >
       {items.map((r) => (
         <ResourcePreviewCard
           key={r.id}
           resource={r}
           role="student"
-          className="flex-col !sm:flex-col"
           actions={
             <Button
               size="sm"
               variant="ghost"
-              className="rounded-full h-8 px-3 text-primary"
+              className="rounded-full h-9 px-3 text-primary min-h-[44px] sm:min-h-0"
               onClick={() => handleOpen(r)}
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
