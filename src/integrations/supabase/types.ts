@@ -1922,6 +1922,20 @@ export type Database = {
         Returns: boolean
       }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
+      bulk_enroll_students: {
+        Args: {
+          requested_class_id: string
+          requested_student_user_ids: string[]
+        }
+        Returns: Json
+      }
+      bulk_remove_students: {
+        Args: {
+          requested_class_id: string
+          requested_student_user_ids: string[]
+        }
+        Returns: Json
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {

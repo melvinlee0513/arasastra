@@ -33,6 +33,7 @@ const navItems = [
   { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/admin/leads", icon: UserCheck, label: "Leads CRM" },
   { path: "/admin/curriculum", icon: BookOpen, label: "Curriculum" },
+  { path: "/admin/enrollment-matrix", icon: GraduationCap, label: "Enrollment Matrix" },
   { path: "/admin/content", icon: FileEdit, label: "Content CMS" },
   { path: "/admin/users", icon: Users, label: "Users" },
   { path: "/admin/schedule", icon: Calendar, label: "Schedule" },

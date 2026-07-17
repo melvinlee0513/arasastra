@@ -89,6 +89,7 @@ const GradingPage = lazy(() => import("@/pages/admin/GradingPage").then(m => ({ 
 const QuizAnalytics = lazy(() => import("@/pages/admin/QuizAnalytics").then(m => ({ default: m.QuizAnalytics })));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const CurriculumManager = lazy(() => import("@/pages/admin/CurriculumManager"));
+const EnrollmentMatrix = lazy(() => import("@/pages/admin/EnrollmentMatrix"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -201,6 +202,7 @@ const App = () => (
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AdminSettings /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/videos" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorVideos /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><CurriculumManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/enrollment-matrix" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><EnrollmentMatrix /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/curriculum" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><CurriculumManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
 
 
