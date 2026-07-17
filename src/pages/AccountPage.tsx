@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link, Navigate } from "react-router-dom";
 import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -13,11 +13,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePaymentSubmissions } from "@/hooks/usePaymentSubmissions";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { PaymentStatusTracker } from "@/components/subscription/PaymentStatusTracker";
 import { SubscriptionRenewalCard } from "@/components/subscription/SubscriptionRenewalCard";
 import { PricingSection } from "@/components/account/PricingSection";
 import { EnrollmentForm } from "@/components/account/EnrollmentForm";
 import { OnboardingTour } from "@/components/account/OnboardingTour";
+import { UserAvatar } from "@/components/profile/UserAvatar";
+import { ProfileEditor } from "@/components/profile/ProfileEditor";
+import { bestDisplayName } from "@/lib/profile";
 
 export function AccountPage() {
   const navigate = useNavigate();
@@ -25,6 +29,22 @@ export function AccountPage() {
   const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
+
+  // Extended profile fields (display_name, bio, avatar_path) not yet on the
+  // shared auth Profile type — fetched separately so saves can refetch cleanly.
+  const { data: extProfile, refetch: refetchExt } = useQuery({
+    enabled: !!user?.id,
+    queryKey: ["profile-ext", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, display_name, bio, avatar_path, avatar_updated_at, center_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Redirect handled after all hooks run — see check right above the main return.
   const shouldRedirectToTutor =
@@ -235,15 +255,16 @@ export function AccountPage() {
       {/* Profile Header */}
       <Card className="p-6 bg-card border border-border">
         <div className="flex items-center gap-4">
-          <Avatar className="w-20 h-20 border-4 border-accent/20">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
-              {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
-            <p className="text-muted-foreground">{user?.email}</p>
+          <UserAvatar
+            path={extProfile?.avatar_path ?? null}
+            name={extProfile?.display_name || displayName}
+            className="w-20 h-20 border-4 border-accent/20"
+            fallbackClassName="text-2xl bg-accent text-accent-foreground font-bold"
+            refreshKey={extProfile?.avatar_updated_at}
+          />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-foreground truncate">{extProfile?.display_name || displayName}</h1>
+            <p className="text-muted-foreground truncate">{user?.email}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {profile?.form_year && <Badge variant="secondary">{profile.form_year}</Badge>}
               <Badge variant="outline" className="text-xs">Member since {memberSince}</Badge>
@@ -251,6 +272,25 @@ export function AccountPage() {
           </div>
         </div>
       </Card>
+
+      {/* Profile Editor */}
+      {extProfile && (
+        <ProfileEditor
+          profile={{
+            id: extProfile.id,
+            user_id: extProfile.user_id,
+            full_name: extProfile.full_name || displayName,
+            display_name: extProfile.display_name,
+            bio: extProfile.bio,
+            avatar_path: extProfile.avatar_path,
+            avatar_updated_at: extProfile.avatar_updated_at,
+            center_id: extProfile.center_id,
+            email: user?.email ?? null,
+          }}
+          onSaved={() => refetchExt()}
+        />
+      )}
+
 
       {/* === STEP 1: Pricing & Registration (shown when NOT registered) === */}
       {!isRegistered && (
