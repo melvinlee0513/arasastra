@@ -32,7 +32,10 @@ import {
   openClassResource,
   splitFilePath,
   generatePdfPreviewBlob,
+  matchesResourceTab,
 } from "@/lib/classResources";
+import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import {
   DndContext,
   DragEndEvent,
