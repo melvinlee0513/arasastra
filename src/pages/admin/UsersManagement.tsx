@@ -371,12 +371,13 @@ export function UsersManagement() {
           </div>
         </div>
 
-        {/* Tabs: Tutors / Students */}
-        <div className="inline-flex items-center gap-1 rounded-full bg-white/80 backdrop-blur-md border border-white/40 p-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        {/* Tabs */}
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-full bg-white/80 backdrop-blur-md border border-white/40 p-1 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           {([
             { id: "student", label: "Students", icon: User },
             { id: "tutor", label: "Tutors", icon: GraduationCap },
             ...(isSuperadmin ? [{ id: "admin", label: "Admins", icon: Shield }] as const : []),
+            { id: "invitations", label: "Invitations", icon: Send },
           ] as const).map((t) => {
             const active = activeTab === t.id;
             const Icon = t.icon;
@@ -384,7 +385,7 @@ export function UsersManagement() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setActiveTab(t.id)}
+                onClick={() => setActiveTab(t.id as typeof activeTab)}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full px-5 h-10 text-sm font-medium transition-colors",
                   active
@@ -398,6 +399,12 @@ export function UsersManagement() {
             );
           })}
         </div>
+
+        {activeTab === "invitations" ? (
+          <InvitationsPanel />
+        ) : (
+        <>
+
 
 
         {/* Faceted filter bar */}
