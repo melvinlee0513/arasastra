@@ -114,6 +114,7 @@ export default function TutorClassResources() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const { currentTenantId } = useTenant();
+  const queryClient = useQueryClient();
 
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -123,7 +124,7 @@ export default function TutorClassResources() {
   const [editing, setEditing] = useState<Resource | null>(null);
   const [tab, setTab] = useState<string>("all");
 
-  // Arrange mode
+  // Arrange mode — draftOrder is the full class order; tab filters the view.
   const [arrangeMode, setArrangeMode] = useState(false);
   const [draftOrder, setDraftOrder] = useState<Resource[]>([]);
   const [savingOrder, setSavingOrder] = useState(false);
