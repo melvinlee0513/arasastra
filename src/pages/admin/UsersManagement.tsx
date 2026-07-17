@@ -222,31 +222,40 @@ export function UsersManagement() {
   const updateUserRole = async (userId: string, newRole: "admin" | "student" | "tutor") => {
     setUpdatingRoleId(userId);
     try {
-      if (newRole === "tutor") {
-        // Atomic promotion: preserves existing admin/student roles.
-        const { error } = await (supabase as any).rpc("assign_tutor_role", {
-          _target_user: userId,
+      if (newRole === "student" || newRole === "tutor") {
+        // Atomic swap between the two ordinary roles. Preserves admin rows.
+        const { error } = await (supabase as any).rpc("replace_tenant_member_role", {
+          target_user_id: userId,
+          requested_role: newRole,
         });
         if (error) throw error;
       } else {
-        // Additive assignment for admin/student — never overwrite existing roles.
+        // Admin is additive on top of an existing ordinary role and never
+        // replaces student/tutor via this dropdown.
         const { error } = await supabase
           .from("user_roles")
-          .insert({ user_id: userId, role: newRole as any });
+          .insert({ user_id: userId, role: "admin" as any });
         if (error && !`${error.message}`.toLowerCase().includes("duplicate")) throw error;
       }
       setUsers((prev) =>
         prev.map((u) => (u.user_id === userId ? { ...u, role: newRole } : u)),
       );
-      toast({ title: "Role granted", description: `${newRole} role assigned.` });
+      // Refresh the underlying list so downstream role-derived UI (tutor
+      // assignments, enrollments) reflects the new state without a manual
+      // reload.
+      await fetchAll();
+      toast({ title: "Role updated", description: `${newRole} role assigned.` });
     } catch (e: any) {
+      const msg = `${e?.message ?? ""}`.toLowerCase();
       toast({
-        title: "Couldn't grant role",
-        description: e?.message?.includes("different centre")
+        title: "Couldn't update role",
+        description: msg.includes("different centre")
           ? "That user belongs to another centre."
-          : e?.message?.includes("not an admin")
-            ? "You don't have permission to grant roles."
-            : "Please try again in a moment.",
+          : msg.includes("not an admin")
+            ? "You don't have permission to change roles."
+            : msg.includes("superadmin")
+              ? "Superadmin accounts can't be changed here."
+              : "Please try again in a moment.",
         variant: "destructive",
       });
     } finally {

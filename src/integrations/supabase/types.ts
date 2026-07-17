@@ -1974,6 +1974,10 @@ export type Database = {
           resource_id: string
         }[]
       }
+      replace_tenant_member_role: {
+        Args: { requested_role: string; target_user_id: string }
+        Returns: Json
+      }
       resolve_tenant_by_subdomain: {
         Args: { _slug: string }
         Returns: {
