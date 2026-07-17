@@ -945,6 +945,25 @@ function ResourceFormModal({
           <DialogTitle>{isEdit ? "Edit material" : "Attach material"}</DialogTitle>
         </DialogHeader>
 
+        {restoredFromDraft && (
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 flex items-center justify-between gap-3">
+            <span>Restored your unsaved draft.</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearDraft();
+                setTitle("");
+                setDescription("");
+                setUrl("");
+                setFile(null);
+              }}
+              className="underline hover:no-underline"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
