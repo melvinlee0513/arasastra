@@ -657,6 +657,16 @@ export function UsersManagement() {
 
       {/* Invite user modal */}
       <InviteUserModal open={inviteOpen} onClose={() => { setInviteOpen(false); fetchAll(); }} />
+
+      {/* Delete account confirmation */}
+      <DeleteAccountDialog
+        target={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={(uid) => {
+          setUsers((prev) => prev.filter((u) => u.user_id !== uid));
+          fetchAll();
+        }}
+      />
     </div>
   );
 }
