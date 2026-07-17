@@ -275,9 +275,9 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
-  // payload.type is the hook event type ("auth")
   const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  // Log only non-sensitive fields — never the token or full confirmation URL.
+  console.log('Received auth event', { emailType, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
   if (!EmailTemplate) {
@@ -288,29 +288,35 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  // Build template props from payload.data (HookData structure)
+  // Admin client for tenant lookup + queue enqueue.
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
+  // Rewrite ONLY the host of the Supabase-generated confirmation URL to the
+  // tenant canonical host. Path, query and fragment (the one-time verifier)
+  // are preserved so expiry, one-time-use and revocation semantics stay intact.
+  const tenantHost = await resolveTenantHost(supabase, emailType, payload.data.email)
+  const confirmationUrl = payload.data.url
+    ? rewriteConfirmationUrl(payload.data.url, tenantHost)
+    : payload.data.url
+
   const templateProps = {
     siteName: SITE_NAME,
-    siteUrl: `https://${ROOT_DOMAIN}`,
+    siteUrl: `https://${tenantHost}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
+    confirmationUrl,
     token: payload.data.token,
     email: payload.data.email,
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
 
-  // Render React Email to HTML and plain text
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
   const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
     plainText: true,
   })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
 
   const messageId = crypto.randomUUID()
 
@@ -328,7 +334,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       run_id,
       message_id: messageId,
       to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: FROM_ADDRESS,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,
