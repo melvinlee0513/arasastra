@@ -191,6 +191,66 @@ export type Database = {
         }
         Relationships: []
       }
+      class_about: {
+        Row: {
+          center_id: string
+          class_expectations: string | null
+          class_id: string
+          contact_guidance: string | null
+          created_at: string
+          id: string
+          learning_objectives: string | null
+          overview: string | null
+          preparation_requirements: string | null
+          updated_at: string
+          updated_by: string | null
+          venue_or_meeting_info: string | null
+        }
+        Insert: {
+          center_id: string
+          class_expectations?: string | null
+          class_id: string
+          contact_guidance?: string | null
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          overview?: string | null
+          preparation_requirements?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          venue_or_meeting_info?: string | null
+        }
+        Update: {
+          center_id?: string
+          class_expectations?: string | null
+          class_id?: string
+          contact_guidance?: string | null
+          created_at?: string
+          id?: string
+          learning_objectives?: string | null
+          overview?: string | null
+          preparation_requirements?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          venue_or_meeting_info?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_about_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_about_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: true
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_enrollments: {
         Row: {
           center_id: string

@@ -1,0 +1,197 @@
+import { ReactNode } from "react";
+import { Link, NavLink } from "react-router-dom";
+import {
+  Home, ChevronRight, GraduationCap, BookOpen, User, Clock, Calendar,
+  LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ClassContextData } from "@/hooks/useClassContext";
+import { cn } from "@/lib/utils";
+
+export type ClassSection =
+  | "home"
+  | "announcements"
+  | "materials"
+  | "discussions"
+  | "quizzes"
+  | "about";
+
+type BreadcrumbItem = { label: string; to?: string };
+
+interface ClassShellProps {
+  data: ClassContextData | undefined;
+  isLoading: boolean;
+  role: "student" | "tutor";
+  section: ClassSection;
+  basePath: string; // e.g. /dashboard/classes/:id or /tutor/classes/:id
+  materialsPath: string; // student uses /materials, tutor uses /resources
+  breadcrumbs: BreadcrumbItem[];
+  headerRight?: ReactNode;
+  children: ReactNode;
+}
+
+const NAV: {
+  key: ClassSection;
+  label: string;
+  icon: typeof Home;
+  disabled?: boolean;
+  disabledLabel?: string;
+}[] = [
+  { key: "home", label: "Home", icon: LayoutGrid },
+  { key: "announcements", label: "Announcements", icon: Megaphone, disabled: true, disabledLabel: "Coming soon" },
+  { key: "materials", label: "Materials", icon: FileText },
+  { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
+  { key: "quizzes", label: "Quizzes", icon: HelpCircle, disabled: true, disabledLabel: "Coming soon" },
+  { key: "about", label: "About", icon: Info },
+];
+
+export function ClassShell({
+  data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
+}: ClassShellProps) {
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-5 md:p-8 space-y-6">
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-40 rounded-3xl" />
+        <Skeleton className="h-12 rounded-full w-full max-w-2xl" />
+        <Skeleton className="h-64 rounded-3xl" />
+      </div>
+    );
+  }
+
+  const k = data?.klass;
+
+  const tutorLabel = data?.tutors.map((t) => t.full_name).filter(Boolean).join(", ") || null;
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+          {breadcrumbs.map((b, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5">
+              {i > 0 && <ChevronRight className="w-3.5 h-3.5" />}
+              {b.to ? (
+                <Link to={b.to} className="inline-flex items-center gap-1 hover:text-primary">
+                  {i === 0 && <Home className="w-3.5 h-3.5" />} {b.label}
+                </Link>
+              ) : (
+                <span className="text-slate-900 font-medium truncate max-w-[50vw]">{b.label}</span>
+              )}
+            </span>
+          ))}
+        </nav>
+
+        {k && (
+          <header className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 sm:p-8">
+            <div className="flex flex-col md:flex-row md:items-start gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <GraduationCap className="w-7 h-7 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">{k.title}</h1>
+                {k.cohort_label && <p className="text-sm text-slate-500 mt-1">{k.cohort_label}</p>}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {k.subject?.name && (
+                    <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
+                      <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
+                    </Badge>
+                  )}
+                  {tutorLabel && (
+                    <Badge variant="outline" className="rounded-full">
+                      <User className="w-3 h-3 mr-1" /> {tutorLabel}
+                    </Badge>
+                  )}
+                  {k.schedule_label && (
+                    <Badge variant="outline" className="rounded-full">
+                      <Clock className="w-3 h-3 mr-1" /> {k.schedule_label}
+                    </Badge>
+                  )}
+                  {k.scheduled_at && (
+                    <Badge variant="secondary" className="rounded-full">
+                      <Calendar className="w-3 h-3 mr-1" /> Next: {new Date(k.scheduled_at).toLocaleString()}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              {headerRight && <div className="shrink-0">{headerRight}</div>}
+            </div>
+          </header>
+        )}
+
+        {/* Class-level navigation */}
+        {k && (
+          <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
+            <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm inline-flex gap-1 min-w-max">
+              {NAV.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.key === section;
+                const href = resolveHref(item.key, basePath, materialsPath);
+                const disabled = item.disabled || !href;
+                const content = (
+                  <>
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                    {disabled && (
+                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        Soon
+                      </span>
+                    )}
+                  </>
+                );
+                const baseCls = "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors";
+                if (disabled) {
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      disabled
+                      aria-disabled
+                      title={item.disabledLabel || "Coming soon"}
+                      className={cn(baseCls, "text-slate-400 cursor-not-allowed")}
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+                return (
+                  <NavLink
+                    key={item.key}
+                    to={href!}
+                    end={item.key === "home"}
+                    className={cn(
+                      baseCls,
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-slate-700 hover:bg-slate-100"
+                    )}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {content}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function resolveHref(key: ClassSection, basePath: string, materialsPath: string): string | null {
+  switch (key) {
+    case "home":
+      return basePath;
+    case "materials":
+      return materialsPath;
+    case "about":
+      return `${basePath}/about`;
+    default:
+      return null;
+  }
+}
