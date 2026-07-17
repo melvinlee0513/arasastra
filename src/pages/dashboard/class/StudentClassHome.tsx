@@ -120,6 +120,33 @@ export function StudentClassHome() {
   return shell(
     <div className="grid gap-5 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-5">
+        {latestAnnQ.data && (
+          <section className={`rounded-3xl border p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${latestAnnQ.data.is_pinned ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-primary" /> Latest announcement
+              </h2>
+              <Button asChild variant="ghost" size="sm" className="text-primary">
+                <Link to={`${basePath}/announcements`}>View all <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {latestAnnQ.data.is_pinned && (
+                <Badge className="rounded-full bg-amber-100 text-amber-800 hover:bg-amber-100">
+                  <Pin className="w-3 h-3 mr-1" /> Pinned
+                </Badge>
+              )}
+              <h3 className="font-semibold text-slate-900 break-words">{latestAnnQ.data.title}</h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {new Date(latestAnnQ.data.published_at || latestAnnQ.data.created_at).toLocaleString()}
+              {latestAnnQ.data.edited_at && " · edited"}
+            </p>
+            {latestAnnQ.data.body && (
+              <p className="text-sm text-slate-700 whitespace-pre-wrap mt-3 line-clamp-4">{latestAnnQ.data.body}</p>
+            )}
+          </section>
+        )}
         <section className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-slate-900">Recent materials</h2>
