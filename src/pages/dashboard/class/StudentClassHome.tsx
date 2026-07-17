@@ -15,6 +15,8 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { hasValidSource, openClassResource } from "@/lib/classResources";
+import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
+import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
 
 type ResourceRow = {
