@@ -188,6 +188,8 @@ function resolveHref(key: ClassSection, basePath: string, materialsPath: string)
   switch (key) {
     case "home":
       return basePath;
+    case "announcements":
+      return `${basePath}/announcements`;
     case "materials":
       return materialsPath;
     case "about":
