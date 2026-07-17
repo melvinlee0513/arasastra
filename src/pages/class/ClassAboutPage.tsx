@@ -12,6 +12,9 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import { showSupabaseError } from "@/lib/supabaseErrors";
+import { ClassCoverManager } from "@/components/class/ClassCoverManager";
+import { bestDisplayName } from "@/lib/profile";
+import { initialsFor } from "@/lib/profile";
 
 type AboutRow = {
   id?: string;
@@ -151,12 +154,20 @@ export function ClassAboutPage({ variant }: Props) {
   return shell(
     <div className="space-y-5">
       {canManage && (
-        <div className="flex items-center justify-between bg-white rounded-3xl border border-slate-200 shadow-sm p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-3xl border border-slate-200 shadow-sm p-4">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Info className="w-4 h-4 text-primary" />
             {editing ? "Editing About — changes are visible to enrolled students once saved." : "Only assigned tutors and centre admins can edit About."}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {ctx.data?.klass && ctx.data.klass.center_id && !editing && (
+              <ClassCoverManager
+                classId={ctx.data.klass.id}
+                centerId={ctx.data.klass.center_id}
+                currentPath={ctx.data.klass.cover_image_path}
+                currentVersion={ctx.data.klass.cover_image_updated_at}
+              />
+            )}
             {editing ? (
               <>
                 <Button
@@ -187,6 +198,7 @@ export function ClassAboutPage({ variant }: Props) {
           </div>
         </div>
       )}
+
 
       {aboutQ.isLoading ? (
         <div className="bg-white rounded-3xl border border-slate-200 p-8 text-sm text-slate-500 text-center">Loading…</div>
@@ -222,14 +234,17 @@ export function ClassAboutPage({ variant }: Props) {
             <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2"><User className="w-4 h-4 text-primary" /> Your tutor{ctx.data.tutors.length > 1 ? "s" : ""}</h3>
               <ul className="mt-3 flex flex-wrap gap-3">
-                {ctx.data.tutors.map((t) => (
-                  <li key={t.id} className="inline-flex items-center gap-2 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm text-slate-700">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                      {(t.full_name || "?").charAt(0).toUpperCase()}
-                    </div>
-                    {t.full_name || "Assigned tutor"}
-                  </li>
-                ))}
+                {ctx.data.tutors.map((t) => {
+                  const name = bestDisplayName(t);
+                  return (
+                    <li key={t.id} className="inline-flex items-center gap-2 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm text-slate-700">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                        {initialsFor(name)}
+                      </div>
+                      <span className="line-clamp-2">{name}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}

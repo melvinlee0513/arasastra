@@ -498,6 +498,9 @@ export type Database = {
           class_tag: string | null
           cohort_label: string | null
           cohort_name: string | null
+          cover_image_path: string | null
+          cover_image_updated_at: string | null
+          cover_image_updated_by: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -523,6 +526,9 @@ export type Database = {
           class_tag?: string | null
           cohort_label?: string | null
           cohort_name?: string | null
+          cover_image_path?: string | null
+          cover_image_updated_at?: string | null
+          cover_image_updated_by?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -548,6 +554,9 @@ export type Database = {
           class_tag?: string | null
           cohort_label?: string | null
           cohort_name?: string | null
+          cover_image_path?: string | null
+          cover_image_updated_at?: string | null
+          cover_image_updated_by?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2088,6 +2097,8 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      _cover_path_center: { Args: { _name: string }; Returns: string }
+      _cover_path_class: { Args: { _name: string }; Returns: string }
       admin_clear_student_profile: {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json

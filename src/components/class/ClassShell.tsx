@@ -1,13 +1,15 @@
 import { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
-  Home, ChevronRight, GraduationCap, BookOpen, User, Clock, Calendar,
+  Home, ChevronRight, BookOpen, User, Clock, Calendar,
   LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClassContextData } from "@/hooks/useClassContext";
 import { cn } from "@/lib/utils";
+import { ClassCover } from "@/components/class/ClassCover";
+import { tutorLabel } from "@/lib/classCovers";
 
 export type ClassSection =
   | "home"
@@ -64,8 +66,7 @@ export function ClassShell({
   }
 
   const k = data?.klass;
-
-  const tutorLabel = data?.tutors.map((t) => t.full_name).filter(Boolean).join(", ") || null;
+  const tutorText = tutorLabel(data?.tutors);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -86,41 +87,45 @@ export function ClassShell({
         </nav>
 
         {k && (
-          <header className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 sm:p-8">
-            <div className="flex flex-col md:flex-row md:items-start gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <GraduationCap className="w-7 h-7 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">{k.title}</h1>
-                {k.cohort_label && <p className="text-sm text-slate-500 mt-1">{k.cohort_label}</p>}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {k.subject?.name && (
-                    <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
-                      <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
-                    </Badge>
-                  )}
-                  {tutorLabel && (
+          <header className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+            <ClassCover
+              classId={k.id}
+              coverPath={k.cover_image_path}
+              version={k.cover_image_updated_at}
+              priority
+            />
+            <div className="p-5 sm:p-8">
+              <div className="flex flex-col md:flex-row md:items-start gap-5">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">{k.title}</h1>
+                  {k.cohort_label && <p className="text-sm text-slate-500 mt-1">{k.cohort_label}</p>}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {k.subject?.name && (
+                      <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
+                        <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="rounded-full">
-                      <User className="w-3 h-3 mr-1" /> {tutorLabel}
+                      <User className="w-3 h-3 mr-1" /> {tutorText}
                     </Badge>
-                  )}
-                  {k.schedule_label && (
-                    <Badge variant="outline" className="rounded-full">
-                      <Clock className="w-3 h-3 mr-1" /> {k.schedule_label}
-                    </Badge>
-                  )}
-                  {k.scheduled_at && (
-                    <Badge variant="secondary" className="rounded-full">
-                      <Calendar className="w-3 h-3 mr-1" /> Next: {new Date(k.scheduled_at).toLocaleString()}
-                    </Badge>
-                  )}
+                    {k.schedule_label && (
+                      <Badge variant="outline" className="rounded-full">
+                        <Clock className="w-3 h-3 mr-1" /> {k.schedule_label}
+                      </Badge>
+                    )}
+                    {k.scheduled_at && (
+                      <Badge variant="secondary" className="rounded-full">
+                        <Calendar className="w-3 h-3 mr-1" /> Next: {new Date(k.scheduled_at).toLocaleString()}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                {headerRight && <div className="shrink-0">{headerRight}</div>}
               </div>
-              {headerRight && <div className="shrink-0">{headerRight}</div>}
             </div>
           </header>
         )}
+
 
         {/* Class-level navigation */}
         {k && (
