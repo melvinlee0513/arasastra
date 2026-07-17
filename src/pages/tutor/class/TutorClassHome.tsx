@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ExternalLink, ArrowRight, Info,
+  Users, CheckCircle2, ExternalLink, ArrowRight, Megaphone, Pin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
+import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 
 type ResourceRow = {
   id: string; title: string; resource_type: string; status: string;
@@ -24,6 +25,8 @@ export function TutorClassHome() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
+  const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canManage);
+
 
   const data = useQuery({
     queryKey: ["tutor-class-home", currentTenantId, classId, user?.id],
@@ -98,10 +101,40 @@ export function TutorClassHome() {
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/about`}><PencilLine className="w-4 h-4 mr-2" /> Edit About</Link>
         </Button>
-        <Button variant="outline" className="rounded-full h-11 justify-center" disabled>
-          <Info className="w-4 h-4 mr-2" /> Announcements
+        <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+          <Link to={`${basePath}/announcements`}><Megaphone className="w-4 h-4 mr-2" /> Announcements</Link>
         </Button>
       </div>
+
+      {/* Latest announcement */}
+      {latestAnnQ.data && (
+        <section className={`rounded-3xl border p-5 sm:p-6 shadow-sm ${latestAnnQ.data.is_pinned ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-primary" /> Latest announcement
+            </h3>
+            <Button asChild variant="ghost" size="sm" className="text-primary">
+              <Link to={`${basePath}/announcements`}>Manage <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {latestAnnQ.data.is_pinned && (
+              <Badge className="rounded-full bg-amber-100 text-amber-800 hover:bg-amber-100">
+                <Pin className="w-3 h-3 mr-1" /> Pinned
+              </Badge>
+            )}
+            <p className="font-semibold text-slate-900 break-words">{latestAnnQ.data.title}</p>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            {new Date(latestAnnQ.data.published_at || latestAnnQ.data.created_at).toLocaleString()}
+            {latestAnnQ.data.edited_at && " · edited"}
+          </p>
+          {latestAnnQ.data.body && (
+            <p className="text-sm text-slate-700 whitespace-pre-wrap mt-3 line-clamp-3">{latestAnnQ.data.body}</p>
+          )}
+        </section>
+      )}
+
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">

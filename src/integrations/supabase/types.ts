@@ -82,6 +82,32 @@ export type Database = {
           },
         ]
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          read_at: string
+          student_user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          read_at?: string
+          student_user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          read_at?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "class_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           class_id: string | null
@@ -246,6 +272,72 @@ export type Database = {
             foreignKeyName: "class_about_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: true
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_announcements: {
+        Row: {
+          author_user_id: string
+          body: string
+          center_id: string
+          class_id: string
+          created_at: string
+          edited_at: string | null
+          expires_at: string | null
+          id: string
+          is_pinned: boolean
+          publish_at: string | null
+          published_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_user_id: string
+          body?: string
+          center_id: string
+          class_id: string
+          created_at?: string
+          edited_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          publish_at?: string | null
+          published_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_user_id?: string
+          body?: string
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          edited_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          publish_at?: string | null
+          published_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_announcements_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_announcements_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },

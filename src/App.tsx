@@ -43,6 +43,7 @@ const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m 
 const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
 const StudentClassHome = lazy(() => import("@/pages/dashboard/class/StudentClassHome").then(m => ({ default: m.StudentClassHome })));
 const StudentClassMaterials = lazy(() => import("@/pages/dashboard/class/StudentClassMaterials").then(m => ({ default: m.StudentClassMaterials })));
+const StudentClassAnnouncements = lazy(() => import("@/pages/dashboard/class/StudentClassAnnouncements").then(m => ({ default: m.StudentClassAnnouncements })));
 const ClassAboutPage = lazy(() => import("@/pages/class/ClassAboutPage").then(m => ({ default: m.ClassAboutPage })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
@@ -62,6 +63,7 @@ const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m 
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
 const TutorClassHome = lazy(() => import("@/pages/tutor/class/TutorClassHome").then(m => ({ default: m.TutorClassHome })));
+const TutorClassAnnouncements = lazy(() => import("@/pages/tutor/class/TutorClassAnnouncements").then(m => ({ default: m.TutorClassAnnouncements })));
 const TutorAccount = lazy(() => import("@/pages/tutor/TutorAccount").then(m => ({ default: m.TutorAccount })));
 const ClassRoomPreview = lazy(() => import("@/pages/dashboard/ClassRoomPreview"));
 const TutorClassRoomPreview = lazy(() => import("@/pages/tutor/TutorClassRoomPreview"));
@@ -162,7 +164,9 @@ const App = () => (
             <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassHome /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/materials" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassMaterials /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/announcements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassAnnouncements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/about" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassAboutPage variant="student" /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+
             {/* UI-only previews — superadmin-gated, never linked from production nav. Isolated mock data, no backend calls. */}
             <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><ClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TutorClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />
@@ -181,6 +185,7 @@ const App = () => (
             <Route path="/tutor/classes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClasses /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassHome /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/about" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassAboutPage variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/announcements" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassAnnouncements /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
