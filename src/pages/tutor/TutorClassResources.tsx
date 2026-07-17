@@ -84,6 +84,7 @@ type Resource = {
   file_path: string | null;
   external_url: string | null;
   embed_url: string | null;
+  thumbnail_path: string | null;
   status: string;
   created_at: string;
   published_at: string | null;
