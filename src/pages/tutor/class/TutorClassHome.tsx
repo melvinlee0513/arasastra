@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ExternalLink, ArrowRight, Info,
+  Users, CheckCircle2, ExternalLink, ArrowRight, Info, Megaphone, Pin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
+import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 
 type ResourceRow = {
   id: string; title: string; resource_type: string; status: string;
