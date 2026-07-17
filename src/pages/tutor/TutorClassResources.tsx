@@ -168,7 +168,7 @@ export default function TutorClassResources() {
     const { data: res } = await supabase
       .from("class_resources")
       .select(
-        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, status, created_at, published_at, display_order",
+        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, thumbnail_path, status, created_at, published_at, display_order",
       )
       .eq("class_id", classId)
       .order("display_order", { ascending: true })
