@@ -39,7 +39,7 @@ const NAV: {
   disabledLabel?: string;
 }[] = [
   { key: "home", label: "Home", icon: LayoutGrid },
-  { key: "announcements", label: "Announcements", icon: Megaphone, disabled: true, disabledLabel: "Coming soon" },
+  { key: "announcements", label: "Announcements", icon: Megaphone },
   { key: "materials", label: "Materials", icon: FileText },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
   { key: "quizzes", label: "Quizzes", icon: HelpCircle, disabled: true, disabledLabel: "Coming soon" },
