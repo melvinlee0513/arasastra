@@ -49,7 +49,8 @@ const NAV: {
 export function ClassShell({
   data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
 }: ClassShellProps) {
-  const location = useLocation();
+
+
 
   if (isLoading) {
     return (
