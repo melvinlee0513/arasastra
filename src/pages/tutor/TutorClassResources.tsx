@@ -31,6 +31,7 @@ import {
   sanitiseFilename,
   openClassResource,
   splitFilePath,
+  generatePdfPreviewBlob,
 } from "@/lib/classResources";
 import {
   DndContext,
