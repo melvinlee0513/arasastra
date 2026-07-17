@@ -83,6 +83,7 @@ const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const queryClient = useQueryClient();
 
   const [center, setCenter] = useState<TenantCenter | null>(null);
@@ -90,6 +91,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
+  // Track which user we already fully resolved centres for. This prevents
+  // Supabase token refreshes (which produce a fresh `user` object with the
+  // SAME id) from re-triggering tenant resolution and flashing the
+  // "Loading your organisation…" gate over modals and forms.
+  const [resolvedForUserId, setResolvedForUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
   const [subdomainResolved, setSubdomainResolved] = useState(false);
