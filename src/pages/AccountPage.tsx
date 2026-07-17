@@ -45,7 +45,6 @@ export function AccountPage() {
       return data;
     },
   });
-  const { toast } = useToast();
 
   // Redirect handled after all hooks run — see check right above the main return.
   const shouldRedirectToTutor =
