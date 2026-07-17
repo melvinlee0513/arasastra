@@ -560,19 +560,19 @@ function SortableRow({
           <button
             type="button"
             aria-label={`Drag ${r.title}`}
-            className="self-start sm:self-center shrink-0 mt-1 sm:mt-0 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-1 touch-none"
+            className="flex items-center justify-center h-8 w-8 cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-800 touch-none"
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-5 w-5" />
+            <GripVertical className="h-4 w-4" />
           </button>
         }
         actions={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 ml-auto">
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full h-8 w-8"
+              className="rounded-full h-9 w-9"
               onClick={onUp}
               disabled={!canMoveUp}
               aria-label={`Move ${r.title} up`}
@@ -582,7 +582,7 @@ function SortableRow({
             <Button
               size="icon"
               variant="ghost"
-              className="rounded-full h-8 w-8"
+              className="rounded-full h-9 w-9"
               onClick={onDown}
               disabled={!canMoveDown}
               aria-label={`Move ${r.title} down`}
