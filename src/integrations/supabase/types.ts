@@ -1115,9 +1115,13 @@ export type Database = {
         Row: {
           admin_remarks: string | null
           assigned_tutor_id: string | null
+          avatar_path: string | null
+          avatar_updated_at: string | null
           avatar_url: string | null
+          bio: string | null
           center_id: string
           created_at: string | null
+          display_name: string | null
           email: string | null
           form_year: string | null
           full_name: string
@@ -1129,15 +1133,20 @@ export type Database = {
           phone: string | null
           plan_id: string | null
           updated_at: string | null
+          updated_by: string | null
           user_id: string
           xp_points: number
         }
         Insert: {
           admin_remarks?: string | null
           assigned_tutor_id?: string | null
+          avatar_path?: string | null
+          avatar_updated_at?: string | null
           avatar_url?: string | null
+          bio?: string | null
           center_id: string
           created_at?: string | null
+          display_name?: string | null
           email?: string | null
           form_year?: string | null
           full_name: string
@@ -1149,15 +1158,20 @@ export type Database = {
           phone?: string | null
           plan_id?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           user_id: string
           xp_points?: number
         }
         Update: {
           admin_remarks?: string | null
           assigned_tutor_id?: string | null
+          avatar_path?: string | null
+          avatar_updated_at?: string | null
           avatar_url?: string | null
+          bio?: string | null
           center_id?: string
           created_at?: string | null
+          display_name?: string | null
           email?: string | null
           form_year?: string | null
           full_name?: string
@@ -1169,6 +1183,7 @@ export type Database = {
           phone?: string | null
           plan_id?: string | null
           updated_at?: string | null
+          updated_by?: string | null
           user_id?: string
           xp_points?: number
         }
@@ -2073,6 +2088,10 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      admin_clear_student_profile: {
+        Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
+        Returns: Json
+      }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       bulk_enroll_students: {
         Args: {
@@ -2105,6 +2124,17 @@ export type Database = {
         }[]
       }
       get_profile_id: { Args: never; Returns: string }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          avatar_path: string
+          bio: string
+          center_id: string
+          display_name: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
