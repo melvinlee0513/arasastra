@@ -69,7 +69,6 @@ export function DeleteAccountDialog({ target, onClose, onDeleted }: Props) {
         body: { target_user_id: target.user_id, confirm_email: typedEmail.trim().toLowerCase() },
       });
       if (error) {
-        // Try to surface structured error code from function response.
         const anyErr = error as unknown as { context?: { body?: unknown } };
         let code = "cleanup_failed";
         try {
@@ -81,7 +80,15 @@ export function DeleteAccountDialog({ target, onClose, onDeleted }: Props) {
       }
       if ((data as any)?.error) throw new Error((data as any).error);
 
-      toast({ title: "User account permanently deleted" });
+      const status = (data as any)?.status as string | undefined;
+      if (status === "pending_storage_cleanup") {
+        toast({
+          title: "Account access removed",
+          description: "Personal file cleanup is still pending. A superadmin can retry from the deletion job.",
+        });
+      } else {
+        toast({ title: "User account permanently deleted" });
+      }
       onDeleted?.(target.user_id);
       // Invalidate downstream caches.
       await Promise.all([
