@@ -202,9 +202,15 @@ export default function TutorClassResources() {
 
   async function remove(r: Resource) {
     if (!confirm(`Delete "${r.title}"?`)) return;
-    // Try storage cleanup first (best-effort — RLS still enforces access).
+    // Best-effort storage cleanup (RLS still enforces access).
     if (r.file_path) {
       const parts = splitFilePath(r.file_path);
+      if (parts) {
+        await supabase.storage.from(parts.bucket).remove([parts.path]).catch(() => null);
+      }
+    }
+    if (r.thumbnail_path) {
+      const parts = splitFilePath(r.thumbnail_path);
       if (parts) {
         await supabase.storage.from(parts.bucket).remove([parts.path]).catch(() => null);
       }
