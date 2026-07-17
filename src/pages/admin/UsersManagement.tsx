@@ -576,7 +576,10 @@ export function UsersManagement() {
             </Table>
           </div>
         </Card>
+        </>
+        )}
       </div>
+
 
       {/* Edit Profile Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
