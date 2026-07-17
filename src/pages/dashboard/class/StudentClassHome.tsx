@@ -71,6 +71,8 @@ export function StudentClassHome() {
     },
   });
 
+  const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canView);
+
   const counts = useMemo(() => {
     const r = resourcesQ.data || [];
     return {
