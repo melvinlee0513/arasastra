@@ -43,6 +43,7 @@ const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m 
 const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
 const StudentClassHome = lazy(() => import("@/pages/dashboard/class/StudentClassHome").then(m => ({ default: m.StudentClassHome })));
 const StudentClassMaterials = lazy(() => import("@/pages/dashboard/class/StudentClassMaterials").then(m => ({ default: m.StudentClassMaterials })));
+const StudentClassAnnouncements = lazy(() => import("@/pages/dashboard/class/StudentClassAnnouncements").then(m => ({ default: m.StudentClassAnnouncements })));
 const ClassAboutPage = lazy(() => import("@/pages/class/ClassAboutPage").then(m => ({ default: m.ClassAboutPage })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
