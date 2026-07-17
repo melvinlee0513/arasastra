@@ -38,16 +38,11 @@ export const BrandedEmail = ({
         <Heading style={styles.h1}>{heading}</Heading>
         <Text style={styles.text}>{intro}</Text>
         {cta ? (
-          <>
-            <Button style={styles.button} href={cta.href}>
-              {cta.label}
-            </Button>
-            <Text style={styles.fallbackLabel}>
-              Or paste this link into your browser:
-            </Text>
-            <Text style={styles.fallbackUrl}>{cta.href}</Text>
-          </>
+          <Button style={styles.button} href={cta.href}>
+            {cta.label}
+          </Button>
         ) : null}
+
         {children}
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
         <Text style={styles.footer}>{BRAND.footerLine}</Text>
