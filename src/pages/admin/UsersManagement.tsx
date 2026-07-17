@@ -27,7 +27,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { InviteUserModal } from "@/components/admin/InviteUserModal";
 import { InvitationsPanel } from "@/components/admin/InvitationsPanel";
-import { Send } from "lucide-react";
+import { DeleteAccountDialog, type DeleteAccountTarget } from "@/components/admin/DeleteAccountDialog";
+import { Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
@@ -90,6 +91,8 @@ export function UsersManagement() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteAccountTarget | null>(null);
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
     if (activeTab === "invitations") return;
@@ -567,6 +570,31 @@ export function UsersManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          {(() => {
+                            // Permission matrix (client-side gating; server re-enforces).
+                            // Cannot delete: self, superadmin, and (for tenant admins) other admins.
+                            const isSelf = authUser?.id === user.user_id;
+                            const isSuper = user.role === "superadmin";
+                            const isAdmin = user.role === "admin";
+                            const canDelete =
+                              !isSelf && !isSuper && (isSuperadmin || !isAdmin);
+                            if (!canDelete) return null;
+                            return (
+                              <Button
+                                variant="ghost" size="sm"
+                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Delete account"
+                                onClick={() => setDeleteTarget({
+                                  user_id: user.user_id,
+                                  full_name: user.full_name,
+                                  email: user.email,
+                                  role: user.role,
+                                })}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -629,6 +657,16 @@ export function UsersManagement() {
 
       {/* Invite user modal */}
       <InviteUserModal open={inviteOpen} onClose={() => { setInviteOpen(false); fetchAll(); }} />
+
+      {/* Delete account confirmation */}
+      <DeleteAccountDialog
+        target={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={(uid) => {
+          setUsers((prev) => prev.filter((u) => u.user_id !== uid));
+          fetchAll();
+        }}
+      />
     </div>
   );
 }

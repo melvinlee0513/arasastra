@@ -17,7 +17,7 @@ export type Database = {
       admin_audit_log: {
         Row: {
           action: string
-          admin_id: string
+          admin_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
@@ -26,7 +26,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          admin_id: string
+          admin_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: string
@@ -35,7 +35,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          admin_id?: string
+          admin_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string
@@ -279,7 +279,7 @@ export type Database = {
       }
       class_announcements: {
         Row: {
-          author_user_id: string
+          author_user_id: string | null
           body: string
           center_id: string
           class_id: string
@@ -295,7 +295,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          author_user_id: string
+          author_user_id?: string | null
           body?: string
           center_id: string
           class_id: string
@@ -311,7 +311,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          author_user_id?: string
+          author_user_id?: string | null
           body?: string
           center_id?: string
           class_id?: string
@@ -2048,6 +2048,54 @@ export type Database = {
           },
         ]
       }
+      user_deletion_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step: string | null
+          failure_category: string | null
+          id: string
+          requested_at: string
+          requested_by: string
+          retry_count: number
+          status: string
+          target_center_id: string | null
+          target_email_hash: string | null
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          failure_category?: string | null
+          id?: string
+          requested_at?: string
+          requested_by: string
+          retry_count?: number
+          status?: string
+          target_center_id?: string | null
+          target_email_hash?: string | null
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          failure_category?: string | null
+          id?: string
+          requested_at?: string
+          requested_by?: string
+          retry_count?: number
+          status?: string
+          target_center_id?: string | null
+          target_email_hash?: string | null
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2111,7 +2159,7 @@ export type Database = {
           class_id: string | null
           course_module: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           duration_seconds: number | null
           file_size: number | null
@@ -2132,7 +2180,7 @@ export type Database = {
           class_id?: string | null
           course_module?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           file_size?: number | null
@@ -2153,7 +2201,7 @@ export type Database = {
           class_id?: string | null
           course_module?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           duration_seconds?: number | null
           file_size?: number | null
@@ -2214,6 +2262,7 @@ export type Database = {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json
       }
+      admin_delete_user_account: { Args: { _target: string }; Returns: Json }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       bulk_enroll_students: {
         Args: {
