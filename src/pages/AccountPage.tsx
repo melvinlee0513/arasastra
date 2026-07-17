@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link, Navigate } from "react-router-dom";
 import { Moon, Sun, Bell, BellOff, ChevronRight, LogOut, Crown, Calendar, Settings, HelpCircle, UserPlus } from "lucide-react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -13,11 +13,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePaymentSubmissions } from "@/hooks/usePaymentSubmissions";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { PaymentStatusTracker } from "@/components/subscription/PaymentStatusTracker";
 import { SubscriptionRenewalCard } from "@/components/subscription/SubscriptionRenewalCard";
 import { PricingSection } from "@/components/account/PricingSection";
 import { EnrollmentForm } from "@/components/account/EnrollmentForm";
 import { OnboardingTour } from "@/components/account/OnboardingTour";
+import { UserAvatar } from "@/components/profile/UserAvatar";
+import { ProfileEditor } from "@/components/profile/ProfileEditor";
+import { bestDisplayName } from "@/lib/profile";
 
 export function AccountPage() {
   const navigate = useNavigate();
