@@ -91,6 +91,8 @@ export function UsersManagement() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const [assignUser, setAssignUser] = useState<UserProfile | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteAccountTarget | null>(null);
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
     if (activeTab === "invitations") return;
