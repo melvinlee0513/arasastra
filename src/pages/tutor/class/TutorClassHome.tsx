@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ExternalLink, ArrowRight, Info, Megaphone, Pin,
+  Users, CheckCircle2, ExternalLink, ArrowRight, Megaphone, Pin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
