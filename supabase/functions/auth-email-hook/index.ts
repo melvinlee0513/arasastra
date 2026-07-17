@@ -325,12 +325,14 @@ async function handleWebhook(req: Request): Promise<Response> {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Rewrite ONLY the host of the Supabase-generated confirmation URL to the
-  // tenant canonical host. Path, query and fragment (the one-time verifier)
-  // are preserved so expiry, one-time-use and revocation semantics stay intact.
+  // Preserve the Supabase auth backend action URL (host + /auth/v1/verify +
+  // token + type + all params) and only override `redirect_to` so the auth
+  // backend, after validating the one-time token, returns the user to the
+  // correct Aras A+ tenant callback. Rewriting the host here would break token
+  // validation and drop users on the SPA 404.
   const tenantHost = await resolveTenantHost(supabase, emailType, payload.data.email)
   const confirmationUrl = payload.data.url
-    ? rewriteConfirmationUrl(payload.data.url, tenantHost)
+    ? withApprovedRedirect(payload.data.url, tenantHost, emailType)
     : payload.data.url
 
   const templateProps = {
