@@ -30,6 +30,23 @@ export function AccountPage() {
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
 
+  // Extended profile fields (display_name, bio, avatar_path) not yet on the
+  // shared auth Profile type — fetched separately so saves can refetch cleanly.
+  const { data: extProfile, refetch: refetchExt } = useQuery({
+    enabled: !!user?.id,
+    queryKey: ["profile-ext", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, display_name, bio, avatar_path, avatar_updated_at, center_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const { toast } = useToast();
+
   // Redirect handled after all hooks run — see check right above the main return.
   const shouldRedirectToTutor =
     !authLoading && !!user && hasRole("tutor") && !isAdmin && !hasRole("student");
