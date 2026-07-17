@@ -1039,6 +1039,11 @@ function ResourceFormModal({
                   Current file will be kept unless you choose a new one.
                 </p>
               )}
+              {showFileReselectHint && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  We restored your draft for “{savedFileName}”. Please select the file again.
+                </p>
+              )}
             </div>
           ) : (
             <div>
