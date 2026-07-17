@@ -402,99 +402,108 @@ export default function TutorClassResources() {
         </div>
       </div>
 
-      {arrangeMode ? (
-        <ArrangeList
-          items={draftOrder}
-          onReorder={setDraftOrder}
-          onMove={moveDraft}
-        />
-      ) : (
-        <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={setTab}>
+        <div className="flex items-center gap-3 flex-wrap">
           <TabsList className="rounded-full bg-slate-100/70 p-1 flex-wrap h-auto">
             {RESOURCE_TABS.map((t) => (
               <TabsTrigger key={t.key} value={t.key} className="rounded-full px-4 text-xs">
                 {t.label}
+                <span className="ml-1.5 text-[10px] text-slate-500">
+                  {tabCounts[t.key] ?? 0}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
+          {arrangeMode && isDirty && (
+            <Badge className="rounded-full bg-amber-100 text-amber-800 border-0">
+              Unsaved changes
+            </Badge>
+          )}
+        </div>
 
-          <TabsContent value={tab} className="mt-6">
-            {filtered.length === 0 ? (
-              <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
-                <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                <p className="font-medium text-slate-900">No materials yet</p>
-                <p className="text-sm text-slate-500 mt-1">
-                  Attach your first note, video, or link to this class.
-                </p>
-              </Card>
-            ) : (
-              <div
-                className="grid gap-4"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
-              >
-                {filtered.map((r) => (
-                  <ResourcePreviewCard
-                    key={r.id}
-                    resource={r}
-                    role="tutor"
-                    actions={
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full h-9 px-3 text-slate-600"
-                          onClick={async () => {
-                            const ok = await openClassResource(r);
-                            if (!ok) toast.error("Could not open this file");
-                          }}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full h-9 px-3 text-slate-600"
-                          onClick={() => {
-                            setEditing(r);
-                            setFormOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => togglePublish(r)}
-                          className="rounded-full h-9 px-3"
-                        >
-                          {r.status === "published" ? (
-                            <>
-                              <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3.5 w-3.5 mr-1" /> Publish
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => remove(r)}
-                          className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
-                          aria-label={`Delete ${r.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value={tab} className="mt-6">
+          {arrangeMode ? (
+            <ArrangeList
+              items={filtered}
+              tab={tab}
+              onReorder={applyFilteredReorder}
+              onMove={moveDraftFiltered}
+            />
+          ) : filtered.length === 0 ? (
+            <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
+              <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+              <p className="font-medium text-slate-900">No materials yet</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Attach your first note, video, or link to this class.
+              </p>
+            </Card>
+          ) : (
+            <div
+              className="grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+            >
+              {filtered.map((r) => (
+                <ResourcePreviewCard
+                  key={r.id}
+                  resource={r}
+                  role="tutor"
+                  actions={
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full h-9 px-3 text-slate-600"
+                        onClick={async () => {
+                          const ok = await openClassResource(r);
+                          if (!ok) toast.error("Could not open this file");
+                        }}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="rounded-full h-9 px-3 text-slate-600"
+                        onClick={() => {
+                          setEditing(r);
+                          setFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => togglePublish(r)}
+                        className="rounded-full h-9 px-3"
+                      >
+                        {r.status === "published" ? (
+                          <>
+                            <EyeOff className="h-3.5 w-3.5 mr-1" /> Unpublish
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Publish
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => remove(r)}
+                        className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
+                        aria-label={`Delete ${r.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {classInfo && currentTenantId && (
         <ResourceFormModal
