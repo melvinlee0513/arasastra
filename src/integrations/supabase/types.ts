@@ -696,9 +696,11 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invited_by: string | null
           revoked_at: string | null
           role: string
           status: string
+          token: string
           used_at: string | null
         }
         Insert: {
@@ -707,9 +709,11 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           revoked_at?: string | null
           role?: string
           status?: string
+          token?: string
           used_at?: string | null
         }
         Update: {
@@ -718,9 +722,11 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           revoked_at?: string | null
           role?: string
           status?: string
+          token?: string
           used_at?: string | null
         }
         Relationships: [
@@ -1911,6 +1917,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _admin_can_manage_center: {
+        Args: { _center_id: string }
+        Returns: boolean
+      }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       get_invitation_by_token: {
         Args: { _token: string }
@@ -1961,6 +1971,26 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_center_invitations: {
+        Args: { _center_id: string }
+        Returns: {
+          accepted_at: string
+          auth_account_created: boolean
+          created_at: string
+          email: string
+          email_verified: boolean
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_by_name: string
+          profile_created: boolean
+          revoked_at: string
+          role: string
+          role_assigned: boolean
+          status: string
+          used_at: string
+        }[]
+      }
       record_learning_activity: {
         Args: {
           _event_type: string
@@ -1969,6 +1999,13 @@ export type Database = {
           _xp_amount: number
         }
         Returns: Json
+      }
+      regenerate_invitation_token: {
+        Args: { _invitation_id: string; _ttl_hours?: number }
+        Returns: {
+          expires_at: string
+          token: string
+        }[]
       }
       reorder_class_resources: {
         Args: { ordered_resource_ids: string[]; requested_class_id: string }
@@ -1991,6 +2028,13 @@ export type Database = {
           name: string
           subdomain_slug: string
           theme_config: Json
+        }[]
+      }
+      reveal_invitation_token: {
+        Args: { _invitation_id: string }
+        Returns: {
+          expires_at: string
+          token: string
         }[]
       }
       revoke_invitation: { Args: { _invitation_id: string }; Returns: boolean }
