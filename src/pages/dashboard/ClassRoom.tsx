@@ -97,7 +97,7 @@ export function ClassRoom() {
       // Published class resources (RLS filters by enrollment)
       const { data: resources } = await supabase
         .from("class_resources")
-        .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,published_at")
+        .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,thumbnail_path,published_at")
         .eq("class_id", klass.id)
         .eq("status", "published")
         .order("display_order", { ascending: true })
