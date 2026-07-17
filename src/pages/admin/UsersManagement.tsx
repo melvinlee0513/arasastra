@@ -74,7 +74,7 @@ export function UsersManagement() {
     { class_id: string; tutor_user_id: string; class_subject_id: string | null }[]
   >([]);
 
-  const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student">("student");
+  const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student" | "invitations">("student");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [standardFilter, setStandardFilter] = useState("all");
