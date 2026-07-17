@@ -392,7 +392,7 @@ export default function TutorClassResources() {
                 onClick={saveOrder}
                 className="rounded-full text-white"
                 style={{ backgroundColor: ELECTRIC_BLUE }}
-                disabled={savingOrder}
+                disabled={savingOrder || !isDirty}
               >
                 <Check className="h-4 w-4 mr-1" />
                 {savingOrder ? "Saving…" : "Save order"}
