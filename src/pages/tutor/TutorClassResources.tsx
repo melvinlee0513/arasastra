@@ -182,10 +182,33 @@ export default function TutorClassResources() {
     setLoading(false);
   }
 
-  const filtered = useMemo(() => {
-    if (tab === "all") return resources;
-    return resources.filter((r) => r.resource_type === tab);
-  }, [resources, tab]);
+  // In arrange mode, the draftOrder is the source of truth so the tutor
+  // sees pending rearrangements across filters. Otherwise show saved order.
+  const viewSource = arrangeMode ? draftOrder : resources;
+
+  const filtered = useMemo(
+    () => viewSource.filter((r) => matchesResourceTab(r, tab)),
+    [viewSource, tab],
+  );
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: viewSource.length };
+    for (const t of RESOURCE_TABS) {
+      if (t.key === "all") continue;
+      counts[t.key] = viewSource.filter((r) => matchesResourceTab(r, t.key)).length;
+    }
+    return counts;
+  }, [viewSource]);
+
+  // Dirty when the draft id sequence differs from the last saved sequence.
+  const isDirty = useMemo(() => {
+    if (!arrangeMode) return false;
+    if (draftOrder.length !== resources.length) return true;
+    for (let i = 0; i < draftOrder.length; i++) {
+      if (draftOrder[i].id !== resources[i].id) return true;
+    }
+    return false;
+  }, [arrangeMode, draftOrder, resources]);
 
   async function togglePublish(r: Resource) {
     const next = r.status === "published" ? "draft" : "published";
