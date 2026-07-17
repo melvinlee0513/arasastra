@@ -41,6 +41,7 @@ type ResourceRow = {
   file_path: string | null;
   external_url: string | null;
   embed_url: string | null;
+  thumbnail_path: string | null;
   published_at: string | null;
 };
 
