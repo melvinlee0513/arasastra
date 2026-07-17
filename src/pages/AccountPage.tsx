@@ -239,15 +239,16 @@ export function AccountPage() {
       {/* Profile Header */}
       <Card className="p-6 bg-card border border-border">
         <div className="flex items-center gap-4">
-          <Avatar className="w-20 h-20 border-4 border-accent/20">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-accent text-accent-foreground text-2xl font-bold">
-              {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
-            <p className="text-muted-foreground">{user?.email}</p>
+          <UserAvatar
+            path={extProfile?.avatar_path ?? null}
+            name={extProfile?.display_name || displayName}
+            className="w-20 h-20 border-4 border-accent/20"
+            fallbackClassName="text-2xl bg-accent text-accent-foreground font-bold"
+            refreshKey={extProfile?.avatar_updated_at}
+          />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-foreground truncate">{extProfile?.display_name || displayName}</h1>
+            <p className="text-muted-foreground truncate">{user?.email}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {profile?.form_year && <Badge variant="secondary">{profile.form_year}</Badge>}
               <Badge variant="outline" className="text-xs">Member since {memberSince}</Badge>
@@ -255,6 +256,25 @@ export function AccountPage() {
           </div>
         </div>
       </Card>
+
+      {/* Profile Editor */}
+      {extProfile && (
+        <ProfileEditor
+          profile={{
+            id: extProfile.id,
+            user_id: extProfile.user_id,
+            full_name: extProfile.full_name || displayName,
+            display_name: extProfile.display_name,
+            bio: extProfile.bio,
+            avatar_path: extProfile.avatar_path,
+            avatar_updated_at: extProfile.avatar_updated_at,
+            center_id: extProfile.center_id,
+            email: user?.email ?? null,
+          }}
+          onSaved={() => refetchExt()}
+        />
+      )}
+
 
       {/* === STEP 1: Pricing & Registration (shown when NOT registered) === */}
       {!isRegistered && (
