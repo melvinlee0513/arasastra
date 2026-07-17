@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ExternalLink, ArrowRight, Megaphone, Pin,
+  Users, CheckCircle2, ExternalLink, ArrowRight, Megaphone, Pin, ImagePlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,7 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
+import { ClassCoverManager } from "@/components/class/ClassCoverManager";
 
 type ResourceRow = {
   id: string; title: string; resource_type: string; status: string;
@@ -91,7 +92,7 @@ export function TutorClassHome() {
   return shell(
     <div className="space-y-5">
       {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
         <Button asChild className="rounded-full h-11 justify-center">
           <Link to={materialsPath}><Plus className="w-4 h-4 mr-2" /> Add Material</Link>
         </Button>
@@ -104,7 +105,22 @@ export function TutorClassHome() {
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/announcements`}><Megaphone className="w-4 h-4 mr-2" /> Announcements</Link>
         </Button>
+        {ctx.data?.klass && ctx.data.klass.center_id && (
+          <ClassCoverManager
+            classId={ctx.data.klass.id}
+            centerId={ctx.data.klass.center_id}
+            currentPath={ctx.data.klass.cover_image_path}
+            currentVersion={ctx.data.klass.cover_image_updated_at}
+            trigger={
+              <Button variant="outline" className="rounded-full h-11 justify-center w-full">
+                <ImagePlus className="w-4 h-4 mr-2" />
+                {ctx.data.klass.cover_image_path ? "Change cover" : "Add cover"}
+              </Button>
+            }
+          />
+        )}
       </div>
+
 
       {/* Latest announcement */}
       {latestAnnQ.data && (

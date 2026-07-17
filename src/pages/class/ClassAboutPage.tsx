@@ -12,6 +12,9 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import { showSupabaseError } from "@/lib/supabaseErrors";
+import { ClassCoverManager } from "@/components/class/ClassCoverManager";
+import { bestDisplayName } from "@/lib/profile";
+import { initialsFor } from "@/lib/profile";
 
 type AboutRow = {
   id?: string;

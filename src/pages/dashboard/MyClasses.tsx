@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { GraduationCap, ArrowRight, Calendar } from "lucide-react";
+import { GraduationCap, ArrowRight, Calendar, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { ClassCover } from "@/components/class/ClassCover";
+import { fetchTutorsByClass, tutorLabel, type TutorIdentity } from "@/lib/classCovers";
 
 interface EnrolledClass {
   id: string;
@@ -12,23 +14,10 @@ interface EnrolledClass {
   cohort_label: string | null;
   scheduled_at: string;
   subject_name: string | null;
+  cover_image_path: string | null;
+  cover_image_updated_at: string | null;
+  tutors: TutorIdentity[];
 }
-
-// Deterministic soft-gradient banner per class — no external stock imagery.
-const BANNER_GRADIENTS = [
-  "from-sky-100 via-white to-cyan-100",
-  "from-indigo-100 via-white to-sky-100",
-  "from-emerald-100 via-white to-teal-100",
-  "from-amber-100 via-white to-rose-100",
-  "from-violet-100 via-white to-fuchsia-100",
-  "from-slate-100 via-white to-sky-50",
-];
-function bannerFor(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return BANNER_GRADIENTS[h % BANNER_GRADIENTS.length];
-}
-
 
 export function MyClasses() {
   const { user } = useAuth();
@@ -51,7 +40,7 @@ export function MyClasses() {
       // Step 2 — classes visible under RLS (tenant + enrolment enforced server-side).
       const { data: classRows, error: classErr } = await supabase
         .from("classes")
-        .select("id,title,scheduled_at,cohort_label,subject_id")
+        .select("id,title,scheduled_at,cohort_label,subject_id,cover_image_path,cover_image_updated_at")
         .in("id", classIds);
       if (classErr) throw classErr;
 
@@ -69,12 +58,20 @@ export function MyClasses() {
         for (const s of subs || []) subjectMap.set(s.id as string, s.name as string);
       }
 
+      // Step 4 — canonical tutor identity (class_tutors → profiles via safe RPC).
+      const tutorsByClass = await fetchTutorsByClass(
+        (classRows || []).map((c: any) => c.id as string),
+      );
+
       return (classRows || []).map<EnrolledClass>((c: any) => ({
         id: c.id,
         title: c.title,
         cohort_label: c.cohort_label,
         scheduled_at: c.scheduled_at,
         subject_name: c.subject_id ? subjectMap.get(c.subject_id) || null : null,
+        cover_image_path: c.cover_image_path ?? null,
+        cover_image_updated_at: c.cover_image_updated_at ?? null,
+        tutors: tutorsByClass.get(c.id) || [],
       }));
     },
   });
@@ -95,7 +92,7 @@ export function MyClasses() {
         {isLoading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-56 rounded-3xl" />
+              <Skeleton key={i} className="h-72 rounded-3xl" />
             ))}
           </div>
         ) : isError ? (
@@ -120,42 +117,46 @@ export function MyClasses() {
             </p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {classes.map((c) => (
               <Link
                 key={c.id}
                 to={`/dashboard/classes/${c.id}`}
                 className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
               >
-                <div
-                  className={`relative aspect-video overflow-hidden bg-gradient-to-br ${bannerFor(c.id)}`}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <GraduationCap className="w-14 h-14 text-slate-400/50" strokeWidth={1.25} />
-                  </div>
-                  <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5">
-                    {c.subject_name && (
-                      <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
-                        {c.subject_name}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                <ClassCover
+                  classId={c.id}
+                  coverPath={c.cover_image_path}
+                  version={c.cover_image_updated_at}
+                  overlay={
+                    c.subject_name ? (
+                      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5">
+                        <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
+                          {c.subject_name}
+                        </Badge>
+                      </div>
+                    ) : undefined
+                  }
+                />
 
                 <div className="p-5 flex-1 flex flex-col gap-2">
-                  <h3 className="font-semibold text-slate-900 line-clamp-1">{c.title}</h3>
+                  <h3 className="font-semibold text-slate-900 line-clamp-2 leading-snug">{c.title}</h3>
                   {c.cohort_label && (
                     <p className="text-xs text-slate-500 line-clamp-1">{c.cohort_label}</p>
                   )}
-                  <div className="text-xs text-slate-500 flex items-center gap-3 mt-1">
+                  <p className="text-xs text-slate-600 inline-flex items-start gap-1.5 line-clamp-2">
+                    <User className="w-3.5 h-3.5 mt-[1px] shrink-0 text-slate-400" />
+                    <span className="line-clamp-2">{tutorLabel(c.tutors)}</span>
+                  </p>
+                  <div className="text-xs text-slate-500 flex items-center gap-3 mt-auto pt-1">
                     <span className="inline-flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
                       {c.scheduled_at ? new Date(c.scheduled_at).toLocaleDateString() : "Scheduled soon"}
                     </span>
                   </div>
 
-                  <span className="mt-3 text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
-                    Open class room <ArrowRight className="w-4 h-4" />
+                  <span className="mt-2 text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Open class <ArrowRight className="w-4 h-4" />
                   </span>
                 </div>
               </Link>

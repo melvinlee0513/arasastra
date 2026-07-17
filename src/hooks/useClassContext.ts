@@ -14,9 +14,16 @@ export type ClassContextData = {
     schedule_label: string | null;
     status: string;
     center_id: string | null;
+    cover_image_path: string | null;
+    cover_image_updated_at: string | null;
     subject: { name: string } | null;
   } | null;
-  tutors: { id: string; full_name: string | null; avatar_url?: string | null }[];
+  tutors: {
+    id: string;
+    full_name: string | null;
+    display_name: string | null;
+    avatar_url?: string | null;
+  }[];
   sameTenant: boolean;
   isEnrolled: boolean;
   isAssignedTutor: boolean;
@@ -36,7 +43,7 @@ export function useClassContext(classId: string | undefined) {
       const { data: klass, error } = await supabase
         .from("classes")
         .select(
-          "id,title,description,scheduled_at,duration_minutes,cohort_label,schedule_label,status,center_id,subject:subjects(name)"
+          "id,title,description,scheduled_at,duration_minutes,cohort_label,schedule_label,status,center_id,cover_image_path,cover_image_updated_at,subject:subjects(name)",
         )
         .eq("id", classId!)
         .maybeSingle();
@@ -70,19 +77,28 @@ export function useClassContext(classId: string | undefined) {
           .eq("class_id", klass.id),
       ]);
 
-      const tutorIds = (ct || []).map((r: { tutor_user_id: string }) => r.tutor_user_id).filter(Boolean);
+      const tutorIds = (ct || [])
+        .map((r: { tutor_user_id: string }) => r.tutor_user_id)
+        .filter(Boolean);
       const isAssignedTutor = !!user && tutorIds.includes(user.id);
 
       let tutors: ClassContextData["tutors"] = [];
       if (tutorIds.length) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("user_id,full_name,avatar_url")
-          .in("user_id", tutorIds);
-        tutors = (profs || []).map((p: { user_id: string; full_name: string | null; avatar_url: string | null }) => ({
+        // Safe cross-role read that returns display_name/full_name without emails.
+        const { data: profs, error: pErr } = await supabase.rpc("get_public_profiles", {
+          _user_ids: tutorIds,
+        });
+        if (pErr) throw pErr;
+        tutors = (profs || []).map((p: {
+          user_id: string;
+          full_name: string | null;
+          display_name: string | null;
+          avatar_path: string | null;
+        }) => ({
           id: p.user_id,
           full_name: p.full_name,
-          avatar_url: p.avatar_url,
+          display_name: p.display_name,
+          avatar_url: p.avatar_path,
         }));
       }
 
@@ -90,7 +106,7 @@ export function useClassContext(classId: string | undefined) {
       const canView = canManage || !!enrol;
 
       return {
-        klass,
+        klass: klass as ClassContextData["klass"],
         tutors,
         sameTenant,
         isEnrolled: !!enrol,
