@@ -254,7 +254,7 @@ export default function TutorClassResources() {
   function enterArrangeMode() {
     setDraftOrder([...resources]);
     setArrangeMode(true);
-    setTab("all");
+    // Keep the currently active filter tab so the tutor can arrange in context.
   }
 
   function cancelArrange() {
@@ -262,21 +262,41 @@ export default function TutorClassResources() {
     setDraftOrder([]);
   }
 
-  function moveDraft(id: string, dir: -1 | 1) {
+  /**
+   * Merge a reordered filtered subset back into the full draft order.
+   * Non-matching resources keep their existing global slots; the filtered
+   * items simply fill those slots in the new order.
+   */
+  function applyFilteredReorder(newFiltered: Resource[]) {
     setDraftOrder((prev) => {
-      const idx = prev.findIndex((r) => r.id === id);
-      const next = idx + dir;
-      if (idx < 0 || next < 0 || next >= prev.length) return prev;
-      return arrayMove(prev, idx, next);
+      if (tab === "all") return newFiltered;
+      let i = 0;
+      return prev.map((item) =>
+        matchesResourceTab(item, tab) ? newFiltered[i++] ?? item : item,
+      );
     });
+  }
+
+  function moveDraftFiltered(id: string, dir: -1 | 1) {
+    const current = draftOrder.filter((r) => matchesResourceTab(r, tab));
+    const idx = current.findIndex((r) => r.id === id);
+    const next = idx + dir;
+    if (idx < 0 || next < 0 || next >= current.length) return;
+    applyFilteredReorder(arrayMove(current, idx, next));
   }
 
   async function saveOrder() {
     if (!classId) return;
+    // Sanity: every existing resource must be represented exactly once.
+    const ids = draftOrder.map((r) => r.id);
+    if (ids.length !== resources.length || new Set(ids).size !== ids.length) {
+      toast.error("Order is inconsistent — please cancel and retry");
+      return;
+    }
     setSavingOrder(true);
     const { data, error } = await supabase.rpc("reorder_class_resources", {
       requested_class_id: classId,
-      ordered_resource_ids: draftOrder.map((r) => r.id),
+      ordered_resource_ids: ids,
     });
     setSavingOrder(false);
     if (error) {
@@ -287,10 +307,12 @@ export default function TutorClassResources() {
       toast.error("Order not confirmed by server");
       return;
     }
+    await load();
+    // Refetch the student classroom view for this class so learners see it too.
+    await queryClient.invalidateQueries({ queryKey: ["classroom"] });
     toast.success("Order saved");
     setArrangeMode(false);
     setDraftOrder([]);
-    void load();
   }
 
   if (loading || allowed === null) {
