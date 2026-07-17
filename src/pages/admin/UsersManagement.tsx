@@ -27,7 +27,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { InviteUserModal } from "@/components/admin/InviteUserModal";
 import { InvitationsPanel } from "@/components/admin/InvitationsPanel";
-import { Send } from "lucide-react";
+import { DeleteAccountDialog, type DeleteAccountTarget } from "@/components/admin/DeleteAccountDialog";
+import { Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
