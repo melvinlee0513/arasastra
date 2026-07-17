@@ -1,6 +1,14 @@
 // Permanently deletes a user account. Enforces role + centre matrix server-side
 // and orchestrates public-schema cleanup + storage + auth.users deletion.
-import { createClient } from "npm:@supabase/supabase-js@2";
+//
+// Job status semantics (public.user_deletion_jobs.status):
+//   processing              — cleanup in progress
+//   pending_storage_cleanup — access revoked; personal-storage cleanup not
+//                             yet fully drained (safe for superadmin retry)
+//   completed               — all mandatory cleanup finished; safe to report
+//                             "permanently deleted" to the operator
+//   failed                  — permission or auth-layer failure
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -24,6 +32,66 @@ function isUuid(v: unknown): v is string {
   return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
+// Mandatory personal-storage buckets. Every prefix listed here must be fully
+// drained (list-then-remove until list returns empty) before the deletion
+// job can be marked `completed`. Anything else is centre-owned and stays.
+type StoragePrefix = { bucket: string; prefix: string };
+type CleanupSummary = { drained: string[]; pending: { bucket: string; remaining: number; error?: string }[] };
+
+async function drainStoragePrefixes(
+  admin: SupabaseClient,
+  prefixes: StoragePrefix[],
+): Promise<CleanupSummary> {
+  const drained: string[] = [];
+  const pending: CleanupSummary["pending"] = [];
+
+  for (const { bucket, prefix } of prefixes) {
+    if (!bucket || !prefix) continue;
+    let remaining = 0;
+    let lastError: string | undefined;
+    try {
+      // Recursively list and delete in pages so folders with many files complete.
+      for (let page = 0; page < 20; page++) {
+        const { data, error } = await admin.storage.from(bucket).list(prefix, {
+          limit: 100,
+          offset: 0,
+        });
+        if (error) { lastError = error.message; break; }
+        if (!data || data.length === 0) break;
+        const paths: string[] = [];
+        for (const entry of data) {
+          if (!entry?.name) continue;
+          // If it's a folder (no id/metadata), recurse one level.
+          if (!entry.id) {
+            const sub = await admin.storage.from(bucket).list(`${prefix}/${entry.name}`, { limit: 100 });
+            for (const child of sub.data ?? []) {
+              if (child?.name) paths.push(`${prefix}/${entry.name}/${child.name}`);
+            }
+          } else {
+            paths.push(`${prefix}/${entry.name}`);
+          }
+        }
+        if (paths.length === 0) break;
+        const { error: rmErr } = await admin.storage.from(bucket).remove(paths);
+        if (rmErr) { lastError = rmErr.message; break; }
+      }
+      // Verify empty.
+      const check = await admin.storage.from(bucket).list(prefix, { limit: 1 });
+      remaining = check.data?.length ?? 0;
+      if (check.error) lastError = check.error.message;
+    } catch (err) {
+      lastError = (err as Error)?.message ?? "list_or_remove_failed";
+    }
+
+    if (remaining === 0 && !lastError) {
+      drained.push(`${bucket}:${prefix}`);
+    } else {
+      pending.push({ bucket, remaining, error: lastError });
+    }
+  }
+  return { drained, pending };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -31,7 +99,6 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return json({ error: "unauthorized" }, 401);
 
-  // Verify caller via anon client bound to the caller's JWT.
   const caller = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -40,20 +107,74 @@ Deno.serve(async (req) => {
   if (claimsError || !claimsData?.claims?.sub) return json({ error: "unauthorized" }, 401);
   const callerId = claimsData.claims.sub as string;
 
-  let payload: { target_user_id?: unknown; confirm_email?: unknown };
+  let payload: { target_user_id?: unknown; confirm_email?: unknown; retry_job_id?: unknown };
   try { payload = await req.json(); } catch { return json({ error: "invalid_body" }, 400); }
   const targetId = payload.target_user_id;
+  const retryJobId = typeof payload.retry_job_id === "string" && isUuid(payload.retry_job_id)
+    ? payload.retry_job_id : null;
   const confirmEmail = typeof payload.confirm_email === "string" ? payload.confirm_email.trim().toLowerCase() : "";
   if (!isUuid(targetId)) return json({ error: "invalid_target" }, 400);
   if (targetId === callerId) return json({ error: "cannot_delete_self" }, 400);
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 
-  // Look up target profile/email + protection checks.
+  // Verify caller privileges up front (retry path also needs authorisation).
+  const { data: callerRoles } = await admin
+    .from("user_roles").select("role").eq("user_id", callerId);
+  const callerRoleSet = new Set((callerRoles ?? []).map((r) => r.role));
+  const callerIsSuper = callerRoleSet.has("superadmin");
+  const callerIsAdmin = callerRoleSet.has("admin") || callerIsSuper;
+  if (!callerIsAdmin) return json({ error: "not_authorised" }, 403);
+
+  // -------- RETRY BRANCH --------
+  // Superadmin can resume storage cleanup even after auth.users / profiles
+  // are gone. Uses the protected job row's stored target_user_id + prefixes.
+  if (retryJobId) {
+    if (!callerIsSuper) return json({ error: "not_authorised" }, 403);
+    const { data: jobRow, error: jobErr } = await admin
+      .from("user_deletion_jobs").select("*").eq("id", retryJobId).maybeSingle();
+    if (jobErr || !jobRow) return json({ error: "invalid_target" }, 404);
+    if (jobRow.status === "completed") return json({ ok: true, status: "completed", job_id: jobRow.id });
+
+    // Rebuild the mandatory prefixes from the stored identifiers.
+    const prefixes: StoragePrefix[] = [
+      { bucket: "avatars", prefix: jobRow.target_center_id
+          ? `${jobRow.target_center_id}/${jobRow.target_user_id}`
+          : jobRow.target_user_id },
+      { bucket: "homework",         prefix: jobRow.target_user_id },
+      { bucket: "submissions",      prefix: jobRow.target_user_id },
+      { bucket: "payment-receipts", prefix: jobRow.target_user_id },
+    ];
+    await admin.from("user_deletion_jobs").update({
+      status: "processing", current_step: "storage_cleanup_retry",
+      retry_count: (jobRow.retry_count ?? 0) + 1,
+    }).eq("id", jobRow.id);
+
+    const summary = await drainStoragePrefixes(admin, prefixes);
+    if (summary.pending.length === 0) {
+      await admin.from("user_deletion_jobs").update({
+        status: "completed", current_step: "done",
+        completed_at: new Date().toISOString(), failure_category: null,
+      }).eq("id", jobRow.id);
+      return json({ ok: true, status: "completed", job_id: jobRow.id, drained: summary.drained });
+    }
+    await admin.from("user_deletion_jobs").update({
+      status: "pending_storage_cleanup", current_step: "storage_cleanup",
+      failure_category: "storage_cleanup_incomplete",
+    }).eq("id", jobRow.id);
+    return json({
+      ok: false, status: "pending_storage_cleanup", job_id: jobRow.id,
+      pending: summary.pending,
+    }, 202);
+  }
+
+  // -------- FRESH DELETION BRANCH --------
+
+  // Look up target profile/email for confirmation + protection.
   const { data: profileRow } = await admin
     .from("profiles").select("user_id, email, center_id, avatar_path")
     .eq("user_id", targetId).maybeSingle();
-  const { data: targetAuth } = await admin.auth.admin.getUserById(targetId);
+  const { data: targetAuth } = await admin.auth.admin.getUserById(targetId as string);
   const authEmail = targetAuth?.user?.email ?? null;
   const targetEmail = (profileRow?.email ?? authEmail ?? "").toLowerCase();
 
@@ -61,25 +182,35 @@ Deno.serve(async (req) => {
     return json({ error: "email_confirmation_mismatch" }, 400);
   }
 
-  // Idempotency: if target no longer has an auth row and no profile, treat as done.
+  // Idempotency: only report already_deleted when there is no outstanding
+  // mandatory cleanup. Otherwise return the outstanding job so the caller
+  // can retry via the retry_job_id path.
   if (!targetAuth?.user && !profileRow) {
+    const { data: outstanding } = await admin
+      .from("user_deletion_jobs")
+      .select("id, status, target_center_id")
+      .eq("target_user_id", targetId as string)
+      .in("status", ["pending_storage_cleanup", "failed", "processing"])
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (outstanding) {
+      return json({
+        ok: false, status: outstanding.status, job_id: outstanding.id,
+        message: "personal_storage_cleanup_incomplete",
+      }, 202);
+    }
     return json({ ok: true, status: "already_deleted" });
   }
 
-  // Superadmin protections re-checked here (RPC also enforces).
   const { data: targetRoles } = await admin
-    .from("user_roles").select("role").eq("user_id", targetId);
+    .from("user_roles").select("role").eq("user_id", targetId as string);
   const roles = new Set((targetRoles ?? []).map((r) => r.role));
-  if (roles.has("superadmin")) {
-    return json({ error: "cannot_delete_superadmin" }, 403);
-  }
+  if (roles.has("superadmin")) return json({ error: "cannot_delete_superadmin" }, 403);
 
-  // Create job row (redacted identifiers only).
   const email_hash = await hashEmail(targetEmail);
   const { data: jobRow, error: jobErr } = await admin
     .from("user_deletion_jobs")
     .insert({
-      target_user_id: targetId,
+      target_user_id: targetId as string,
       target_center_id: profileRow?.center_id ?? null,
       target_email_hash: email_hash,
       requested_by: callerId,
@@ -96,10 +227,8 @@ Deno.serve(async (req) => {
 
   try {
     await updateJob({ current_step: "cleanup_rpc" });
-    // Invoke RPC using caller-authenticated client so it can re-verify auth.uid()
-    // and re-enforce the permission matrix. Cannot elevate via service-role.
     const { data: rpcData, error: rpcErr } = await caller.rpc("admin_delete_user_account", {
-      _target: targetId,
+      _target: targetId as string,
     });
     if (rpcErr) {
       const msg = (rpcErr.message ?? "").toLowerCase();
@@ -114,53 +243,15 @@ Deno.serve(async (req) => {
       return json({ error: category }, status);
     }
 
-    const storagePaths = Array.isArray((rpcData as { storage_paths?: unknown })?.storage_paths)
-      ? ((rpcData as { storage_paths: Array<{ bucket: string; path: string }> }).storage_paths)
-      : [];
-
-    // Storage cleanup — best effort. Failures do not restore access.
-    await updateJob({ current_step: "storage_cleanup" });
-    const byBucket = new Map<string, string[]>();
-    for (const item of storagePaths) {
-      if (!item?.bucket || !item?.path) continue;
-      const arr = byBucket.get(item.bucket) ?? [];
-      arr.push(item.path);
-      byBucket.set(item.bucket, arr);
-    }
-    // Also purge user avatar folder if it exists (defence in depth).
-    try {
-      const { data: avatarFiles } = await admin.storage.from("avatars").list(targetId, { limit: 100 });
-      if (avatarFiles?.length) {
-        const paths = avatarFiles.map((f) => `${targetId}/${f.name}`);
-        const arr = byBucket.get("avatars") ?? [];
-        byBucket.set("avatars", arr.concat(paths));
-      }
-    } catch { /* ignore */ }
-
-    for (const [bucket, paths] of byBucket) {
-      if (!paths.length) continue;
-      try { await admin.storage.from(bucket).remove(paths); } catch { /* logged below */ }
+    const rpcCenter = (rpcData as { target_center_id?: string | null })?.target_center_id ?? null;
+    if (rpcCenter && rpcCenter !== profileRow?.center_id) {
+      await updateJob({ target_center_id: rpcCenter });
     }
 
-    // NOTE: we deliberately do NOT call admin.auth.admin.signOut here.
-    // The JS admin.signOut(jwt, scope) API requires a valid *access-token JWT*
-    // for the target user; the deleting administrator does not hold that JWT,
-    // and passing a UUID is invalid. Session revocation is instead achieved by
-    // auth.admin.deleteUser below, which removes auth.sessions +
-    // auth.refresh_tokens (blocking refresh) and — via the cleanup RPC + FK
-    // cascades — removes profiles / user_roles / enrolments so every RLS
-    // helper (is_admin, is_tutor_of_class, is_enrolled_in_class,
-    // same_center_as_current_user) returns false even for a still-unexpired
-    // access token. The stale access JWT itself is NOT cryptographically
-    // invalidated and remains parseable until its natural expiry (~1h), but
-    // it can no longer read or mutate tenant data.
-    await updateJob({ current_step: "revoke_sessions_noop" });
-
-    // Delete the auth user last. This cascades to remaining CASCADE FKs
-    // (profiles, subscriptions, notifications, quiz_results, submissions, etc.)
-    // and to auth.sessions / auth.identities.
+    // Auth delete — removes sessions and refresh tokens. Do this before final
+    // storage drain so the access surface is closed even if drain retries.
     await updateJob({ current_step: "auth_delete" });
-    const { error: authDelErr } = await admin.auth.admin.deleteUser(targetId);
+    const { error: authDelErr } = await admin.auth.admin.deleteUser(targetId as string);
     if (authDelErr) {
       const notFound = (authDelErr.message ?? "").toLowerCase().includes("not found");
       if (!notFound) {
@@ -169,8 +260,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    await updateJob({ status: "completed", current_step: "done", completed_at: new Date().toISOString() });
-    return json({ ok: true, status: "completed", job_id: jobId });
+    // Mandatory storage cleanup (authoritative, not best-effort).
+    await updateJob({ current_step: "storage_cleanup" });
+    const rpcPrefixes = Array.isArray((rpcData as { storage_prefixes?: unknown })?.storage_prefixes)
+      ? ((rpcData as { storage_prefixes: StoragePrefix[] }).storage_prefixes)
+      : [];
+    const summary = await drainStoragePrefixes(admin, rpcPrefixes);
+
+    if (summary.pending.length > 0) {
+      await updateJob({
+        status: "pending_storage_cleanup",
+        current_step: "storage_cleanup",
+        failure_category: "storage_cleanup_incomplete",
+      });
+      return json({
+        ok: false, status: "pending_storage_cleanup", job_id: jobId,
+        message: "Account access was removed, but personal file cleanup is still pending.",
+        pending: summary.pending,
+      }, 202);
+    }
+
+    await updateJob({
+      status: "completed", current_step: "done",
+      completed_at: new Date().toISOString(), failure_category: null,
+    });
+    return json({ ok: true, status: "completed", job_id: jobId, drained: summary.drained });
   } catch (err) {
     await updateJob({ status: "failed", failure_category: "unexpected_error" });
     console.error("delete-user-account unexpected", (err as Error)?.message);
