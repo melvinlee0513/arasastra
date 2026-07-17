@@ -929,6 +929,7 @@ function ResourceFormModal({
       }
 
       toast.success(publish ? "Published to students" : "Saved as draft");
+      clearDraft();
       onSaved();
     } catch (err: any) {
       showSupabaseError(err, isEdit ? "Could not save changes" : "Could not attach material");
