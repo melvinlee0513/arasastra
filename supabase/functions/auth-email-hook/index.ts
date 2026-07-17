@@ -360,7 +360,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
-  console.log('Auth email enqueued', { emailType, email: payload.data.email, run_id })
+  console.log('Auth email enqueued', { emailType, run_id })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),
