@@ -783,14 +783,17 @@ function ResourceFormModal({
 
     setSaving(true);
 
-    // Track any newly uploaded object so we can clean up on failure.
+    // Track any newly uploaded objects so we can clean them up on failure.
     let uploadedBucket: string | null = null;
     let uploadedPath: string | null = null;
+    let uploadedThumbBucket: string | null = null;
+    let uploadedThumbPath: string | null = null;
 
     try {
       let file_path: string | null = editing?.file_path ?? null;
       let external_url: string | null = editing?.external_url ?? null;
       let embed_url: string | null = editing?.embed_url ?? null;
+      let thumbnail_path: string | null = editing?.thumbnail_path ?? null;
 
       // URL-based sources: replace URL/embed. Local file_path becomes null
       // when moving away from a local upload.
@@ -801,7 +804,6 @@ function ResourceFormModal({
         external_url = url.trim();
         embed_url = null;
       } else if (source === "local_upload") {
-        // Ensure valid file source
         if (!file && !hasExistingFile) {
           toast.error("Choose a file to upload");
           setSaving(false);
@@ -814,9 +816,12 @@ function ResourceFormModal({
       // Upload replacement / initial file
       let replacedOldPath: string | null = null;
       let replacedOldBucket: string | null = null;
+      let replacedOldThumbPath: string | null = null;
+      let replacedOldThumbBucket: string | null = null;
+      const resourceId = editing?.id ?? crypto.randomUUID();
+
       if (source === "local_upload" && file) {
         const bucket = type === "video" ? "course-videos" : "notes";
-        const resourceId = editing?.id ?? crypto.randomUUID();
         const safeName = sanitiseFilename(file.name);
         const objectPath = `${centerId}/${classInfo.id}/${resourceId}/${safeName}`;
         const { error: upErr } = await supabase.storage
@@ -837,8 +842,6 @@ function ResourceFormModal({
         uploadedBucket = bucket;
         uploadedPath = objectPath;
 
-        // If we're replacing a previously-uploaded file, remember its path
-        // for cleanup after the DB write succeeds.
         if (editing?.file_path) {
           const prev = splitFilePath(editing.file_path);
           if (prev) {
@@ -847,21 +850,74 @@ function ResourceFormModal({
           }
         }
         file_path = `${bucket}/${objectPath}`;
+
+        // Generate + upload a pre-rendered first-page preview for PDFs. This
+        // avoids running pdf.js in every student's browser on first view.
+        const isPdfUpload =
+          file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+        if (isPdfUpload) {
+          const previewBlob = await generatePdfPreviewBlob(file, { maxWidth: 560 });
+          if (previewBlob) {
+            const thumbBucket = "notes";
+            const thumbExt = previewBlob.type === "image/jpeg" ? "jpg" : "webp";
+            const thumbObjectPath = `${centerId}/${classInfo.id}/${resourceId}/preview.${thumbExt}`;
+            const { error: thumbErr } = await supabase.storage
+              .from(thumbBucket)
+              .upload(thumbObjectPath, previewBlob, {
+                upsert: true,
+                contentType: previewBlob.type,
+              });
+            if (!thumbErr) {
+              uploadedThumbBucket = thumbBucket;
+              uploadedThumbPath = thumbObjectPath;
+              if (editing?.thumbnail_path) {
+                const prevThumb = splitFilePath(editing.thumbnail_path);
+                if (prevThumb && prevThumb.path !== thumbObjectPath) {
+                  replacedOldThumbBucket = prevThumb.bucket;
+                  replacedOldThumbPath = prevThumb.path;
+                }
+              }
+              thumbnail_path = `${thumbBucket}/${thumbObjectPath}`;
+            } else {
+              // Non-fatal — fall back to on-demand pdf.js rendering.
+              console.warn("[resource-thumbnail] upload failed", thumbErr.message);
+            }
+          }
+        } else if (editing?.thumbnail_path) {
+          // Replacing a PDF with a non-PDF file — drop stale preview.
+          const prevThumb = splitFilePath(editing.thumbnail_path);
+          if (prevThumb) {
+            replacedOldThumbBucket = prevThumb.bucket;
+            replacedOldThumbPath = prevThumb.path;
+          }
+          thumbnail_path = null;
+        }
       }
+
+      const cleanupUploads = async () => {
+        if (uploadedBucket && uploadedPath) {
+          await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
+        }
+        if (uploadedThumbBucket && uploadedThumbPath) {
+          await supabase.storage
+            .from(uploadedThumbBucket)
+            .remove([uploadedThumbPath])
+            .catch(() => null);
+        }
+      };
 
       // Final invariant: type/source combination must have a valid source.
       const hasFile = !!file_path;
       const hasUrl = !!(external_url || embed_url);
       if (!hasFile && !hasUrl) {
         toast.error("A source is required (file or URL)");
-        if (uploadedBucket && uploadedPath) {
-          await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
-        }
+        await cleanupUploads();
         setSaving(false);
         return;
       }
       if (type === "video" && source === "local_upload" && !hasFile) {
         toast.error("Upload a video file");
+        await cleanupUploads();
         setSaving(false);
         return;
       }
@@ -869,8 +925,6 @@ function ResourceFormModal({
       const now = new Date().toISOString();
 
       if (isEdit && editing) {
-        // Determine status: publish action always publishes; otherwise keep
-        // existing status.
         const nextStatus = publish ? "published" : editing.status;
         const nextPublishedAt =
           publish && editing.status !== "published"
@@ -888,23 +942,28 @@ function ResourceFormModal({
             file_path,
             external_url,
             embed_url,
+            thumbnail_path,
             status: nextStatus,
             published_at: nextStatus === "published" ? nextPublishedAt ?? now : null,
           })
           .eq("id", editing.id);
 
         if (error) {
-          if (uploadedBucket && uploadedPath) {
-            await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
-          }
+          await cleanupUploads();
           throw error;
         }
 
-        // Only after DB success, remove the previous file
+        // Only after DB success, remove replaced files.
         if (replacedOldBucket && replacedOldPath) {
           await supabase.storage
             .from(replacedOldBucket)
             .remove([replacedOldPath])
+            .catch(() => null);
+        }
+        if (replacedOldThumbBucket && replacedOldThumbPath) {
+          await supabase.storage
+            .from(replacedOldThumbBucket)
+            .remove([replacedOldThumbPath])
             .catch(() => null);
         }
 
@@ -914,9 +973,10 @@ function ResourceFormModal({
         return;
       }
 
-      // Create
+      // Create — use the pre-computed resourceId so the storage path matches.
       const status = publish ? "published" : "draft";
       const { error } = await supabase.from("class_resources").insert({
+        id: resourceId,
         center_id: centerId,
         class_id: classInfo.id,
         subject_id: classInfo.subject_id,
@@ -929,14 +989,13 @@ function ResourceFormModal({
         file_path,
         external_url,
         embed_url,
+        thumbnail_path,
         status,
         published_at: publish ? now : null,
         display_order: existingCount + 1,
       });
       if (error) {
-        if (uploadedBucket && uploadedPath) {
-          await supabase.storage.from(uploadedBucket).remove([uploadedPath]).catch(() => null);
-        }
+        await cleanupUploads();
         throw error;
       }
 
