@@ -897,6 +897,7 @@ function ResourceFormModal({
         }
 
         toast.success(publish && editing.status !== "published" ? "Published" : "Changes saved");
+        clearDraft();
         onSaved();
         return;
       }
