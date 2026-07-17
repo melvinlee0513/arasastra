@@ -59,6 +59,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
         return;
       }
 
+      const { data: authData } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("invitations")
         .insert({
@@ -66,8 +67,9 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
           role,
           center_id: currentTenantId,
           status: "pending",
-        })
-        .select("id")
+          invited_by: authData.user?.id ?? null,
+        } as any)
+        .select("id, token")
         .single();
 
       if (error) {
@@ -79,10 +81,11 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
         throw error;
       }
 
+      const tokenValue = (data as any).token ?? data.id;
       const slug = center?.subdomainSlug ?? null;
       const link = slug
-        ? tenantHrefFor(slug, `/invite?token=${data.id}`)
-        : hqHrefFor(`/invite?token=${data.id}`);
+        ? tenantHrefFor(slug, `/invite?token=${tokenValue}`)
+        : hqHrefFor(`/invite?token=${tokenValue}`);
 
 
       toast.success("Invitation created", {
