@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirm your Aras A+ account',
+  invite: "You're invited to join Aras A+",
+  magiclink: 'Your Aras A+ sign-in link',
+  recovery: 'Reset your Aras A+ password',
+  email_change: 'Confirm your new email address',
+  reauthentication: 'Confirm this Aras A+ security action',
 }
 
 // Template mapping
@@ -35,11 +35,81 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   reauthentication: ReauthenticationEmail,
 }
 
-// Configuration
-const SITE_NAME = "arasastra"
-const SENDER_DOMAIN = "notify.arasaplus.info"
-const ROOT_DOMAIN = "arasaplus.info"
-const FROM_DOMAIN = "arasaplus.info" // Domain shown in From address (may be root or sender subdomain)
+// Configuration — one global Aras A+ identity for every tenant.
+const SITE_NAME = 'Aras A+'
+const SENDER_DOMAIN = 'notify.arasaplus.info'
+const ROOT_DOMAIN = 'arasaplus.info'
+const FROM_ADDRESS = `Aras A+ <no-reply@${SENDER_DOMAIN}>`
+
+/**
+ * Resolve the canonical tenant host for a given recipient / action.
+ * - Invite: look up a pending invitation row for this email → centre → slug
+ * - Everything else: look up the user's profile → centre → slug
+ * Superadmins / unresolved users fall back to the HQ apex.
+ * Never trusts a client-supplied host.
+ */
+async function resolveTenantHost(
+  admin: ReturnType<typeof createClient>,
+  emailType: string,
+  email: string | null | undefined,
+): Promise<string> {
+  if (!email) return ROOT_DOMAIN
+  try {
+    if (emailType === 'invite') {
+      const { data } = await admin
+        .from('invitations')
+        .select('center_id, status')
+        .eq('email', email)
+        .in('status', ['pending', 'sent'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const centerId = (data as { center_id?: string } | null)?.center_id
+      if (centerId) return await hostForCenter(admin, centerId)
+    }
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('center_id')
+      .eq('email', email)
+      .maybeSingle()
+    const centerId = (profile as { center_id?: string } | null)?.center_id
+    if (centerId) return await hostForCenter(admin, centerId)
+  } catch (_e) {
+    // fall through to HQ
+  }
+  return ROOT_DOMAIN
+}
+
+async function hostForCenter(
+  admin: ReturnType<typeof createClient>,
+  centerId: string,
+): Promise<string> {
+  const { data } = await admin
+    .from('tuition_centers')
+    .select('subdomain_slug, domain_status')
+    .eq('id', centerId)
+    .maybeSingle()
+  const row = data as { subdomain_slug?: string | null; domain_status?: string | null } | null
+  if (row?.subdomain_slug) return `${row.subdomain_slug}.${ROOT_DOMAIN}`
+  return ROOT_DOMAIN
+}
+
+/**
+ * Safely rewrite only the host of a Supabase-generated confirmation URL to
+ * the resolved tenant canonical host. Preserves path, query and fragment
+ * (which is where GoTrue puts the one-time verifier). Never accepts an
+ * arbitrary host from the payload.
+ */
+function rewriteConfirmationUrl(rawUrl: string, tenantHost: string): string {
+  try {
+    const u = new URL(rawUrl)
+    u.protocol = 'https:'
+    u.host = tenantHost
+    return u.toString()
+  } catch {
+    return rawUrl
+  }
+}
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
