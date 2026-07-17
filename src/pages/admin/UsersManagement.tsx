@@ -570,6 +570,31 @@ export function UsersManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          {(() => {
+                            // Permission matrix (client-side gating; server re-enforces).
+                            // Cannot delete: self, superadmin, and (for tenant admins) other admins.
+                            const isSelf = authUser?.id === user.user_id;
+                            const isSuper = user.role === "superadmin";
+                            const isAdmin = user.role === "admin";
+                            const canDelete =
+                              !isSelf && !isSuper && (isSuperadmin || !isAdmin);
+                            if (!canDelete) return null;
+                            return (
+                              <Button
+                                variant="ghost" size="sm"
+                                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Delete account"
+                                onClick={() => setDeleteTarget({
+                                  user_id: user.user_id,
+                                  full_name: user.full_name,
+                                  email: user.email,
+                                  role: user.role,
+                                })}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     </TableRow>
