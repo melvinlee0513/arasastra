@@ -83,6 +83,7 @@ const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const queryClient = useQueryClient();
 
   const [center, setCenter] = useState<TenantCenter | null>(null);
@@ -90,6 +91,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
+  // Track which user we already fully resolved centres for. This prevents
+  // Supabase token refreshes (which produce a fresh `user` object with the
+  // SAME id) from re-triggering tenant resolution and flashing the
+  // "Loading your organisation…" gate over modals and forms.
+  const [resolvedForUserId, setResolvedForUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
   const [subdomainResolved, setSubdomainResolved] = useState(false);
@@ -143,24 +149,34 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authLoading) return;
 
-    if (!user) {
+    if (!userId) {
       setCenter(null);
       setAvailableCenters([]);
       setIsSuperAdmin(false);
       setIsLoading(false);
+      setResolvedForUserId(null);
+      return;
+    }
+
+    // Already fully resolved for this user — a stale user object from a
+    // token refresh must not restart tenant resolution.
+    if (resolvedForUserId === userId) {
       return;
     }
 
     let cancelled = false;
     (async () => {
-      setIsLoading(true);
+      // Only show the loading state during the FIRST resolution. Subsequent
+      // background revalidations keep the previous tenant data visible so
+      // modals/forms don't remount.
+      if (!hasResolvedOnce) setIsLoading(true);
       try {
         const [rolesRes, profileRes] = await Promise.all([
-          supabase.from("user_roles").select("role").eq("user_id", user.id),
+          supabase.from("user_roles").select("role").eq("user_id", userId),
           supabase
             .from("profiles")
             .select("center_id")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .maybeSingle(),
         ]);
         if (cancelled) return;
@@ -216,11 +232,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setAvailableCenters(centers);
         setCenter(activeCenter);
         setError(null);
+        setResolvedForUserId(userId);
       } catch (err) {
         if (cancelled) return;
         console.error("[TenantProvider] failed to resolve tenant", err);
         setError("Failed to resolve organisation");
-        setCenter(null);
+        if (!hasResolvedOnce) setCenter(null);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -232,7 +249,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading]);
+  }, [userId, authLoading, resolvedForUserId, hasResolvedOnce]);
 
   const setCurrentTenantId = (id: string) => {
     const next = availableCenters.find((c) => c.id === id);

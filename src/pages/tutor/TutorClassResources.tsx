@@ -623,37 +623,130 @@ function ResourceFormModal({
   editing: Resource | null;
 }) {
   const isEdit = !!editing;
+  const draftKey = useMemo(() => {
+    const mode = isEdit ? `edit:${editing?.id ?? "unknown"}` : "create";
+    return `arasa:resource-draft:${uploaderId}:${centerId}:${classInfo.id}:${mode}`;
+  }, [isEdit, editing?.id, uploaderId, centerId, classInfo.id]);
+
   const [source, setSource] = useState<SourceType>("external_link");
   const [type, setType] = useState<ResourceType>("note");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [savedFileName, setSavedFileName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [restoredFromDraft, setRestoredFromDraft] = useState(false);
+  // Guards the very first hydration so the debounced writer doesn't clobber
+  // the draft with the modal's initial empty defaults.
+  const [hydrated, setHydrated] = useState(false);
 
   // Reset / prefill whenever the modal opens (or editing target changes).
   useEffect(() => {
-    if (!open) return;
-    if (editing) {
-      setSource((editing.source_type as SourceType) || "external_link");
-      setType((editing.resource_type as ResourceType) || "note");
-      setTitle(editing.title || "");
-      setDescription(editing.description || "");
-      setUrl(editing.external_url || editing.embed_url || "");
-      setFile(null);
-    } else {
-      setSource("external_link");
-      setType("note");
-      setTitle("");
-      setDescription("");
-      setUrl("");
-      setFile(null);
+    if (!open) {
+      setHydrated(false);
+      setRestoredFromDraft(false);
+      return;
     }
-  }, [open, editing]);
+
+    // Seed from the resource being edited (or blank defaults for create).
+    let nextSource: SourceType = "external_link";
+    let nextType: ResourceType = "note";
+    let nextTitle = "";
+    let nextDescription = "";
+    let nextUrl = "";
+    if (editing) {
+      nextSource = (editing.source_type as SourceType) || "external_link";
+      nextType = (editing.resource_type as ResourceType) || "note";
+      nextTitle = editing.title || "";
+      nextDescription = editing.description || "";
+      nextUrl = editing.external_url || editing.embed_url || "";
+    }
+
+    // Then overlay any locally saved draft (per user + centre + class + mode).
+    let restored = false;
+    let draftFileName: string | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(draftKey);
+        if (raw) {
+          const draft = JSON.parse(raw) as Partial<{
+            source: SourceType;
+            type: ResourceType;
+            title: string;
+            description: string;
+            url: string;
+            fileName: string;
+          }>;
+          if (draft.source) nextSource = draft.source;
+          if (draft.type) nextType = draft.type;
+          if (typeof draft.title === "string") nextTitle = draft.title;
+          if (typeof draft.description === "string") nextDescription = draft.description;
+          if (typeof draft.url === "string") nextUrl = draft.url;
+          if (typeof draft.fileName === "string") draftFileName = draft.fileName;
+          restored =
+            !!draft.title || !!draft.description || !!draft.url || !!draft.fileName;
+        }
+      } catch (err) {
+        console.warn("[resource-draft] could not restore draft", err);
+      }
+    }
+
+    setSource(nextSource);
+    setType(nextType);
+    setTitle(nextTitle);
+    setDescription(nextDescription);
+    setUrl(nextUrl);
+    setFile(null);
+    setSavedFileName(draftFileName);
+    setRestoredFromDraft(restored);
+    setHydrated(true);
+  }, [open, editing, draftKey]);
+
+  // Debounced local persistence — never store the file bytes themselves.
+  useEffect(() => {
+    if (!open || !hydrated) return;
+    if (typeof window === "undefined") return;
+    const handle = window.setTimeout(() => {
+      try {
+        const payload = {
+          source,
+          type,
+          title,
+          description,
+          url,
+          fileName: file?.name ?? savedFileName ?? null,
+        };
+        const hasContent =
+          !!title.trim() || !!description.trim() || !!url.trim() || !!payload.fileName;
+        if (hasContent) {
+          window.localStorage.setItem(draftKey, JSON.stringify(payload));
+        } else {
+          window.localStorage.removeItem(draftKey);
+        }
+      } catch (err) {
+        console.warn("[resource-draft] could not persist draft", err);
+      }
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [open, hydrated, source, type, title, description, url, file, savedFileName, draftKey]);
+
+  const clearDraft = () => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+    setRestoredFromDraft(false);
+    setSavedFileName(null);
+  };
 
   const hasExistingFile = isEdit && !!editing?.file_path;
   const needsUrl = source !== "local_upload";
   const needsFile = source === "local_upload" && !hasExistingFile;
+  const showFileReselectHint =
+    source === "local_upload" && !file && !hasExistingFile && !!savedFileName;
 
   async function save(publish: boolean) {
     if (!title.trim()) {
@@ -804,6 +897,7 @@ function ResourceFormModal({
         }
 
         toast.success(publish && editing.status !== "published" ? "Published" : "Changes saved");
+        clearDraft();
         onSaved();
         return;
       }
@@ -835,6 +929,7 @@ function ResourceFormModal({
       }
 
       toast.success(publish ? "Published to students" : "Saved as draft");
+      clearDraft();
       onSaved();
     } catch (err: any) {
       showSupabaseError(err, isEdit ? "Could not save changes" : "Could not attach material");
@@ -849,6 +944,25 @@ function ResourceFormModal({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit material" : "Attach material"}</DialogTitle>
         </DialogHeader>
+
+        {restoredFromDraft && (
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 flex items-center justify-between gap-3">
+            <span>Restored your unsaved draft.</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearDraft();
+                setTitle("");
+                setDescription("");
+                setUrl("");
+                setFile(null);
+              }}
+              className="underline hover:no-underline"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -923,6 +1037,11 @@ function ResourceFormModal({
               {hasExistingFile && !file && (
                 <p className="text-[11px] text-slate-400 mt-1">
                   Current file will be kept unless you choose a new one.
+                </p>
+              )}
+              {showFileReselectHint && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  We restored your draft for “{savedFileName}”. Please select the file again.
                 </p>
               )}
             </div>
