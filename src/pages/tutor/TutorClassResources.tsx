@@ -530,10 +530,12 @@ export default function TutorClassResources() {
 
 function ArrangeList({
   items,
+  tab,
   onReorder,
   onMove,
 }: {
   items: Resource[];
+  tab: string;
   onReorder: (next: Resource[]) => void;
   onMove: (id: string, dir: -1 | 1) => void;
 }) {
@@ -554,7 +556,11 @@ function ArrangeList({
   if (items.length === 0) {
     return (
       <Card className="p-8 text-center rounded-3xl bg-white/60 border-slate-200">
-        <p className="text-sm text-slate-500">Nothing to arrange.</p>
+        <p className="text-sm text-slate-500">
+          {tab === "all"
+            ? "Nothing to arrange."
+            : "No materials in this category. Switch filters to arrange others."}
+        </p>
       </Card>
     );
   }
