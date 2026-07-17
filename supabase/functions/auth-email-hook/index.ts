@@ -94,17 +94,48 @@ async function hostForCenter(
   return ROOT_DOMAIN
 }
 
+// Callback path on each tenant that the auth backend redirects the user to
+// after successfully validating the token. `/auth` runs the SPA auth page,
+// which lets @supabase/supabase-js pick up the session from the URL hash and
+// then routes the user into their workspace. Recovery uses the dedicated
+// reset-password screen.
+const TENANT_CALLBACK_PATH: Record<string, string> = {
+  signup: '/auth',
+  invite: '/invite',
+  magiclink: '/auth',
+  recovery: '/auth/reset-password',
+  email_change: '/auth',
+  reauthentication: '/auth',
+}
+
+// Approved host allowlist — the resolved tenant host must be either the HQ
+// apex or a *.arasaplus.info subdomain. Anything else falls back to HQ.
+function isApprovedTenantHost(host: string): boolean {
+  if (host === ROOT_DOMAIN) return true
+  if (!host.endsWith(`.${ROOT_DOMAIN}`)) return false
+  const label = host.slice(0, -1 - ROOT_DOMAIN.length)
+  return /^[a-z0-9]([a-z0-9-]{1,48}[a-z0-9])$/.test(label)
+}
+
 /**
- * Safely rewrite only the host of a Supabase-generated confirmation URL to
- * the resolved tenant canonical host. Preserves path, query and fragment
- * (which is where GoTrue puts the one-time verifier). Never accepts an
- * arbitrary host from the payload.
+ * Preserve the Supabase-generated auth action URL (origin + `/auth/v1/verify`
+ * + token + type + all other params) and only override its `redirect_to`
+ * query parameter so the auth backend, after validating the one-time token,
+ * sends the user back to the correct Aras A+ tenant callback.
+ *
+ * Never rewrites the host of the action URL itself — that would break token
+ * validation and route users straight into the SPA 404.
  */
-function rewriteConfirmationUrl(rawUrl: string, tenantHost: string): string {
+function withApprovedRedirect(
+  rawUrl: string,
+  tenantHost: string,
+  emailType: string,
+): string {
   try {
     const u = new URL(rawUrl)
-    u.protocol = 'https:'
-    u.host = tenantHost
+    const safeHost = isApprovedTenantHost(tenantHost) ? tenantHost : ROOT_DOMAIN
+    const path = TENANT_CALLBACK_PATH[emailType] ?? '/auth'
+    u.searchParams.set('redirect_to', `https://${safeHost}${path}`)
     return u.toString()
   } catch {
     return rawUrl
@@ -294,12 +325,14 @@ async function handleWebhook(req: Request): Promise<Response> {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Rewrite ONLY the host of the Supabase-generated confirmation URL to the
-  // tenant canonical host. Path, query and fragment (the one-time verifier)
-  // are preserved so expiry, one-time-use and revocation semantics stay intact.
+  // Preserve the Supabase auth backend action URL (host + /auth/v1/verify +
+  // token + type + all params) and only override `redirect_to` so the auth
+  // backend, after validating the one-time token, returns the user to the
+  // correct Aras A+ tenant callback. Rewriting the host here would break token
+  // validation and drop users on the SPA 404.
   const tenantHost = await resolveTenantHost(supabase, emailType, payload.data.email)
   const confirmationUrl = payload.data.url
-    ? rewriteConfirmationUrl(payload.data.url, tenantHost)
+    ? withApprovedRedirect(payload.data.url, tenantHost, emailType)
     : payload.data.url
 
   const templateProps = {
