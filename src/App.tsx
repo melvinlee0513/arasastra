@@ -89,6 +89,7 @@ const GradingPage = lazy(() => import("@/pages/admin/GradingPage").then(m => ({ 
 const QuizAnalytics = lazy(() => import("@/pages/admin/QuizAnalytics").then(m => ({ default: m.QuizAnalytics })));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const CurriculumManager = lazy(() => import("@/pages/admin/CurriculumManager"));
+const EnrollmentMatrix = lazy(() => import("@/pages/admin/EnrollmentMatrix"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
