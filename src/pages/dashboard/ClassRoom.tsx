@@ -324,18 +324,20 @@ function ResourceGrid({ items }: { items: ResourceRow[] }) {
     if (!ok) toast.error("This file isn't available right now.");
   }
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      className="grid gap-4"
+      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+    >
       {items.map((r) => (
         <ResourcePreviewCard
           key={r.id}
           resource={r}
           role="student"
-          className="flex-col !sm:flex-col"
           actions={
             <Button
               size="sm"
               variant="ghost"
-              className="rounded-full h-8 px-3 text-primary"
+              className="rounded-full h-9 px-3 text-primary min-h-[44px] sm:min-h-0"
               onClick={() => handleOpen(r)}
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
