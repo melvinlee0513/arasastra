@@ -1614,6 +1614,7 @@ export type Database = {
           instructions: string | null
           published_at: string | null
           result_visibility: string
+          results_released_at: string | null
           shuffle_options: boolean
           shuffle_questions: boolean
           sound_theme: string
@@ -1638,6 +1639,7 @@ export type Database = {
           instructions?: string | null
           published_at?: string | null
           result_visibility?: string
+          results_released_at?: string | null
           shuffle_options?: boolean
           shuffle_questions?: boolean
           sound_theme?: string
@@ -1662,6 +1664,7 @@ export type Database = {
           instructions?: string | null
           published_at?: string | null
           result_visibility?: string
+          results_released_at?: string | null
           shuffle_options?: boolean
           shuffle_questions?: boolean
           sound_theme?: string
@@ -2353,6 +2356,19 @@ export type Database = {
       }
       _cover_path_center: { Args: { _name: string }; Returns: string }
       _cover_path_class: { Args: { _name: string }; Returns: string }
+      _finalize_expired_attempt: {
+        Args: { _attempt_id: string }
+        Returns: undefined
+      }
+      _grade_and_finalize_attempt: {
+        Args: {
+          _answers: Json
+          _attempt_id: string
+          _reason_hint?: string
+          _use_saved: boolean
+        }
+        Returns: Json
+      }
       _quiz_attempt_deadline: {
         Args: {
           _att: Database["public"]["Tables"]["quiz_attempts"]["Row"]
@@ -2435,6 +2451,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hide_quiz_results: { Args: { _quiz_id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_enrolled_in_class: { Args: { _class_id: string }; Returns: boolean }
       is_enrolled_in_subject: {
@@ -2505,6 +2522,7 @@ export type Database = {
           token: string
         }[]
       }
+      release_quiz_results: { Args: { _quiz_id: string }; Returns: string }
       reorder_class_resources: {
         Args: { ordered_resource_ids: string[]; requested_class_id: string }
         Returns: {
