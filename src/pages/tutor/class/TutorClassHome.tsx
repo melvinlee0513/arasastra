@@ -189,7 +189,7 @@ export function TutorClassHome() {
             <Users className="w-4 h-4 text-primary" /> Students
           </h3>
           <Button asChild variant="ghost" size="sm" className="text-primary">
-            <Link to="/tutor/students">Open roster <ExternalLink className="w-3.5 h-3.5 ml-1" /></Link>
+            <Link to={`${basePath}/students`}>Open roster <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
           </Button>
         </div>
         <p className="text-sm text-slate-500 mt-2">
