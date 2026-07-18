@@ -339,31 +339,13 @@ export function QuizPlay() {
     setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.4, x: 0.3 } }), 300);
     setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.4, x: 0.7 } }), 600);
 
-    if (user && quizId) {
-      // Mark any in-progress attempt as completed
-      if (attemptId) {
-        await supabase.from("quiz_attempts").update({ status: "completed", score }).eq("id", attemptId);
-      }
-
-      await supabase.from("quiz_results").insert({
-        quiz_id: quizId,
-        user_id: user.id,
-        score: correctCount,
-        total_questions: questions.length,
-      });
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, xp_points")
-        .eq("user_id", user.id)
-        .single();
-      if (profile) {
-        await supabase
-          .from("profiles")
-          .update({ xp_points: (profile.xp_points || 0) + totalXP })
-          .eq("id", profile.id);
-      }
+    // NOTE: Legacy client-side grading path. Turn B replaces this whole page
+    // with the server-graded submit_quiz_attempt RPC flow. quiz_results now
+    // requires attempt_id and is written server-side only.
+    if (user && quizId && attemptId) {
+      await supabase.rpc("submit_quiz_attempt", { _attempt_id: attemptId });
     }
+
   };
 
   const saveAndQuit = async () => {

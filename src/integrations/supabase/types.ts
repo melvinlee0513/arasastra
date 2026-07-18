@@ -1541,6 +1541,7 @@ export type Database = {
       }
       quiz_results: {
         Row: {
+          attempt_id: string
           center_id: string | null
           class_id: string | null
           completed_at: string | null
@@ -1548,11 +1549,13 @@ export type Database = {
           percentage: number | null
           quiz_id: string
           score: number
+          submission_reason: string
           total_points: number | null
           total_questions: number
           user_id: string
         }
         Insert: {
+          attempt_id: string
           center_id?: string | null
           class_id?: string | null
           completed_at?: string | null
@@ -1560,11 +1563,13 @@ export type Database = {
           percentage?: number | null
           quiz_id: string
           score?: number
+          submission_reason?: string
           total_points?: number | null
           total_questions?: number
           user_id: string
         }
         Update: {
+          attempt_id?: string
           center_id?: string | null
           class_id?: string | null
           completed_at?: string | null
@@ -1572,11 +1577,19 @@ export type Database = {
           percentage?: number | null
           quiz_id?: string
           score?: number
+          submission_reason?: string
           total_points?: number | null
           total_questions?: number
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "quiz_results_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quiz_results_quiz_id_fkey"
             columns: ["quiz_id"]
@@ -2340,6 +2353,13 @@ export type Database = {
       }
       _cover_path_center: { Args: { _name: string }; Returns: string }
       _cover_path_class: { Args: { _name: string }; Returns: string }
+      _quiz_attempt_deadline: {
+        Args: {
+          _att: Database["public"]["Tables"]["quiz_attempts"]["Row"]
+          _q: Database["public"]["Tables"]["quizzes"]["Row"]
+        }
+        Returns: string
+      }
       admin_clear_student_profile: {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json
@@ -2399,6 +2419,7 @@ export type Database = {
         }[]
       }
       get_quiz_for_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      get_quiz_result: { Args: { _attempt_id: string }; Returns: Json }
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
@@ -2522,7 +2543,7 @@ export type Database = {
       }
       save_quiz_progress: {
         Args: { _answers: Json; _attempt_id: string }
-        Returns: undefined
+        Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
       submit_quiz_attempt: {
