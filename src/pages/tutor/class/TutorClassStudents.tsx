@@ -67,6 +67,26 @@ export function TutorClassStudents() {
     },
   });
 
+  const items = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = rosterQ.data || [];
+    const filtered = q
+      ? rows.filter((r) => {
+          const name = bestDisplayName(r.profile || {}) || "";
+          return name.toLowerCase().includes(q);
+        })
+      : rows;
+    return filtered
+      .slice()
+      .sort((a, b) =>
+        (bestDisplayName(a.profile || {}) || "").localeCompare(
+          bestDisplayName(b.profile || {}) || "",
+          undefined,
+          { sensitivity: "base" },
+        ),
+      );
+  }, [rosterQ.data, query]);
+
   const basePath = `/tutor/classes/${classId}`;
   const materialsPath = `${basePath}/resources`;
 
@@ -96,25 +116,6 @@ export function TutorClassStudents() {
   if (!ctx.isLoading && ctx.data && !canView)
     return shell(<Msg title="You're not assigned to this class" body="Only assigned tutors and centre admins can view the roster." />);
 
-  const items = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const rows = rosterQ.data || [];
-    const filtered = q
-      ? rows.filter((r) => {
-          const name = bestDisplayName(r.profile || {}) || "";
-          return name.toLowerCase().includes(q);
-        })
-      : rows;
-    return filtered
-      .slice()
-      .sort((a, b) =>
-        (bestDisplayName(a.profile || {}) || "").localeCompare(
-          bestDisplayName(b.profile || {}) || "",
-          undefined,
-          { sensitivity: "base" },
-        ),
-      );
-  }, [rosterQ.data, query]);
 
   return shell(
     <div className="space-y-4">
