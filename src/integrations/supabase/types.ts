@@ -826,32 +826,47 @@ export type Database = {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
           center_id: string
+          class_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          display_order: number
           id: string
+          published_at: string | null
+          status: string
           subject_id: string | null
           title: string
+          updated_at: string
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
           center_id: string
+          class_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          display_order?: number
           id?: string
+          published_at?: string | null
+          status?: string
           subject_id?: string | null
           title: string
+          updated_at?: string
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
           center_id?: string
+          class_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          display_order?: number
           id?: string
+          published_at?: string | null
+          status?: string
           subject_id?: string | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -859,6 +874,13 @@ export type Database = {
             columns: ["center_id"]
             isOneToOne: false
             referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_decks_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
           {
@@ -910,6 +932,7 @@ export type Database = {
           front_text: string
           id: string
           sort_order: number | null
+          updated_at: string
         }
         Insert: {
           back_text: string
@@ -918,6 +941,7 @@ export type Database = {
           front_text: string
           id?: string
           sort_order?: number | null
+          updated_at?: string
         }
         Update: {
           back_text?: string
@@ -926,6 +950,7 @@ export type Database = {
           front_text?: string
           id?: string
           sort_order?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1351,43 +1376,67 @@ export type Database = {
       }
       quiz_attempts: {
         Row: {
+          center_id: string | null
+          class_id: string | null
           created_at: string
           current_question_index: number
           id: string
+          max_points: number
+          percentage: number | null
           power_ups_used: Json
           quiz_id: string
           saved_answers: Json
           score: number
+          started_at: string
           status: string
           streak: number
+          submitted_at: string | null
+          total_points: number
           updated_at: string
           user_id: string
+          xp_awarded: boolean
         }
         Insert: {
+          center_id?: string | null
+          class_id?: string | null
           created_at?: string
           current_question_index?: number
           id?: string
+          max_points?: number
+          percentage?: number | null
           power_ups_used?: Json
           quiz_id: string
           saved_answers?: Json
           score?: number
+          started_at?: string
           status?: string
           streak?: number
+          submitted_at?: string | null
+          total_points?: number
           updated_at?: string
           user_id: string
+          xp_awarded?: boolean
         }
         Update: {
+          center_id?: string | null
+          class_id?: string | null
           created_at?: string
           current_question_index?: number
           id?: string
+          max_points?: number
+          percentage?: number | null
           power_ups_used?: Json
           quiz_id?: string
           saved_answers?: Json
           score?: number
+          started_at?: string
           status?: string
           streak?: number
+          submitted_at?: string | null
+          total_points?: number
           updated_at?: string
           user_id?: string
+          xp_awarded?: boolean
         }
         Relationships: [
           {
@@ -1440,7 +1489,8 @@ export type Database = {
       quiz_questions: {
         Row: {
           center_id: string | null
-          correct_answer: string
+          correct_answer: string | null
+          explanation: string | null
           id: string
           options: Json
           order_index: number | null
@@ -1449,10 +1499,12 @@ export type Database = {
           question_type: string
           quiz_id: string
           sort_order: number | null
+          updated_at: string
         }
         Insert: {
           center_id?: string | null
-          correct_answer: string
+          correct_answer?: string | null
+          explanation?: string | null
           id?: string
           options?: Json
           order_index?: number | null
@@ -1461,10 +1513,12 @@ export type Database = {
           question_type?: string
           quiz_id: string
           sort_order?: number | null
+          updated_at?: string
         }
         Update: {
           center_id?: string | null
-          correct_answer?: string
+          correct_answer?: string | null
+          explanation?: string | null
           id?: string
           options?: Json
           order_index?: number | null
@@ -1473,6 +1527,7 @@ export type Database = {
           question_type?: string
           quiz_id?: string
           sort_order?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1534,48 +1589,75 @@ export type Database = {
       quizzes: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          attempt_limit: number
+          available_from: string | null
           center_id: string
           class_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          due_at: string | null
           id: string
+          instructions: string | null
           published_at: string | null
+          result_visibility: string
+          shuffle_options: boolean
+          shuffle_questions: boolean
           sound_theme: string
           status: string
           subject_id: string | null
+          time_limit_seconds: number | null
           title: string
           total_points: number
+          updated_at: string
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          attempt_limit?: number
+          available_from?: string | null
           center_id: string
           class_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          due_at?: string | null
           id?: string
+          instructions?: string | null
           published_at?: string | null
+          result_visibility?: string
+          shuffle_options?: boolean
+          shuffle_questions?: boolean
           sound_theme?: string
           status?: string
           subject_id?: string | null
+          time_limit_seconds?: number | null
           title: string
           total_points?: number
+          updated_at?: string
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          attempt_limit?: number
+          available_from?: string | null
           center_id?: string
           class_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          due_at?: string | null
           id?: string
+          instructions?: string | null
           published_at?: string | null
+          result_visibility?: string
+          shuffle_options?: boolean
+          shuffle_questions?: boolean
           sound_theme?: string
           status?: string
           subject_id?: string | null
+          time_limit_seconds?: number | null
           title?: string
           total_points?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2278,6 +2360,7 @@ export type Database = {
         }
         Returns: Json
       }
+      can_manage_class: { Args: { _class_id: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2315,6 +2398,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_quiz_for_attempt: { Args: { _attempt_id: string }; Returns: Json }
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
@@ -2435,6 +2519,15 @@ export type Database = {
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean
+      }
+      save_quiz_progress: {
+        Args: { _answers: Json; _attempt_id: string }
+        Returns: undefined
+      }
+      start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
+      submit_quiz_attempt: {
+        Args: { _answers?: Json; _attempt_id: string }
+        Returns: Json
       }
       tutor_can_teach: {
         Args: { _standard_id: string; _subject_id: string; _user_id: string }
