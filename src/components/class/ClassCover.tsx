@@ -9,6 +9,11 @@ interface ClassCoverProps {
   /** cover_image_updated_at from `classes` — used to cache-bust signed URLs. */
   version?: string | null;
   className?: string;
+  /**
+   * Sizing override. When set, replaces the default `aspect-video` container
+   * (e.g. use `h-40 sm:h-48 md:h-56 lg:h-60` for a Facebook-style banner).
+   */
+  sizeClassName?: string;
   /** Priority = eager decode (used above the fold). */
   priority?: boolean;
   /** Optional subject/status overlay children. */
@@ -17,14 +22,16 @@ interface ClassCoverProps {
 }
 
 /**
- * 16:9 class cover with a branded gradient fallback and cached signed URL.
- * Reserves aspect ratio to prevent layout shift while the URL is signing.
+ * Responsive class cover with a branded gradient fallback and cached signed URL.
+ * Default is 16:9 (tiles). Callers can pass `sizeClassName` for a compact
+ * banner variant. Reserves space to prevent layout shift while signing.
  */
 export function ClassCover({
   classId,
   coverPath,
   version,
   className,
+  sizeClassName,
   priority,
   overlay,
   alt = "Class cover",
@@ -32,7 +39,6 @@ export function ClassCover({
   const cover = useQuery({
     queryKey: ["class-cover-signed", coverPath, version],
     enabled: !!coverPath,
-    // Signed URLs live ~1h — refresh conservatively.
     staleTime: 45 * 60_000,
     gcTime: 60 * 60_000,
     queryFn: () => getClassCoverSignedUrl(coverPath!),
@@ -44,7 +50,8 @@ export function ClassCover({
   return (
     <div
       className={cn(
-        "relative aspect-video w-full overflow-hidden bg-gradient-to-br",
+        "relative w-full overflow-hidden bg-gradient-to-br",
+        sizeClassName ?? "aspect-video",
         gradient,
         className,
       )}

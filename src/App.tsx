@@ -64,6 +64,7 @@ const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ 
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
 const TutorClassHome = lazy(() => import("@/pages/tutor/class/TutorClassHome").then(m => ({ default: m.TutorClassHome })));
 const TutorClassAnnouncements = lazy(() => import("@/pages/tutor/class/TutorClassAnnouncements").then(m => ({ default: m.TutorClassAnnouncements })));
+const TutorClassStudents = lazy(() => import("@/pages/tutor/class/TutorClassStudents").then(m => ({ default: m.TutorClassStudents })));
 const TutorAccount = lazy(() => import("@/pages/tutor/TutorAccount").then(m => ({ default: m.TutorAccount })));
 const ClassRoomPreview = lazy(() => import("@/pages/dashboard/ClassRoomPreview"));
 const TutorClassRoomPreview = lazy(() => import("@/pages/tutor/TutorClassRoomPreview"));
@@ -187,6 +188,7 @@ const App = () => (
             <Route path="/tutor/classes/:classId/about" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassAboutPage variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/announcements" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassAnnouncements /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />

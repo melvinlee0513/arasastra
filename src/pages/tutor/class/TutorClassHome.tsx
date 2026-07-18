@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ExternalLink, ArrowRight, Megaphone, Pin, ImagePlus,
+  Users, CheckCircle2, ArrowRight, Megaphone, Pin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,6 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
-import { ClassCoverManager } from "@/components/class/ClassCoverManager";
 
 type ResourceRow = {
   id: string; title: string; resource_type: string; status: string;
@@ -105,20 +104,9 @@ export function TutorClassHome() {
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/announcements`}><Megaphone className="w-4 h-4 mr-2" /> Announcements</Link>
         </Button>
-        {ctx.data?.klass && ctx.data.klass.center_id && (
-          <ClassCoverManager
-            classId={ctx.data.klass.id}
-            centerId={ctx.data.klass.center_id}
-            currentPath={ctx.data.klass.cover_image_path}
-            currentVersion={ctx.data.klass.cover_image_updated_at}
-            trigger={
-              <Button variant="outline" className="rounded-full h-11 justify-center w-full">
-                <ImagePlus className="w-4 h-4 mr-2" />
-                {ctx.data.klass.cover_image_path ? "Change cover" : "Add cover"}
-              </Button>
-            }
-          />
-        )}
+        <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+          <Link to={`${basePath}/students`}><Users className="w-4 h-4 mr-2" /> View students</Link>
+        </Button>
       </div>
 
 
@@ -201,7 +189,7 @@ export function TutorClassHome() {
             <Users className="w-4 h-4 text-primary" /> Students
           </h3>
           <Button asChild variant="ghost" size="sm" className="text-primary">
-            <Link to="/tutor/students">Open roster <ExternalLink className="w-3.5 h-3.5 ml-1" /></Link>
+            <Link to={`${basePath}/students`}>Open roster <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
           </Button>
         </div>
         <p className="text-sm text-slate-500 mt-2">
