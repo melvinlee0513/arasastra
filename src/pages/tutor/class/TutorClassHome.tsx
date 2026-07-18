@@ -104,20 +104,9 @@ export function TutorClassHome() {
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/announcements`}><Megaphone className="w-4 h-4 mr-2" /> Announcements</Link>
         </Button>
-        {ctx.data?.klass && ctx.data.klass.center_id && (
-          <ClassCoverManager
-            classId={ctx.data.klass.id}
-            centerId={ctx.data.klass.center_id}
-            currentPath={ctx.data.klass.cover_image_path}
-            currentVersion={ctx.data.klass.cover_image_updated_at}
-            trigger={
-              <Button variant="outline" className="rounded-full h-11 justify-center w-full">
-                <ImagePlus className="w-4 h-4 mr-2" />
-                {ctx.data.klass.cover_image_path ? "Change cover" : "Add cover"}
-              </Button>
-            }
-          />
-        )}
+        <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+          <Link to={`${basePath}/students`}><Users className="w-4 h-4 mr-2" /> View students</Link>
+        </Button>
       </div>
 
 
