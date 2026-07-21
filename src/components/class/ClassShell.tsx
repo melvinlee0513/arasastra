@@ -163,7 +163,7 @@ export function ClassShell({
         {k && (
           <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
             <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm inline-flex gap-1 min-w-max">
-              {NAV.filter((item) => !(item.tutorOnly && role !== "tutor")).map((item) => {
+              {NAV.filter((item) => !(item.managerOnly && role === "student")).map((item) => {
                 const Icon = item.icon;
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
