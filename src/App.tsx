@@ -189,7 +189,14 @@ const App = () => (
             <Route path="/tutor/classes/:classId/announcements" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassAnnouncements /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            {/* Admin Class Hub — mirrors the tutor hub for same-centre admins */}
+            <Route path="/admin/classes/:classId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassHome /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/about" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassAboutPage variant="tutor" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/announcements" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassAnnouncements /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/materials" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/students" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassStudents /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/quizzes" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizzesManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
