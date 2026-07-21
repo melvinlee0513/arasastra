@@ -26,10 +26,10 @@ type BreadcrumbItem = { label: string; to?: string };
 interface ClassShellProps {
   data: ClassContextData | undefined;
   isLoading: boolean;
-  role: "student" | "tutor";
+  role: "student" | "tutor" | "admin";
   section: ClassSection;
-  basePath: string; // e.g. /dashboard/classes/:id or /tutor/classes/:id
-  materialsPath: string; // student uses /materials, tutor uses /resources
+  basePath: string; // e.g. /dashboard/classes/:id, /tutor/classes/:id, /admin/classes/:id
+  materialsPath: string; // student uses /materials, tutor/admin uses /resources
   breadcrumbs: BreadcrumbItem[];
   headerRight?: ReactNode;
   children: ReactNode;
@@ -41,16 +41,16 @@ type NavEntry = {
   icon: typeof Home;
   disabled?: boolean;
   disabledLabel?: string;
-  tutorOnly?: boolean;
+  managerOnly?: boolean; // tutor + admin only
 };
 
 const NAV: NavEntry[] = [
   { key: "home", label: "Home", icon: LayoutGrid },
   { key: "announcements", label: "Announcements", icon: Megaphone },
   { key: "materials", label: "Materials", icon: FileText },
-  { key: "students", label: "Students", icon: Users, tutorOnly: true },
+  { key: "students", label: "Students", icon: Users, managerOnly: true },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
-  { key: "quizzes", label: "Quizzes", icon: HelpCircle, disabled: true, disabledLabel: "Coming soon" },
+  { key: "quizzes", label: "Quizzes", icon: HelpCircle, managerOnly: true },
   { key: "about", label: "About", icon: Info },
 ];
 
@@ -163,7 +163,7 @@ export function ClassShell({
         {k && (
           <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
             <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm inline-flex gap-1 min-w-max">
-              {NAV.filter((item) => !(item.tutorOnly && role !== "tutor")).map((item) => {
+              {NAV.filter((item) => !(item.managerOnly && role === "student")).map((item) => {
                 const Icon = item.icon;
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -231,6 +231,8 @@ function resolveHref(key: ClassSection, basePath: string, materialsPath: string)
       return materialsPath;
     case "students":
       return `${basePath}/students`;
+    case "quizzes":
+      return `${basePath}/quizzes`;
     case "about":
       return `${basePath}/about`;
     default:

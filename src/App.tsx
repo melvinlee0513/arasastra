@@ -58,7 +58,7 @@ const TutorStudents = lazy(() => import("@/pages/tutor/TutorStudents").then(m =>
 const TutorGrading = lazy(() => import("@/pages/tutor/TutorGrading").then(m => ({ default: m.TutorGrading })));
 const TutorNotes = lazy(() => import("@/pages/tutor/TutorNotes").then(m => ({ default: m.TutorNotes })));
 const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ default: m.TutorUpload })));
-const TutorQuizBuilder = lazy(() => import("@/pages/tutor/TutorQuizBuilder").then(m => ({ default: m.TutorQuizBuilder })));
+const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
@@ -189,13 +189,22 @@ const App = () => (
             <Route path="/tutor/classes/:classId/announcements" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassAnnouncements /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/resources" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassResources /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorClassStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            {/* Admin Class Hub — mirrors the tutor hub for same-centre admins */}
+            <Route path="/admin/classes/:classId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassHome /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/about" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassAboutPage variant="tutor" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/announcements" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassAnnouncements /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/materials" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/students" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassStudents /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/quizzes" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizzesManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/upload" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorUpload /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/videos" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorVideos /></TutorLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/tutor/quizzes/new" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuizBuilder /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            {/* Legacy tutor quiz builder → redirect to tutor classes list; real builder ships in B2b under /tutor/classes/:classId/quizzes/... */}
+            <Route path="/tutor/quizzes/new" element={<Navigate to="/tutor/classes" replace />} />
+            <Route path="/tutor/classes/:classId/quizzes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizzesManager variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuestions /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><QuizAnalytics /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/account" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorAccount /></TutorLayout></TenantGuard></ProtectedRoute>} />

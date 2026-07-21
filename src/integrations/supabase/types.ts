@@ -2401,6 +2401,8 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_quiz_safe: { Args: { _quiz_id: string }; Returns: Json }
+      duplicate_quiz_as_draft: { Args: { _quiz_id: string }; Returns: string }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -2489,6 +2491,33 @@ export type Database = {
           used_at: string
         }[]
       }
+      list_class_quizzes_for_manager: {
+        Args: { _class_id: string }
+        Returns: {
+          attempt_count: number
+          attempt_limit: number
+          available_from: string
+          center_id: string
+          class_id: string
+          created_at: string
+          description: string
+          due_at: string
+          id: string
+          instructions: string
+          published_at: string
+          question_count: number
+          result_visibility: string
+          results_released_at: string
+          shuffle_options: boolean
+          shuffle_questions: boolean
+          status: string
+          submission_count: number
+          time_limit_seconds: number
+          title: string
+          total_points: number
+          updated_at: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2559,8 +2588,21 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      save_quiz_definition: {
+        Args: {
+          _class_id: string
+          _definition: Json
+          _publish?: boolean
+          _quiz_id?: string
+        }
+        Returns: Json
+      }
       save_quiz_progress: {
         Args: { _answers: Json; _attempt_id: string }
+        Returns: Json
+      }
+      set_quiz_status: {
+        Args: { _quiz_id: string; _status: string }
         Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
