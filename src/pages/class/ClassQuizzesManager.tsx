@@ -363,6 +363,10 @@ function QuizCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={onEdit}>
+                <Send className="w-4 h-4 mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuLabel>Lifecycle</DropdownMenuLabel>
               {row.status !== "published" && (
                 <DropdownMenuItem onClick={() => onStatus("published")}>
