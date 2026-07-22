@@ -250,6 +250,7 @@ export function ClassQuizzesManager({ variant }: Props) {
                 <QuizCard
                   key={row.id}
                   row={row}
+                  onEdit={() => navigate(`${basePath}/quizzes/${row.id}/edit`)}
                   onStatus={(s) => statusMut.mutate({ id: row.id, status: s })}
                   onDelete={() => setPendingDelete(row)}
                   onArchive={() => setPendingArchive(row)}
