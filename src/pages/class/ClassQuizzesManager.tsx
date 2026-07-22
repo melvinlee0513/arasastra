@@ -320,6 +320,7 @@ export function ClassQuizzesManager({ variant }: Props) {
 
 function QuizCard({
   row,
+  onEdit,
   onStatus,
   onDelete,
   onArchive,
@@ -328,6 +329,7 @@ function QuizCard({
   busy,
 }: {
   row: QuizManagerRow;
+  onEdit: () => void;
   onStatus: (s: "draft" | "published" | "archived") => void;
   onDelete: () => void;
   onArchive: () => void;
