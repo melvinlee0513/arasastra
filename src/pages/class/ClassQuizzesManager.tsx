@@ -171,10 +171,13 @@ export function ClassQuizzesManager({ variant }: Props) {
   ];
 
   const headerRight = (
-    <Button disabled className="rounded-full" title="Full builder ships in the next release">
+    <Button
+      className="rounded-full"
+      onClick={() => navigate(`${basePath}/quizzes/new`)}
+      disabled={!canManage}
+    >
       <Plus className="w-4 h-4 mr-1.5" />
       New quiz
-      <span className="ml-2 text-[10px] uppercase tracking-wide bg-white/20 rounded-full px-1.5 py-0.5">Soon</span>
     </Button>
   );
 
