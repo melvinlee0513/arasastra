@@ -260,7 +260,14 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
   if (msg.includes("quiz_not_found") || msg.includes("class_not_found")) return "This quiz is no longer available.";
   if (msg.includes("quiz_class_mismatch")) return "That quiz belongs to a different class.";
   if (msg.includes("cannot_publish_after_attempts")) return "You can't publish a quiz that already has student attempts.";
+  if (msg.includes("quiz_locked_after_attempts")) {
+    const idx = msg.indexOf(":");
+    return idx > -1
+      ? `Locked after attempts: ${msg.slice(idx + 1).trim()}`
+      : "This quiz has student attempts — questions, answers and grading settings are locked. Duplicate it to make changes.";
+  }
   if (msg.includes("edit_locked_after_attempts")) return "This quiz has attempts — question edits are locked. Duplicate it to make changes.";
+  if (msg.includes("active_attempt_in_progress")) return "A student has an in-progress attempt right now. Wait for it to finish before changing the status.";
   if (msg.includes("publish_validation_failed")) {
     const idx = msg.indexOf(":");
     return idx > -1 ? msg.slice(idx + 1).trim() : "Please complete the quiz before publishing.";
