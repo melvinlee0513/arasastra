@@ -122,7 +122,71 @@ export const quizManagerKeys = {
     classId: string,
     quizId: string,
   ) => ["quiz-manager", "detail", tenantId ?? "no-tenant", classId, quizId] as const,
+  definition: (
+    tenantId: string | null | undefined,
+    classId: string,
+    quizId: string,
+    userId: string | null | undefined,
+  ) =>
+    [
+      "quiz-manager",
+      "definition",
+      tenantId ?? "no-tenant",
+      classId,
+      quizId,
+      userId ?? "anon",
+    ] as const,
 };
+
+export interface QuizDefinitionForManager {
+  quiz: {
+    id: string;
+    class_id: string;
+    center_id: string;
+    title: string;
+    description: string | null;
+    instructions: string | null;
+    status: QuizStatus;
+    available_from: string | null;
+    due_at: string | null;
+    time_limit_seconds: number | null;
+    attempt_limit: number;
+    shuffle_questions: boolean;
+    shuffle_options: boolean;
+    result_visibility: ResultVisibility;
+    results_released_at: string | null;
+    published_at: string | null;
+    total_points: number;
+    updated_at: string;
+  };
+  questions: Array<{
+    id: string;
+    question: string;
+    question_type: QuestionType;
+    points: number;
+    explanation: string | null;
+    order_index: number;
+    options: Array<{
+      id: string;
+      option_text: string;
+      is_correct: boolean;
+      order_index: number;
+    }>;
+  }>;
+  locked: boolean;
+  has_attempts: boolean;
+  has_results: boolean;
+}
+
+export async function getQuizDefinitionForManager(
+  quizId: string,
+): Promise<QuizDefinitionForManager> {
+  const { data, error } = await supabase.rpc("get_quiz_definition_for_manager", {
+    _quiz_id: quizId,
+  });
+  if (error) throw error;
+  return data as unknown as QuizDefinitionForManager;
+}
 
 // ─── Typed RPC wrappers ─────────────────────────────────────────────────────
 export async function listClassQuizzesForManager(
