@@ -122,7 +122,71 @@ export const quizManagerKeys = {
     classId: string,
     quizId: string,
   ) => ["quiz-manager", "detail", tenantId ?? "no-tenant", classId, quizId] as const,
+  definition: (
+    tenantId: string | null | undefined,
+    classId: string,
+    quizId: string,
+    userId: string | null | undefined,
+  ) =>
+    [
+      "quiz-manager",
+      "definition",
+      tenantId ?? "no-tenant",
+      classId,
+      quizId,
+      userId ?? "anon",
+    ] as const,
 };
+
+export interface QuizDefinitionForManager {
+  quiz: {
+    id: string;
+    class_id: string;
+    center_id: string;
+    title: string;
+    description: string | null;
+    instructions: string | null;
+    status: QuizStatus;
+    available_from: string | null;
+    due_at: string | null;
+    time_limit_seconds: number | null;
+    attempt_limit: number;
+    shuffle_questions: boolean;
+    shuffle_options: boolean;
+    result_visibility: ResultVisibility;
+    results_released_at: string | null;
+    published_at: string | null;
+    total_points: number;
+    updated_at: string;
+  };
+  questions: Array<{
+    id: string;
+    question: string;
+    question_type: QuestionType;
+    points: number;
+    explanation: string | null;
+    order_index: number;
+    options: Array<{
+      id: string;
+      option_text: string;
+      is_correct: boolean;
+      order_index: number;
+    }>;
+  }>;
+  locked: boolean;
+  has_attempts: boolean;
+  has_results: boolean;
+}
+
+export async function getQuizDefinitionForManager(
+  quizId: string,
+): Promise<QuizDefinitionForManager> {
+  const { data, error } = await supabase.rpc("get_quiz_definition_for_manager", {
+    _quiz_id: quizId,
+  });
+  if (error) throw error;
+  return data as unknown as QuizDefinitionForManager;
+}
 
 // ─── Typed RPC wrappers ─────────────────────────────────────────────────────
 export async function listClassQuizzesForManager(
@@ -196,7 +260,14 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
   if (msg.includes("quiz_not_found") || msg.includes("class_not_found")) return "This quiz is no longer available.";
   if (msg.includes("quiz_class_mismatch")) return "That quiz belongs to a different class.";
   if (msg.includes("cannot_publish_after_attempts")) return "You can't publish a quiz that already has student attempts.";
+  if (msg.includes("quiz_locked_after_attempts")) {
+    const idx = msg.indexOf(":");
+    return idx > -1
+      ? `Locked after attempts: ${msg.slice(idx + 1).trim()}`
+      : "This quiz has student attempts — questions, answers and grading settings are locked. Duplicate it to make changes.";
+  }
   if (msg.includes("edit_locked_after_attempts")) return "This quiz has attempts — question edits are locked. Duplicate it to make changes.";
+  if (msg.includes("active_attempt_in_progress")) return "A student has an in-progress attempt right now. Wait for it to finish before changing the status.";
   if (msg.includes("publish_validation_failed")) {
     const idx = msg.indexOf(":");
     return idx > -1 ? msg.slice(idx + 1).trim() : "Please complete the quiz before publishing.";

@@ -59,6 +59,7 @@ const TutorGrading = lazy(() => import("@/pages/tutor/TutorGrading").then(m => (
 const TutorNotes = lazy(() => import("@/pages/tutor/TutorNotes").then(m => ({ default: m.TutorNotes })));
 const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ default: m.TutorUpload })));
 const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
+const ClassQuizBuilder = lazy(() => import("@/pages/class/ClassQuizBuilder").then(m => ({ default: m.ClassQuizBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
@@ -197,6 +198,8 @@ const App = () => (
             <Route path="/admin/classes/:classId/resources" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassResources /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/students" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorClassStudents /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizzesManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/quizzes/new" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizBuilder variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/quizzes/:quizId/edit" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizBuilder variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
@@ -205,6 +208,8 @@ const App = () => (
             {/* Legacy tutor quiz builder → redirect to tutor classes list; real builder ships in B2b under /tutor/classes/:classId/quizzes/... */}
             <Route path="/tutor/quizzes/new" element={<Navigate to="/tutor/classes" replace />} />
             <Route path="/tutor/classes/:classId/quizzes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizzesManager variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/quizzes/new" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizBuilder variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/quizzes/:quizId/edit" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizBuilder variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuestions /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><QuizAnalytics /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/account" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorAccount /></TutorLayout></TenantGuard></ProtectedRoute>} />

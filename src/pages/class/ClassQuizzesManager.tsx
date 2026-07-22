@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -75,6 +75,7 @@ interface Props {
 
 export function ClassQuizzesManager({ variant }: Props) {
   const { classId } = useParams<{ classId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
@@ -142,9 +143,10 @@ export function ClassQuizzesManager({ variant }: Props) {
 
   const dupMut = useMutation({
     mutationFn: (id: string) => duplicateQuizAsDraft(id),
-    onSuccess: () => {
+    onSuccess: (newId) => {
       invalidate();
       toast({ title: "Duplicated as new draft" });
+      navigate(`${basePath}/quizzes/${newId}/edit`);
     },
     onError: (err) =>
       toast({ title: "Duplicate failed", description: mapQuizError(err), variant: "destructive" }),
@@ -169,10 +171,13 @@ export function ClassQuizzesManager({ variant }: Props) {
   ];
 
   const headerRight = (
-    <Button disabled className="rounded-full" title="Full builder ships in the next release">
+    <Button
+      className="rounded-full"
+      onClick={() => navigate(`${basePath}/quizzes/new`)}
+      disabled={!canManage}
+    >
       <Plus className="w-4 h-4 mr-1.5" />
       New quiz
-      <span className="ml-2 text-[10px] uppercase tracking-wide bg-white/20 rounded-full px-1.5 py-0.5">Soon</span>
     </Button>
   );
 
@@ -245,6 +250,7 @@ export function ClassQuizzesManager({ variant }: Props) {
                 <QuizCard
                   key={row.id}
                   row={row}
+                  onEdit={() => navigate(`${basePath}/quizzes/${row.id}/edit`)}
                   onStatus={(s) => statusMut.mutate({ id: row.id, status: s })}
                   onDelete={() => setPendingDelete(row)}
                   onArchive={() => setPendingArchive(row)}
@@ -314,6 +320,7 @@ export function ClassQuizzesManager({ variant }: Props) {
 
 function QuizCard({
   row,
+  onEdit,
   onStatus,
   onDelete,
   onArchive,
@@ -322,6 +329,7 @@ function QuizCard({
   busy,
 }: {
   row: QuizManagerRow;
+  onEdit: () => void;
   onStatus: (s: "draft" | "published" | "archived") => void;
   onDelete: () => void;
   onArchive: () => void;
@@ -355,6 +363,10 @@ function QuizCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={onEdit}>
+                <Send className="w-4 h-4 mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuLabel>Lifecycle</DropdownMenuLabel>
               {row.status !== "published" && (
                 <DropdownMenuItem onClick={() => onStatus("published")}>

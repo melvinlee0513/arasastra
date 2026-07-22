@@ -2436,6 +2436,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_quiz_definition_for_manager: {
+        Args: { _quiz_id: string }
+        Returns: Json
+      }
       get_quiz_for_attempt: { Args: { _attempt_id: string }; Returns: Json }
       get_quiz_result: { Args: { _attempt_id: string }; Returns: Json }
       get_signin_redirect_for_email: {
