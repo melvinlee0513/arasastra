@@ -143,9 +143,10 @@ export function ClassQuizzesManager({ variant }: Props) {
 
   const dupMut = useMutation({
     mutationFn: (id: string) => duplicateQuizAsDraft(id),
-    onSuccess: () => {
+    onSuccess: (newId) => {
       invalidate();
       toast({ title: "Duplicated as new draft" });
+      navigate(`${basePath}/quizzes/${newId}/edit`);
     },
     onError: (err) =>
       toast({ title: "Duplicate failed", description: mapQuizError(err), variant: "destructive" }),
