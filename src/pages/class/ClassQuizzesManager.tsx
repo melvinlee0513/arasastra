@@ -75,6 +75,7 @@ interface Props {
 
 export function ClassQuizzesManager({ variant }: Props) {
   const { classId } = useParams<{ classId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
