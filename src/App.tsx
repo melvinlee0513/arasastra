@@ -45,6 +45,8 @@ const StudentClassHome = lazy(() => import("@/pages/dashboard/class/StudentClass
 const StudentClassMaterials = lazy(() => import("@/pages/dashboard/class/StudentClassMaterials").then(m => ({ default: m.StudentClassMaterials })));
 const StudentClassAnnouncements = lazy(() => import("@/pages/dashboard/class/StudentClassAnnouncements").then(m => ({ default: m.StudentClassAnnouncements })));
 const ClassAboutPage = lazy(() => import("@/pages/class/ClassAboutPage").then(m => ({ default: m.ClassAboutPage })));
+const StudentClassQuizzes = lazy(() => import("@/pages/dashboard/class/StudentClassQuizzes").then(m => ({ default: m.StudentClassQuizzes })));
+const StudentQuizAttempt = lazy(() => import("@/pages/dashboard/class/StudentQuizAttempt").then(m => ({ default: m.StudentQuizAttempt })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
 // Quiz
@@ -168,6 +170,9 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/materials" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassMaterials /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/announcements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassAnnouncements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/about" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassAboutPage variant="student" /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassQuizzes /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><StudentQuizAttempt /></TenantGuard></ProtectedRoute>} />
+
 
             {/* UI-only previews — superadmin-gated, never linked from production nav. Isolated mock data, no backend calls. */}
             <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><ClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />

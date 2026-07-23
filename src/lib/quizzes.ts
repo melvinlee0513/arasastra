@@ -158,6 +158,7 @@ export interface QuizDefinitionForManager {
     published_at: string | null;
     total_points: number;
     updated_at: string;
+    definition_version: number;
   };
   questions: Array<{
     id: string;
@@ -239,16 +240,156 @@ export async function saveQuizDefinition(args: {
   quizId?: string | null;
   definition: QuizDefinitionDraft;
   publish?: boolean;
-}) {
-  const payload: Database["public"]["Functions"]["save_quiz_definition"]["Args"] = {
-    _class_id: args.classId,
-    _quiz_id: args.quizId ?? undefined,
-    _definition: args.definition as unknown as Database["public"]["Functions"]["save_quiz_definition"]["Args"]["_definition"],
-    _publish: args.publish ?? false,
-  };
-  const { data, error } = await supabase.rpc("save_quiz_definition", payload);
+  expectedVersion?: number | null;
+}): Promise<{
+  id: string;
+  status: QuizStatus;
+  updated_at: string;
+  total_points: number;
+  published_at: string | null;
+  definition_version: number;
+}> {
+  // Types have not been regenerated for the 5th positional arg yet; cast is safe.
+  const { data, error } = await supabase.rpc(
+    "save_quiz_definition" as never,
+    {
+      _class_id: args.classId,
+      _quiz_id: args.quizId ?? undefined,
+      _definition: args.definition as unknown as Record<string, unknown>,
+      _publish: args.publish ?? false,
+      _expected_version: args.expectedVersion ?? null,
+    } as never,
+  );
   if (error) throw error;
-  return data as { id: string; status: QuizStatus; updated_at: string; total_points: number; published_at: string | null };
+  return data as {
+    id: string;
+    status: QuizStatus;
+    updated_at: string;
+    total_points: number;
+    published_at: string | null;
+    definition_version: number;
+  };
+}
+
+// ─── Student attempt flow ───────────────────────────────────────────────────
+export interface StudentQuizListRow {
+  id: string;
+  title: string;
+  description: string | null;
+  available_from: string | null;
+  due_at: string | null;
+  time_limit_seconds: number | null;
+  attempt_limit: number;
+  result_visibility: ResultVisibility;
+  results_released_at: string | null;
+  question_count: number;
+  attempts_used: number;
+  in_progress_attempt_id: string | null;
+  latest_submitted_attempt_id: string | null;
+}
+
+export async function listStudentClassQuizzes(
+  classId: string,
+): Promise<StudentQuizListRow[]> {
+  const { data, error } = await supabase.rpc(
+    "list_student_class_quizzes" as never,
+    { _class_id: classId } as never,
+  );
+  if (error) throw error;
+  return (data ?? []) as unknown as StudentQuizListRow[];
+}
+
+export interface StudentAttemptOption {
+  id: string;
+  text: string;
+  order_index: number;
+}
+export interface StudentAttemptQuestion {
+  id: string;
+  question_type: QuestionType;
+  prompt: string;
+  points: number;
+  display_order: number;
+  options: StudentAttemptOption[];
+}
+export interface StudentAttemptPayload {
+  quiz: {
+    id: string;
+    title: string;
+    description: string | null;
+    instructions: string | null;
+    time_limit_seconds: number | null;
+    due_at: string | null;
+    available_from: string | null;
+    shuffle_questions: boolean;
+    shuffle_options: boolean;
+    attempt_limit: number;
+    result_visibility: ResultVisibility;
+    class_id: string;
+    center_id: string;
+  };
+  attempt: {
+    id: string;
+    status: "in_progress" | "submitted" | "expired";
+    saved_answers: Record<string, string> | null;
+    started_at: string;
+    submitted_at: string | null;
+    deadline: string | null;
+    progress_revision: number;
+  };
+  questions: StudentAttemptQuestion[];
+}
+
+export async function startQuizAttempt(quizId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("start_quiz_attempt", { _quiz_id: quizId });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function getQuizForAttempt(
+  attemptId: string,
+): Promise<StudentAttemptPayload> {
+  const { data, error } = await supabase.rpc("get_quiz_for_attempt", {
+    _attempt_id: attemptId,
+  });
+  if (error) throw error;
+  return data as unknown as StudentAttemptPayload;
+}
+
+export interface SaveProgressResult {
+  saved: true;
+  saved_at: string;
+  deadline: string | null;
+  progress_revision: number;
+}
+
+export async function saveQuizProgress(args: {
+  attemptId: string;
+  answers: Record<string, string>;
+  expectedRevision: number;
+}): Promise<SaveProgressResult> {
+  const { data, error } = await supabase.rpc(
+    "save_quiz_progress" as never,
+    {
+      _attempt_id: args.attemptId,
+      _answers: args.answers,
+      _expected_revision: args.expectedRevision,
+    } as never,
+  );
+  if (error) throw error;
+  return data as unknown as SaveProgressResult;
+}
+
+export async function submitQuizAttempt(args: {
+  attemptId: string;
+  answers?: Record<string, string> | null;
+}) {
+  const { data, error } = await supabase.rpc("submit_quiz_attempt", {
+    _attempt_id: args.attemptId,
+    _answers: (args.answers ?? null) as never,
+  });
+  if (error) throw error;
+  return data;
 }
 
 // ─── Friendly error mapping ─────────────────────────────────────────────────
@@ -257,9 +398,12 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
   if (!msg) return fallback;
   if (msg.includes("not_authenticated")) return "Please sign in again.";
   if (msg.includes("access_denied")) return "You don't have permission to manage this quiz.";
+  if (msg.includes("not_enrolled")) return "You aren't enrolled in this class.";
   if (msg.includes("quiz_not_found") || msg.includes("class_not_found")) return "This quiz is no longer available.";
   if (msg.includes("quiz_class_mismatch")) return "That quiz belongs to a different class.";
   if (msg.includes("cannot_publish_after_attempts")) return "You can't publish a quiz that already has student attempts.";
+  if (msg.includes("quiz_schedule_locked_after_attempts")) return "This quiz has attempts — the schedule is locked. Duplicate it to change the dates.";
+  if (msg.includes("quiz_definition_conflict")) return "This quiz was updated by another manager. Reload the latest version before saving.";
   if (msg.includes("quiz_locked_after_attempts")) {
     const idx = msg.indexOf(":");
     return idx > -1
@@ -268,6 +412,14 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
   }
   if (msg.includes("edit_locked_after_attempts")) return "This quiz has attempts — question edits are locked. Duplicate it to make changes.";
   if (msg.includes("active_attempt_in_progress")) return "A student has an in-progress attempt right now. Wait for it to finish before changing the status.";
+  if (msg.includes("progress_revision_conflict")) return "Your answers were updated in another tab. Reload to continue.";
+  if (msg.includes("attempt_not_editable")) return "This attempt can no longer be edited.";
+  if (msg.includes("attempt_deadline_passed")) return "The deadline for this attempt has passed.";
+  if (msg.includes("attempt_not_found")) return "We couldn't find that attempt.";
+  if (msg.includes("quiz_no_longer_accessible")) return "This quiz is no longer available.";
+  if (msg.includes("attempts_exhausted")) return "You've used all your attempts on this quiz.";
+  if (msg.includes("quiz_not_available")) return "This quiz isn't available yet.";
+  if (msg.includes("quiz_past_due")) return "This quiz is past its due date.";
   if (msg.includes("publish_validation_failed")) {
     const idx = msg.indexOf(":");
     return idx > -1 ? msg.slice(idx + 1).trim() : "Please complete the quiz before publishing.";

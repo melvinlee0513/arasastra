@@ -50,7 +50,7 @@ const NAV: NavEntry[] = [
   { key: "materials", label: "Materials", icon: FileText },
   { key: "students", label: "Students", icon: Users, managerOnly: true },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
-  { key: "quizzes", label: "Quizzes", icon: HelpCircle, managerOnly: true },
+  { key: "quizzes", label: "Quizzes", icon: HelpCircle },
   { key: "about", label: "About", icon: Info },
 ];
 
