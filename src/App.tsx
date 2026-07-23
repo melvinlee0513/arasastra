@@ -45,6 +45,8 @@ const StudentClassHome = lazy(() => import("@/pages/dashboard/class/StudentClass
 const StudentClassMaterials = lazy(() => import("@/pages/dashboard/class/StudentClassMaterials").then(m => ({ default: m.StudentClassMaterials })));
 const StudentClassAnnouncements = lazy(() => import("@/pages/dashboard/class/StudentClassAnnouncements").then(m => ({ default: m.StudentClassAnnouncements })));
 const ClassAboutPage = lazy(() => import("@/pages/class/ClassAboutPage").then(m => ({ default: m.ClassAboutPage })));
+const StudentClassQuizzes = lazy(() => import("@/pages/dashboard/class/StudentClassQuizzes").then(m => ({ default: m.StudentClassQuizzes })));
+const StudentQuizAttempt = lazy(() => import("@/pages/dashboard/class/StudentQuizAttempt").then(m => ({ default: m.StudentQuizAttempt })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
 // Quiz
