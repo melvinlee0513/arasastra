@@ -1384,6 +1384,7 @@ export type Database = {
           max_points: number
           percentage: number | null
           power_ups_used: Json
+          progress_revision: number
           quiz_id: string
           saved_answers: Json
           score: number
@@ -1405,6 +1406,7 @@ export type Database = {
           max_points?: number
           percentage?: number | null
           power_ups_used?: Json
+          progress_revision?: number
           quiz_id: string
           saved_answers?: Json
           score?: number
@@ -1426,6 +1428,7 @@ export type Database = {
           max_points?: number
           percentage?: number | null
           power_ups_used?: Json
+          progress_revision?: number
           quiz_id?: string
           saved_answers?: Json
           score?: number
@@ -1608,6 +1611,7 @@ export type Database = {
           class_id: string | null
           created_at: string | null
           created_by: string | null
+          definition_version: number
           description: string | null
           due_at: string | null
           id: string
@@ -1633,6 +1637,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          definition_version?: number
           description?: string | null
           due_at?: string | null
           id?: string
@@ -1658,6 +1663,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          definition_version?: number
           description?: string | null
           due_at?: string | null
           id?: string
@@ -2522,6 +2528,24 @@ export type Database = {
           updated_at: string
         }[]
       }
+      list_student_class_quizzes: {
+        Args: { _class_id: string }
+        Returns: {
+          attempt_limit: number
+          attempts_used: number
+          available_from: string
+          description: string
+          due_at: string
+          id: string
+          in_progress_attempt_id: string
+          latest_submitted_attempt_id: string
+          question_count: number
+          result_visibility: string
+          results_released_at: string
+          time_limit_seconds: number
+          title: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2596,13 +2620,18 @@ export type Database = {
         Args: {
           _class_id: string
           _definition: Json
+          _expected_version?: number
           _publish?: boolean
           _quiz_id?: string
         }
         Returns: Json
       }
       save_quiz_progress: {
-        Args: { _answers: Json; _attempt_id: string }
+        Args: {
+          _answers: Json
+          _attempt_id: string
+          _expected_revision?: number
+        }
         Returns: Json
       }
       set_quiz_status: {
