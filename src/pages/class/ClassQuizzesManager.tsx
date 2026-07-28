@@ -366,6 +366,11 @@ function QuizCard({
               <DropdownMenuItem onClick={onEdit}>
                 <Send className="w-4 h-4 mr-2" /> Edit
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to={`../quizzes/${row.id}/results`} relative="path">
+                  <Users className="w-4 h-4 mr-2" /> View results
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Lifecycle</DropdownMenuLabel>
               {row.status !== "published" && (
