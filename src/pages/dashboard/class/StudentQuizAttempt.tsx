@@ -149,12 +149,13 @@ export function StudentQuizAttempt() {
         setSubmitted(true);
         qc.invalidateQueries({ queryKey: ["quiz-student", "list", currentTenantId, classId] });
         toast.info("Time's up — your saved answers were submitted.");
+        navigate(`/dashboard/classes/${classId}/quizzes/${quizId}/results/${attemptId}`, { replace: true });
       } catch (err) {
         const msg = mapQuizError(err);
         toast.error(msg);
       }
     })();
-  }, [secondsLeft, locked, submitted, attemptId, qc, currentTenantId, classId]);
+  }, [secondsLeft, locked, submitted, attemptId, quizId, qc, currentTenantId, classId, navigate]);
 
   // Exit protection
   useEffect(() => {
