@@ -2442,12 +2442,20 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_quiz_attempt_for_manager: {
+        Args: { _attempt_id: string }
+        Returns: Json
+      }
       get_quiz_definition_for_manager: {
         Args: { _quiz_id: string }
         Returns: Json
       }
       get_quiz_for_attempt: { Args: { _attempt_id: string }; Returns: Json }
       get_quiz_result: { Args: { _attempt_id: string }; Returns: Json }
+      get_quiz_results_for_manager: {
+        Args: { _quiz_id: string }
+        Returns: Json
+      }
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
@@ -2528,6 +2536,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      list_my_quiz_attempts: { Args: { _quiz_id: string }; Returns: Json }
       list_student_class_quizzes: {
         Args: { _class_id: string }
         Returns: {

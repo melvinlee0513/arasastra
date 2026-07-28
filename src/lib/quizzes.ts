@@ -437,6 +437,131 @@ export async function getQuizResult(attemptId: string): Promise<QuizResultPayloa
   return data as unknown as QuizResultPayload;
 }
 
+// ─── Student attempt history ────────────────────────────────────────────────
+export interface StudentAttemptHistoryRow {
+  attempt_id: string;
+  status: "in_progress" | "submitted" | "abandoned";
+  started_at: string;
+  submitted_at: string | null;
+  total_points: number | null;
+  max_points: number | null;
+  percentage: number | null;
+  submission_reason: string | null;
+  results_visible: boolean;
+}
+export interface StudentAttemptHistory {
+  quiz_id: string;
+  result_visibility: ResultVisibility;
+  results_visible: boolean;
+  attempts: StudentAttemptHistoryRow[];
+}
+
+export async function listMyQuizAttempts(quizId: string): Promise<StudentAttemptHistory> {
+  const { data, error } = await supabase.rpc(
+    "list_my_quiz_attempts" as never,
+    { _quiz_id: quizId } as never,
+  );
+  if (error) throw error;
+  return data as unknown as StudentAttemptHistory;
+}
+
+// ─── Manager results (per-student summary) ──────────────────────────────────
+export interface ManagerResultStudent {
+  user_id: string;
+  full_name: string;
+  email: string | null;
+  avatar_path: string | null;
+  attempt_count: number;
+  submitted_count: number;
+  in_progress_count: number;
+  attempt_id: string | null;
+  total_points: number | null;
+  max_points: number | null;
+  percentage: number | null;
+  submitted_at: string | null;
+  submission_reason: string | null;
+}
+export interface ManagerResultsSummary {
+  total_enrolled: number;
+  total_attempts: number;
+  total_submitted: number;
+  total_in_progress: number;
+  avg_percentage: number | null;
+}
+export interface ManagerResultsPayload {
+  quiz: {
+    id: string; title: string; status: QuizStatus; class_id: string;
+    result_visibility: ResultVisibility;
+    results_released_at: string | null;
+    due_at: string | null;
+    total_points: number;
+    attempt_limit: number;
+  };
+  summary: ManagerResultsSummary;
+  students: ManagerResultStudent[];
+}
+
+export async function getQuizResultsForManager(quizId: string): Promise<ManagerResultsPayload> {
+  const { data, error } = await supabase.rpc(
+    "get_quiz_results_for_manager" as never,
+    { _quiz_id: quizId } as never,
+  );
+  if (error) throw error;
+  return data as unknown as ManagerResultsPayload;
+}
+
+// ─── Manager single-attempt review ──────────────────────────────────────────
+export interface ManagerAttemptQuestion {
+  question_id: string;
+  prompt: string;
+  question_type: string;
+  points: number;
+  explanation: string | null;
+  order_index: number | null;
+  correct_answer: string | null;
+  options: QuizResultOption[];
+  selected_option_id: string | null;
+  selected_answer: string | null;
+  is_correct: boolean;
+  points_awarded: number;
+}
+export interface ManagerAttemptPayload {
+  attempt: {
+    id: string;
+    status: string;
+    started_at: string;
+    submitted_at: string | null;
+    total_points: number;
+    max_points: number;
+    percentage: number | null;
+    saved_answers: Record<string, string> | null;
+  };
+  result: {
+    id: string;
+    submission_reason: string;
+    completed_at: string;
+    score: number;
+    total_questions: number;
+    total_points: number;
+    percentage: number | null;
+  } | null;
+  quiz: {
+    id: string; title: string; class_id: string; total_points: number;
+    result_visibility: ResultVisibility;
+  };
+  student: { user_id: string; full_name: string; email: string | null; avatar_path: string | null };
+  questions: ManagerAttemptQuestion[];
+}
+
+export async function getQuizAttemptForManager(attemptId: string): Promise<ManagerAttemptPayload> {
+  const { data, error } = await supabase.rpc(
+    "get_quiz_attempt_for_manager" as never,
+    { _attempt_id: attemptId } as never,
+  );
+  if (error) throw error;
+  return data as unknown as ManagerAttemptPayload;
+}
+
 // ─── Friendly error mapping ─────────────────────────────────────────────────
 export function mapQuizError(err: unknown, fallback = "Something went wrong. Please try again."): string {
   const msg = (err as { message?: string })?.message ?? "";

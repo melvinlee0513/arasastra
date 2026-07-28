@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -365,6 +365,11 @@ function QuizCard({
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={onEdit}>
                 <Send className="w-4 h-4 mr-2" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to={`../quizzes/${row.id}/results`} relative="path">
+                  <Users className="w-4 h-4 mr-2" /> View results
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Lifecycle</DropdownMenuLabel>
