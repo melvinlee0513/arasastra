@@ -392,6 +392,51 @@ export async function submitQuizAttempt(args: {
   return data;
 }
 
+// ─── Result payload (student-safe) ──────────────────────────────────────────
+export interface QuizResultOption {
+  id: string;
+  text: string;
+  is_correct: boolean;
+  order_index: number;
+}
+export interface QuizResultQuestion {
+  question_id: string;
+  prompt: string;
+  question_type: string;
+  points: number;
+  explanation: string | null;
+  correct_answer: string | null;
+  options: QuizResultOption[];
+  selected_option_id: string | null;
+  selected_answer: string | null;
+  is_correct: boolean;
+  points_awarded: number;
+}
+export type QuizResultPayload =
+  | { status: "not_submitted"; attempt_id: string }
+  | { status: "no_result"; attempt_id: string }
+  | { status: "hidden"; visibility: ResultVisibility; attempt_id: string; result_id: string }
+  | {
+      status: "ok";
+      visibility: ResultVisibility;
+      attempt_id: string;
+      result_id: string;
+      score: number;
+      total_questions: number;
+      total_points: number;
+      max_points: number;
+      percentage: number | null;
+      submission_reason: string;
+      completed_at: string;
+      questions: QuizResultQuestion[];
+    };
+
+export async function getQuizResult(attemptId: string): Promise<QuizResultPayload> {
+  const { data, error } = await supabase.rpc("get_quiz_result", { _attempt_id: attemptId });
+  if (error) throw error;
+  return data as unknown as QuizResultPayload;
+}
+
 // ─── Friendly error mapping ─────────────────────────────────────────────────
 export function mapQuizError(err: unknown, fallback = "Something went wrong. Please try again."): string {
   const msg = (err as { message?: string })?.message ?? "";
