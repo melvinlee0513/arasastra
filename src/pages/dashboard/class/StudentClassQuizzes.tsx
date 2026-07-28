@@ -211,6 +211,16 @@ function QuizAction({
     return <Button variant="outline" className="rounded-full gap-1" disabled>Attempts used</Button>;
   }
   if (state.kind === "submitted") {
+    const attemptId = row.latest_submitted_attempt_id;
+    if (attemptId) {
+      return (
+        <Button asChild variant="outline" className="rounded-full gap-1">
+          <Link to={`/dashboard/classes/${classId}/quizzes/${row.id}/results/${attemptId}`}>
+            <CheckCircle2 className="w-4 h-4" /> View result
+          </Link>
+        </Button>
+      );
+    }
     return <Button variant="outline" className="rounded-full gap-1" disabled><CheckCircle2 className="w-4 h-4" /> Submitted</Button>;
   }
   return (

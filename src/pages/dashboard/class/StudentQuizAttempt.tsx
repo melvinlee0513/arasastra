@@ -149,12 +149,13 @@ export function StudentQuizAttempt() {
         setSubmitted(true);
         qc.invalidateQueries({ queryKey: ["quiz-student", "list", currentTenantId, classId] });
         toast.info("Time's up — your saved answers were submitted.");
+        navigate(`/dashboard/classes/${classId}/quizzes/${quizId}/results/${attemptId}`, { replace: true });
       } catch (err) {
         const msg = mapQuizError(err);
         toast.error(msg);
       }
     })();
-  }, [secondsLeft, locked, submitted, attemptId, qc, currentTenantId, classId]);
+  }, [secondsLeft, locked, submitted, attemptId, quizId, qc, currentTenantId, classId, navigate]);
 
   // Exit protection
   useEffect(() => {
@@ -183,6 +184,7 @@ export function StudentQuizAttempt() {
       setLocked(true);
       qc.invalidateQueries({ queryKey: ["quiz-student", "list", currentTenantId, classId] });
       toast.success("Quiz submitted.");
+      navigate(`/dashboard/classes/${classId}/quizzes/${quizId}/results/${attemptId}`, { replace: true });
     } catch (err) {
       const msg = mapQuizError(err);
       if (msg === "Something went wrong. Please try again.") showSupabaseError(err);
@@ -191,7 +193,7 @@ export function StudentQuizAttempt() {
       setSubmitting(false);
       setConfirmOpen(false);
     }
-  }, [attemptId, answers, persist, qc, saveState, submitting, currentTenantId, classId]);
+  }, [attemptId, quizId, classId, navigate, answers, persist, qc, saveState, submitting, currentTenantId]);
 
   // ── Render ───────────────────────────────────────────────────────────
   if (attemptQ.isLoading || classCtx.isLoading) {
