@@ -193,7 +193,7 @@ export function StudentQuizAttempt() {
       setSubmitting(false);
       setConfirmOpen(false);
     }
-  }, [attemptId, answers, persist, qc, saveState, submitting, currentTenantId, classId]);
+  }, [attemptId, quizId, classId, navigate, answers, persist, qc, saveState, submitting, currentTenantId]);
 
   // ── Render ───────────────────────────────────────────────────────────
   if (attemptQ.isLoading || classCtx.isLoading) {
