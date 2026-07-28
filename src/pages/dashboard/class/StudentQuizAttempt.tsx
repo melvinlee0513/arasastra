@@ -184,6 +184,7 @@ export function StudentQuizAttempt() {
       setLocked(true);
       qc.invalidateQueries({ queryKey: ["quiz-student", "list", currentTenantId, classId] });
       toast.success("Quiz submitted.");
+      navigate(`/dashboard/classes/${classId}/quizzes/${quizId}/results/${attemptId}`, { replace: true });
     } catch (err) {
       const msg = mapQuizError(err);
       if (msg === "Something went wrong. Please try again.") showSupabaseError(err);
