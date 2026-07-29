@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, ExternalLink, HelpCircle, Layers,
-  ArrowRight, Info, Calendar, User, BookOpen,
+  ArrowRight, Info, Calendar, User, BookOpen, Play, Lock, CheckCircle2, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { hasValidSource, openClassResource } from "@/lib/classResources";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
+import { listStudentClassQuizzes, quizStudentKeys, formatDateTime, type StudentQuizListRow } from "@/lib/quizzes";
 
 type ResourceRow = {
   id: string;
@@ -72,6 +73,15 @@ export function StudentClassHome() {
   });
 
   const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canView);
+
+  const quizzesQ = useQuery({
+    queryKey: quizStudentKeys.list(currentTenantId, classId ?? "", user?.id),
+    enabled: !!classId && !!user && !!ctx.data?.canView,
+    queryFn: () => listStudentClassQuizzes(classId!),
+    staleTime: 30_000,
+  });
+
+  const priorityQuiz = useMemo(() => pickPriorityQuiz(quizzesQ.data ?? []), [quizzesQ.data]);
 
   const counts = useMemo(() => {
     const r = resourcesQ.data || [];
