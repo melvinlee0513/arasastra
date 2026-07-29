@@ -237,6 +237,9 @@ export function StudentClassHome() {
           </Button>
         </section>
 
+        <QuizWidget classId={classId!} basePath={basePath} loading={quizzesQ.isLoading} quiz={priorityQuiz} />
+
+
         {ctx.data?.klass?.scheduled_at && (
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
             <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
@@ -281,6 +284,79 @@ export function StudentClassHome() {
     </div>
   );
 }
+
+function pickPriorityQuiz(rows: StudentQuizListRow[]): StudentQuizListRow | null {
+  if (!rows.length) return null;
+  const now = Date.now();
+  const inProgress = rows.find((r) => r.in_progress_attempt_id);
+  if (inProgress) return inProgress;
+  const available = rows.filter((r) => {
+    const from = r.available_from ? new Date(r.available_from).getTime() : -Infinity;
+    const due = r.due_at ? new Date(r.due_at).getTime() : Infinity;
+    return from <= now && due >= now && r.attempts_used < (r.attempt_limit ?? 1);
+  });
+  if (available.length) {
+    return available.sort((a, b) => {
+      const ad = a.due_at ? new Date(a.due_at).getTime() : Infinity;
+      const bd = b.due_at ? new Date(b.due_at).getTime() : Infinity;
+      return ad - bd;
+    })[0];
+  }
+  const upcoming = rows
+    .filter((r) => r.available_from && new Date(r.available_from).getTime() > now)
+    .sort((a, b) => new Date(a.available_from!).getTime() - new Date(b.available_from!).getTime());
+  if (upcoming.length) return upcoming[0];
+  return null;
+}
+
+function QuizWidget({
+  classId,
+  basePath,
+  loading,
+  quiz,
+}: {
+  classId: string;
+  basePath: string;
+  loading: boolean;
+  quiz: StudentQuizListRow | null;
+}) {
+  if (loading) return null;
+  if (!quiz) return null;
+  const now = Date.now();
+  const isUpcoming = !!quiz.available_from && new Date(quiz.available_from).getTime() > now;
+  const inProgress = !!quiz.in_progress_attempt_id;
+  return (
+    <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+          <HelpCircle className="w-4 h-4 text-primary" /> {inProgress ? "Resume quiz" : isUpcoming ? "Upcoming quiz" : "Next quiz"}
+        </h3>
+        <Button asChild variant="ghost" size="sm" className="text-primary">
+          <Link to={`${basePath}/quizzes`}>All quizzes <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+        </Button>
+      </div>
+      <p className="font-medium text-slate-900 truncate">{quiz.title}</p>
+      <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
+        {quiz.due_at && (
+          <Badge variant="outline" className="rounded-full gap-1">
+            <Clock className="w-3 h-3" /> Due {formatDateTime(quiz.due_at)}
+          </Badge>
+        )}
+        <Badge variant="outline" className="rounded-full">
+          {quiz.attempts_used}/{quiz.attempt_limit} used
+        </Badge>
+      </div>
+      <Button asChild className="rounded-full w-full mt-4" disabled={isUpcoming}>
+        <Link to={`${basePath}/quizzes`}>
+          {isUpcoming ? <><Lock className="w-4 h-4 mr-2" /> Opens {formatDateTime(quiz.available_from!)}</> :
+           inProgress ? <><Play className="w-4 h-4 mr-2" /> Resume</> :
+           <><Play className="w-4 h-4 mr-2" /> Start quiz</>}
+        </Link>
+      </Button>
+    </section>
+  );
+}
+
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
