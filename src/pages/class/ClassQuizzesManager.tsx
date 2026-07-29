@@ -116,6 +116,13 @@ export function ClassQuizzesManager({ variant }: Props) {
     qc.invalidateQueries({ queryKey: quizManagerKeys.list(currentTenantId, classId ?? "") });
     qc.invalidateQueries({ queryKey: ["class-context", currentTenantId, classId] });
     qc.invalidateQueries({ queryKey: ["tutor-class-home"] });
+    // Manager result caches (summary + individual attempt review) must also
+    // refresh so lifecycle actions like Release/Hide results appear immediately.
+    qc.invalidateQueries({ queryKey: ["quiz-manager", "results"] });
+    qc.invalidateQueries({ queryKey: ["quiz-manager", "attempt"] });
+    // And the student-facing list/result caches — students should see status
+    // changes (release/hide/archive) on next mount without a hard reload.
+    qc.invalidateQueries({ queryKey: ["quiz-student"] });
   };
 
   const statusMut = useMutation({
