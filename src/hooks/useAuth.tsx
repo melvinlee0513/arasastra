@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearQuizLocalState } from "@/lib/quizzes";
 
 type UserRole = "admin" | "student" | "tutor" | "superadmin";
 
@@ -155,6 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     fetchingRef.current = null;
+    // Purge any lingering quiz builder/attempt drafts so the next user on the
+    // same browser never inherits the previous user's in-progress state.
+    clearQuizLocalState();
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

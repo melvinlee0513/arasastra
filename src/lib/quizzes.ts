@@ -413,14 +413,23 @@ export interface QuizResultQuestion {
   points_awarded: number;
 }
 export type QuizResultPayload =
-  | { status: "not_submitted"; attempt_id: string }
-  | { status: "no_result"; attempt_id: string }
-  | { status: "hidden"; visibility: ResultVisibility; attempt_id: string; result_id: string }
+  | { status: "not_submitted"; attempt_id: string; quiz_id: string; class_id: string }
+  | { status: "no_result"; attempt_id: string; quiz_id: string; class_id: string }
+  | {
+      status: "hidden";
+      visibility: ResultVisibility;
+      attempt_id: string;
+      result_id: string;
+      quiz_id: string;
+      class_id: string;
+    }
   | {
       status: "ok";
       visibility: ResultVisibility;
       attempt_id: string;
       result_id: string;
+      quiz_id: string;
+      class_id: string;
       score: number;
       total_questions: number;
       total_points: number;
@@ -435,6 +444,47 @@ export async function getQuizResult(attemptId: string): Promise<QuizResultPayloa
   const { data, error } = await supabase.rpc("get_quiz_result", { _attempt_id: attemptId });
   if (error) throw error;
   return data as unknown as QuizResultPayload;
+}
+
+// ─── Student-facing React Query keys ────────────────────────────────────────
+export const quizStudentKeys = {
+  list: (tenantId: string | null | undefined, classId: string, userId: string | null | undefined) =>
+    ["quiz-student", "list", tenantId ?? "no-tenant", classId, userId ?? "anon"] as const,
+  result: (
+    tenantId: string | null | undefined,
+    classId: string,
+    attemptId: string,
+    userId: string | null | undefined,
+  ) => ["quiz-student", "result", tenantId ?? "no-tenant", classId, attemptId, userId ?? "anon"] as const,
+  history: (
+    tenantId: string | null | undefined,
+    quizId: string,
+    userId: string | null | undefined,
+  ) => ["quiz-student", "history", tenantId ?? "no-tenant", quizId, userId ?? "anon"] as const,
+};
+
+// Purge any client-side quiz draft/state persisted in localStorage. Called on
+// sign-out so a subsequent user on the same browser never inherits the
+// previous user's in-progress builder/attempt state.
+export function clearQuizLocalState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const kill: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k) continue;
+      if (
+        k.startsWith("quiz-builder:") ||
+        k.startsWith("quiz-attempt:") ||
+        k.startsWith("aras.quiz.")
+      ) {
+        kill.push(k);
+      }
+    }
+    kill.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    // Ignore storage errors — best-effort cleanup only.
+  }
 }
 
 // ─── Student attempt history ────────────────────────────────────────────────
