@@ -180,6 +180,17 @@ export function StudentQuizResult() {
             });
           }}
         />
+      ) : resultQ.data!.status === "not_submitted" ? (
+        <StatusCard
+          icon={<Clock className="w-7 h-7 text-primary" />}
+          title="Attempt not submitted"
+          body="This attempt hasn't been submitted yet."
+          action={
+            <Button asChild className="rounded-full">
+              <Link to={backHref}>Back to quizzes</Link>
+            </Button>
+          }
+        />
       ) : (
         <ResultBody data={resultQ.data!} quizId={params.quizId!} classId={params.classId!} />
       )}
