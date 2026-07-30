@@ -160,12 +160,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // same browser never inherits the previous user's in-progress state.
     clearQuizLocalState();
     await supabase.auth.signOut();
+    // Drop all cached server state so a second sign-in on the same browser
+    // cannot read the previous user's quiz/class data from memory.
+    queryClient.clear();
     setUser(null);
     setSession(null);
     setProfile(null);
     setRole(null);
     setRoles([]);
   };
+
 
   const isSuperAdmin = role === "superadmin" || roles.includes("superadmin");
   const isAdmin = isSuperAdmin || role === "admin" || roles.includes("admin");
