@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { clearQuizLocalState } from "@/lib/quizzes";
 
 type UserRole = "admin" | "student" | "tutor" | "superadmin";
