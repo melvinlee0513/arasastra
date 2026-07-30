@@ -46,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
+
 
   useEffect(() => {
     // 1. Register listener FIRST so we don't miss the SIGNED_IN event.
