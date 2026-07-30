@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { clearQuizLocalState } from "@/lib/quizzes";
 
 type UserRole = "admin" | "student" | "tutor" | "superadmin";
@@ -46,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
+
 
   useEffect(() => {
     // 1. Register listener FIRST so we don't miss the SIGNED_IN event.
@@ -160,12 +164,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // same browser never inherits the previous user's in-progress state.
     clearQuizLocalState();
     await supabase.auth.signOut();
+    // Drop all cached server state so a second sign-in on the same browser
+    // cannot read the previous user's quiz/class data from memory.
+    queryClient.clear();
     setUser(null);
     setSession(null);
     setProfile(null);
     setRole(null);
     setRoles([]);
   };
+
 
   const isSuperAdmin = role === "superadmin" || roles.includes("superadmin");
   const isAdmin = isSuperAdmin || role === "admin" || roles.includes("admin");

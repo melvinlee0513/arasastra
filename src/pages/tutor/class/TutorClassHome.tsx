@@ -1,8 +1,8 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, ClipboardList, Plus, Layers, PencilLine,
-  Users, CheckCircle2, ArrowRight, Megaphone, Pin,
+  Users, CheckCircle2, ArrowRight, Megaphone, Pin, HelpCircle, BarChart3, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,12 +13,17 @@ import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
+import {
+  listClassQuizzesForManager,
+  quizManagerKeys,
+  formatDateTime,
+  type QuizManagerRow,
+} from "@/lib/quizzes";
 
 type ResourceRow = {
   id: string; title: string; resource_type: string; status: string;
   published_at: string | null; created_at: string;
 };
-type QuizRow = { id: string; title: string; status: string; total_points: number };
 
 export function TutorClassHome() {
   const { classId } = useParams<{ classId: string }>();
@@ -26,13 +31,14 @@ export function TutorClassHome() {
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
   const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canManage);
-
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin/");
 
   const data = useQuery({
     queryKey: ["tutor-class-home", currentTenantId, classId, user?.id],
     enabled: !!classId && !!user && !!ctx.data?.canManage,
     queryFn: async () => {
-      const [{ count: studentCount }, { data: resources }, { data: quizzes }] = await Promise.all([
+      const [{ count: studentCount }, { data: resources }] = await Promise.all([
         supabase
           .from("class_enrollments")
           .select("id", { count: "exact", head: true })
@@ -44,34 +50,39 @@ export function TutorClassHome() {
           .eq("class_id", classId!)
           .order("created_at", { ascending: false })
           .limit(50),
-        supabase
-          .from("quizzes")
-          .select("id,title,status,total_points")
-          .eq("class_id", classId!)
-          .order("created_at", { ascending: false }),
       ]);
       return {
         studentCount: studentCount ?? 0,
         resources: (resources || []) as ResourceRow[],
-        quizzes: (quizzes || []) as QuizRow[],
       };
     },
   });
 
-  const basePath = `/tutor/classes/${classId}`;
+  // Single manager-scoped aggregate query — no per-quiz requests.
+  const quizzesQ = useQuery({
+    queryKey: quizManagerKeys.list(currentTenantId, classId ?? ""),
+    enabled: !!classId && !!user && !!ctx.data?.canManage,
+    queryFn: () => listClassQuizzesForManager(classId!),
+    staleTime: 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
+
+  const basePath = isAdminRoute ? `/admin/classes/${classId}` : `/tutor/classes/${classId}`;
   const materialsPath = `${basePath}/resources`;
 
   const shell = (children: React.ReactNode) => (
     <ClassShell
       data={ctx.data}
       isLoading={ctx.isLoading}
-      role="tutor"
+      role={isAdminRoute ? "admin" : "tutor"}
       section="home"
       basePath={basePath}
       materialsPath={materialsPath}
       breadcrumbs={[
-        { label: "Tutor", to: "/tutor" },
-        { label: "My Classes", to: "/tutor/classes" },
+        { label: isAdminRoute ? "Admin" : "Tutor", to: isAdminRoute ? "/admin" : "/tutor" },
+        { label: "Classes", to: isAdminRoute ? "/admin/curriculum" : "/tutor/classes" },
         { label: ctx.data?.klass?.title || "Class" },
       ]}
     >
@@ -87,6 +98,7 @@ export function TutorClassHome() {
   const drafts = d ? d.resources.filter((r) => r.status === "draft").length : 0;
   const published = d ? d.resources.filter((r) => r.status === "published").length : 0;
   const recent = d ? d.resources.slice(0, 6) : [];
+  const quizAgg = aggregateQuizzes(quizzesQ.data);
 
   return shell(
     <div className="space-y-5">
@@ -145,8 +157,65 @@ export function TutorClassHome() {
         <StatCard label="Students" value={d?.studentCount ?? "—"} sub="active enrolments" />
         <StatCard label="Published" value={published} sub="resources" />
         <StatCard label="Drafts" value={drafts} sub="not yet visible" tone={drafts > 0 ? "warn" : "default"} />
-        <StatCard label="Quizzes" value={d?.quizzes.length ?? "—"} sub="total in class" />
+        <StatCard label="Quizzes" value={quizzesQ.data ? quizAgg.total : "—"} sub="total in class" />
       </div>
+
+      {/* Quiz aggregates */}
+      <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 text-primary" /> Quizzes
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" className="rounded-full">
+              <Link to={`${basePath}/quizzes/new`}><Plus className="w-3.5 h-3.5 mr-1" /> Create quiz</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="rounded-full">
+              <Link to={`${basePath}/quizzes`}>Manage quizzes</Link>
+            </Button>
+          </div>
+        </div>
+
+        {quizzesQ.isLoading ? (
+          <p className="text-sm text-slate-500">Loading…</p>
+        ) : quizzesQ.isError ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-slate-500">Quiz data isn't available right now.</p>
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => quizzesQ.refetch()}>Retry</Button>
+          </div>
+        ) : quizAgg.total === 0 ? (
+          <p className="text-sm text-slate-500 text-center py-6">No quizzes yet. Create your first quiz for this class.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <MiniStat label="Draft" value={quizAgg.draft} />
+              <MiniStat label="Published" value={quizAgg.published} />
+              <MiniStat label="Archived" value={quizAgg.archived} />
+              <MiniStat label="Submitted attempts" value={quizAgg.submittedAttempts} sub="includes retakes" />
+            </div>
+            {quizAgg.next && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {quizAgg.nextIsOpen ? "Currently available" : "Next upcoming"}
+                </p>
+                <p className="font-semibold text-slate-900 mt-1 break-words">{quizAgg.next.title}</p>
+                <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {quizAgg.next.due_at ? `Due ${formatDateTime(quizAgg.next.due_at)}` : "No due date"}
+                  </span>
+                  <span>{quizAgg.next.submission_count} submitted attempts</span>
+                </p>
+                <Button asChild size="sm" variant="ghost" className="rounded-full text-primary mt-2 px-2">
+                  <Link to={`${basePath}/quizzes/${quizAgg.next.id}/results`}>
+                    <BarChart3 className="w-3.5 h-3.5 mr-1" /> View results
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Recent content */}
       <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6">
@@ -196,6 +265,42 @@ export function TutorClassHome() {
           {d?.studentCount ?? 0} active enrolments in this class.
         </p>
       </section>
+    </div>
+  );
+}
+
+function aggregateQuizzes(rows: QuizManagerRow[] | undefined) {
+  const list = rows ?? [];
+  const now = Date.now();
+  const published = list.filter((q) => q.status === "published");
+
+  const openNow = published
+    .filter((q) => (!q.available_from || new Date(q.available_from).getTime() <= now)
+      && (!q.due_at || new Date(q.due_at).getTime() >= now))
+    .sort((a, b) => (a.due_at ? new Date(a.due_at).getTime() : Infinity) - (b.due_at ? new Date(b.due_at).getTime() : Infinity));
+
+  const upcoming = published
+    .filter((q) => q.available_from && new Date(q.available_from).getTime() > now)
+    .sort((a, b) => new Date(a.available_from!).getTime() - new Date(b.available_from!).getTime());
+
+  return {
+    total: list.length,
+    draft: list.filter((q) => q.status === "draft").length,
+    published: published.length,
+    archived: list.filter((q) => q.status === "archived").length,
+    // submission_count counts every submitted attempt, retakes included.
+    submittedAttempts: list.reduce((sum, q) => sum + (q.submission_count ?? 0), 0),
+    next: openNow[0] ?? upcoming[0] ?? null,
+    nextIsOpen: openNow.length > 0,
+  };
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: number; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 break-words">{label}</p>
+      <p className="text-xl font-bold text-slate-900 mt-1">{value}</p>
+      {sub && <p className="text-[11px] text-slate-500 mt-0.5">{sub}</p>}
     </div>
   );
 }

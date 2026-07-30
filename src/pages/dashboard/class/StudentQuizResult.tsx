@@ -62,7 +62,14 @@ export function StudentQuizResult() {
       if (d.status === "no_result" && !pollExhausted) return POLL_INTERVAL_MS;
       return false;
     },
+    // A tutor releasing results elsewhere only reaches this tab on
+    // mount/focus/reconnect, so opt out of the global no-focus-refetch default.
+    staleTime: 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
+
 
   // Reset the poll counter whenever the attempt in the URL changes.
   useEffect(() => {
