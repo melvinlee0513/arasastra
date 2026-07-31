@@ -536,6 +536,13 @@ export interface ManagerResultsSummary {
   total_attempts: number;
   total_submitted: number;
   total_in_progress: number;
+  /** Distinct enrolled students with at least one attempt. */
+  students_started: number;
+  /** Distinct students with at least one submitted attempt. */
+  students_submitted: number;
+  /** Percentage of enrolled students who submitted at least once. */
+  completion_pct: number | null;
+  /** Class average over each student's LATEST submitted attempt. */
   avg_percentage: number | null;
 }
 export interface ManagerResultsPayload {
