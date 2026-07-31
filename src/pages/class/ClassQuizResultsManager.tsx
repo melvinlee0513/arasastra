@@ -106,13 +106,19 @@ function ResultsSummary({
     <div className="space-y-5">
       <Card className="rounded-3xl p-6 border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <h2 className="font-semibold text-slate-900 mb-3">{quiz.title}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Stat label="Enrolled" value={summary.total_enrolled} />
-          <Stat label="Submitted" value={summary.total_submitted} />
-          <Stat label="In progress" value={summary.total_in_progress} />
-          <Stat label="Attempts" value={summary.total_attempts} />
-          <Stat label="Average" value={summary.avg_percentage != null ? `${summary.avg_percentage}%` : "—"} />
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+          <Stat label="Enrolled students" value={summary.total_enrolled} />
+          <Stat label="Students started" value={summary.students_started} />
+          <Stat label="Students submitted" value={summary.students_submitted} />
+          <Stat label="Submitted attempts" value={summary.total_submitted} />
+          <Stat label="Completion" value={summary.completion_pct != null ? `${summary.completion_pct}%` : "—"} />
+          <Stat label="Average (latest attempt)" value={summary.avg_percentage != null ? `${summary.avg_percentage}%` : "—"} />
         </div>
+        <p className="text-xs text-slate-500 mt-3">
+          Class average uses each student&apos;s latest submitted attempt. {summary.total_in_progress} attempt
+          {summary.total_in_progress === 1 ? "" : "s"} in progress · {summary.total_attempts} attempt
+          {summary.total_attempts === 1 ? "" : "s"} started in total.
+        </p>
       </Card>
 
       <Card className="rounded-3xl p-4 sm:p-5 border-slate-200">
