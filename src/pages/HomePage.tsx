@@ -87,8 +87,15 @@ export function HomePage() {
   };
 
   useEffect(() => {
+    // Live class data is member-only; signed-out visitors are denied by RLS,
+    // so skip the request entirely instead of generating 401 noise.
+    if (!isAuthenticated) {
+      setLiveClasses([]);
+      setIsLoading(false);
+      return;
+    }
     fetchLiveClasses();
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchLiveClasses = async () => {
     try {
