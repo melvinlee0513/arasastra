@@ -927,32 +927,42 @@ export type Database = {
       flashcards: {
         Row: {
           back_text: string
+          center_id: string
           created_at: string
           deck_id: string
           front_text: string
           id: string
-          sort_order: number | null
+          sort_order: number
           updated_at: string
         }
         Insert: {
           back_text: string
+          center_id: string
           created_at?: string
           deck_id: string
           front_text: string
           id?: string
-          sort_order?: number | null
+          sort_order?: number
           updated_at?: string
         }
         Update: {
           back_text?: string
+          center_id?: string
           created_at?: string
           deck_id?: string
           front_text?: string
           id?: string
-          sort_order?: number | null
+          sort_order?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "flashcards_center_fk"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "flashcards_deck_id_fkey"
             columns: ["deck_id"]
@@ -2366,6 +2376,10 @@ export type Database = {
         Args: { _attempt_id: string }
         Returns: undefined
       }
+      _flashcard_manager_center: {
+        Args: { _class_id: string }
+        Returns: string
+      }
       _grade_and_finalize_attempt: {
         Args: {
           _answers: Json
@@ -2407,12 +2421,25 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_flashcard_deck_safe: { Args: { _deck_id: string }; Returns: Json }
       delete_quiz_safe: { Args: { _quiz_id: string }; Returns: Json }
+      duplicate_flashcard_deck_as_draft: {
+        Args: { _deck_id: string }
+        Returns: string
+      }
       duplicate_quiz_as_draft: { Args: { _quiz_id: string }; Returns: string }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_flashcard_deck_for_manager: {
+        Args: { _deck_id: string }
+        Returns: Json
+      }
+      get_flashcard_deck_for_study: {
+        Args: { _deck_id: string }
+        Returns: Json
       }
       get_invitation_by_token: {
         Args: { _token: string }
@@ -2509,6 +2536,14 @@ export type Database = {
           used_at: string
         }[]
       }
+      list_class_flashcard_decks_for_manager: {
+        Args: { _class_id: string }
+        Returns: Json
+      }
+      list_class_flashcard_decks_for_student: {
+        Args: { _class_id: string }
+        Returns: Json
+      }
       list_class_quizzes_for_manager: {
         Args: { _class_id: string }
         Returns: {
@@ -2572,6 +2607,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_flashcard_deck_completion: {
+        Args: { _deck_id: string }
+        Returns: Json
+      }
       record_learning_activity: {
         Args: {
           _event_type: string
@@ -2595,6 +2634,10 @@ export type Database = {
           new_display_order: number
           resource_id: string
         }[]
+      }
+      reorder_flashcard_decks: {
+        Args: { _class_id: string; _deck_ids: string[] }
+        Returns: Json
       }
       replace_tenant_member_role: {
         Args: { requested_role: string; target_user_id: string }
@@ -2625,6 +2668,15 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      save_flashcard_deck: {
+        Args: {
+          _class_id: string
+          _deck_id?: string
+          _definition: Json
+          _publish?: boolean
+        }
+        Returns: Json
+      }
       save_quiz_definition: {
         Args: {
           _class_id: string
@@ -2643,6 +2695,10 @@ export type Database = {
         }
         Returns: Json
       }
+      set_flashcard_deck_status: {
+        Args: { _deck_id: string; _status: string }
+        Returns: Json
+      }
       set_quiz_status: {
         Args: { _quiz_id: string; _status: string }
         Returns: Json
@@ -2651,6 +2707,10 @@ export type Database = {
       submit_quiz_attempt: {
         Args: { _answers?: Json; _attempt_id: string }
         Returns: Json
+      }
+      tenant_feature_enabled: {
+        Args: { _center_id: string; _default?: boolean; _flag: string }
+        Returns: boolean
       }
       tutor_can_teach: {
         Args: { _standard_id: string; _subject_id: string; _user_id: string }
