@@ -137,10 +137,17 @@ export function FlashcardDecksTab() {
       for (const c of cards) {
         if (!c.front_text.trim() || !c.back_text.trim()) throw new Error("All cards must have front and back text");
       }
+      if (!currentTenantId) throw new Error("Tenant context missing");
       await supabase.from("flashcards").delete().eq("deck_id", editingDeck.id);
       if (cards.length > 0) {
         await supabase.from("flashcards").insert(
-          cards.map((c, i) => ({ deck_id: editingDeck.id, front_text: c.front_text, back_text: c.back_text, sort_order: i }))
+          cards.map((c, i) => ({
+            deck_id: editingDeck.id,
+            center_id: currentTenantId,
+            front_text: c.front_text,
+            back_text: c.back_text,
+            sort_order: i,
+          }))
         );
       }
       toast({ title: "✅ Cards saved" });
