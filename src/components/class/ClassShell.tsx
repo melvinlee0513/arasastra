@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   Home, ChevronRight, BookOpen, User, Clock, Calendar,
-  LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info, Users, ImagePlus,
+  LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info, Users, ImagePlus, Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { ClassCover } from "@/components/class/ClassCover";
 import { ClassCoverManager } from "@/components/class/ClassCoverManager";
 import { tutorLabel } from "@/lib/classCovers";
+import { useFeatureEnabled, type FeatureFlag } from "@/hooks/useFeature";
+
 
 export type ClassSection =
   | "home"
@@ -19,7 +21,9 @@ export type ClassSection =
   | "students"
   | "discussions"
   | "quizzes"
+  | "flashcards"
   | "about";
+
 
 type BreadcrumbItem = { label: string; to?: string };
 
@@ -42,6 +46,8 @@ type NavEntry = {
   disabled?: boolean;
   disabledLabel?: string;
   managerOnly?: boolean; // tutor + admin only
+  /** Tenant feature flag that must be enabled for this item to appear. */
+  featureFlag?: FeatureFlag;
 };
 
 const NAV: NavEntry[] = [
@@ -51,8 +57,11 @@ const NAV: NavEntry[] = [
   { key: "students", label: "Students", icon: Users, managerOnly: true },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
   { key: "quizzes", label: "Quizzes", icon: HelpCircle },
+  // Student flashcard navigation ships in Phase 3B2; manager surface is live now.
+  { key: "flashcards", label: "Flashcards", icon: Layers, managerOnly: true, featureFlag: "flashcards" },
   { key: "about", label: "About", icon: Info },
 ];
+
 
 export function ClassShell({
   data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
