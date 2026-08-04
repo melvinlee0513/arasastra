@@ -599,9 +599,9 @@ export function ClassQuizBuilder({ variant }: Props) {
               <div className="text-sm text-amber-900">
                 <p className="font-medium">This quiz has student attempts.</p>
                 <p className="mt-1">
-                  Questions, answers, shuffle, time limit and grading fields are locked to preserve
-                  historical results. You can still edit title, description, instructions, availability,
-                  due date, result visibility and increase the attempt limit.
+                  Questions, answers, shuffle, time limit, availability and due date are locked to
+                  preserve historical results. You can still edit title, description, instructions,
+                  result visibility and increase the attempt limit.
                 </p>
                 <div className="mt-3">
                   <Button
