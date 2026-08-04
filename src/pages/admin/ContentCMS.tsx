@@ -1,4 +1,4 @@
-import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard, HelpCircle, BrainCircuit, Link2 } from "lucide-react";
+import { Calendar, Users, BookOpen, FileText, RefreshCw, CreditCard, HelpCircle, Link2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
