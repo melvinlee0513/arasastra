@@ -66,7 +66,17 @@ const NAV: NavEntry[] = [
 export function ClassShell({
   data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
 }: ClassShellProps) {
+  // Feature-flag gating for flag-scoped nav items. Client-side hiding only —
+  // backend RPCs remain the authoritative enforcement point.
+  const flashcardsEnabled = useFeatureEnabled("flashcards");
+  const flagEnabled = (flag?: FeatureFlag): boolean => {
+    if (!flag) return true;
+    if (flag === "flashcards") return flashcardsEnabled;
+    return true;
+  };
+
   if (isLoading) {
+
     return (
       <div className="min-h-screen bg-slate-50 p-5 md:p-8 space-y-6">
         <Skeleton className="h-6 w-1/2" />
