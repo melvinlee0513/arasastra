@@ -253,7 +253,10 @@ function resolveHref(key: ClassSection, basePath: string, materialsPath: string)
       return materialsPath;
     case "students":
       return `${basePath}/students`;
+    case "flashcards":
+      return `${basePath}/flashcards`;
     case "quizzes":
+
       return `${basePath}/quizzes`;
     case "about":
       return `${basePath}/about`;
