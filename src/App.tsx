@@ -51,9 +51,8 @@ const StudentQuizAttempt = lazy(() => import("@/pages/dashboard/class/StudentQui
 const StudentQuizResult = lazy(() => import("@/pages/dashboard/class/StudentQuizResult").then(m => ({ default: m.StudentQuizResult })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
-// Quiz
-const QuizPlay = lazy(() => import("@/pages/quiz/QuizPlay").then(m => ({ default: m.QuizPlay })));
-const QuizLobby = lazy(() => import("@/pages/quiz/QuizLobby").then(m => ({ default: m.QuizLobby })));
+// Quiz — legacy /quiz/* URLs resolve into the canonical class quiz hub.
+const LegacyQuizRedirect = lazy(() => import("@/pages/quiz/LegacyQuizRedirect").then(m => ({ default: m.LegacyQuizRedirect })));
 
 // Tutor
 const TutorDashboard = lazy(() => import("@/pages/tutor/TutorDashboard").then(m => ({ default: m.TutorDashboard })));
