@@ -166,9 +166,9 @@ const App = () => (
             <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
 
-            {/* Quiz Routes */}
-            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><QuizLobby /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
+            {/* Legacy quiz URLs — resolved to the class quiz hub */}
+            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassHome /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/materials" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassMaterials /></DashboardLayout></TenantGuard></ProtectedRoute>} />
