@@ -139,7 +139,7 @@ export function StudentClassMaterials() {
             {q.data.quizzes.map((quiz) => (
               <Link
                 key={quiz.id}
-                to={`/quiz/${quiz.id}/lobby`}
+                to={`/dashboard/classes/${classId}/quizzes`}
                 className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-center gap-4 group"
               >
                 <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">

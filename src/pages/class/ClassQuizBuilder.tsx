@@ -230,8 +230,23 @@ function validateBuilder(state: BuilderState, forPublish: boolean): string[] {
   return errs;
 }
 
-function toRpcDefinition(state: BuilderState) {
+// Once a quiz has attempts the server freezes questions, shuffle, time limit
+// and schedule. Sending those keys — even unchanged — risks a locked error, so
+// a locked save carries only the fields the server still accepts.
+function toRpcDefinition(state: BuilderState, locked: boolean) {
   const tlMin = state.meta.time_limit_seconds.trim();
+  if (locked) {
+    return {
+      meta: {
+        title: state.meta.title.trim(),
+        description: state.meta.description,
+        instructions: state.meta.instructions,
+        attempt_limit: Math.max(1, parseInt(state.meta.attempt_limit, 10) || 1),
+        result_visibility: state.meta.result_visibility,
+      },
+      questions: [],
+    };
+  }
   return {
     meta: {
       title: state.meta.title.trim(),
@@ -257,6 +272,7 @@ function toRpcDefinition(state: BuilderState) {
     })),
   };
 }
+
 
 export function ClassQuizBuilder({ variant }: Props) {
   const params = useParams<{ classId: string; quizId?: string }>();
@@ -367,7 +383,7 @@ export function ClassQuizBuilder({ variant }: Props) {
       return saveQuizDefinition({
         classId,
         quizId: quizId,
-        definition: toRpcDefinition(state) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
+        definition: toRpcDefinition(state, locked) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
         publish: args.publish,
       });
     },
@@ -583,9 +599,9 @@ export function ClassQuizBuilder({ variant }: Props) {
               <div className="text-sm text-amber-900">
                 <p className="font-medium">This quiz has student attempts.</p>
                 <p className="mt-1">
-                  Questions, answers, shuffle, time limit and grading fields are locked to preserve
-                  historical results. You can still edit title, description, instructions, availability,
-                  due date, result visibility and increase the attempt limit.
+                  Questions, answers, shuffle, time limit, availability and due date are locked to
+                  preserve historical results. You can still edit title, description, instructions,
+                  result visibility and increase the attempt limit.
                 </p>
                 <div className="mt-3">
                   <Button
@@ -652,6 +668,7 @@ export function ClassQuizBuilder({ variant }: Props) {
                   type="datetime-local"
                   value={state.meta.available_from}
                   onChange={(e) => patchMeta("available_from", e.target.value)}
+                  disabled={locked}
                   className="mt-1"
                 />
               </div>
@@ -662,6 +679,7 @@ export function ClassQuizBuilder({ variant }: Props) {
                   type="datetime-local"
                   value={state.meta.due_at}
                   onChange={(e) => patchMeta("due_at", e.target.value)}
+                  disabled={locked}
                   className="mt-1"
                 />
               </div>

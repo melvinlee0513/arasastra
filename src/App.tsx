@@ -51,9 +51,8 @@ const StudentQuizAttempt = lazy(() => import("@/pages/dashboard/class/StudentQui
 const StudentQuizResult = lazy(() => import("@/pages/dashboard/class/StudentQuizResult").then(m => ({ default: m.StudentQuizResult })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
 
-// Quiz
-const QuizPlay = lazy(() => import("@/pages/quiz/QuizPlay").then(m => ({ default: m.QuizPlay })));
-const QuizLobby = lazy(() => import("@/pages/quiz/QuizLobby").then(m => ({ default: m.QuizLobby })));
+// Quiz — legacy /quiz/* URLs resolve into the canonical class quiz hub.
+const LegacyQuizRedirect = lazy(() => import("@/pages/quiz/LegacyQuizRedirect").then(m => ({ default: m.LegacyQuizRedirect })));
 
 // Tutor
 const TutorDashboard = lazy(() => import("@/pages/tutor/TutorDashboard").then(m => ({ default: m.TutorDashboard })));
@@ -167,9 +166,9 @@ const App = () => (
             <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
 
-            {/* Quiz Routes */}
-            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><QuizLobby /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
+            {/* Legacy quiz URLs — resolved to the class quiz hub */}
+            <Route path="/quiz/:quizId/lobby" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/quiz/:quizId/play" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MyClasses /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassHome /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/materials" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassMaterials /></DashboardLayout></TenantGuard></ProtectedRoute>} />
@@ -190,8 +189,8 @@ const App = () => (
             <Route path="/admin/enrollment-matrix/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><EnrollmentMatrixPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/superadmin/tenants/:centerId/configuration/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TenantConfigurationPreview /></DevPreviewGuard></ProtectedRoute>} />
 
-            {/* Quiz Routes */}
-            <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><QuizPlay /></TenantGuard></ProtectedRoute>} />
+            {/* Legacy quiz entry point */}
+            <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
             {/* Tutor Routes */}
             <Route path="/tutor" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorDashboard /></TutorLayout></TenantGuard></ProtectedRoute>} />
