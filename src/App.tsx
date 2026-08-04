@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { FeatureRoute } from "@/components/common/FeatureRoute";
 
 // Layouts (kept eager – small, used on every page)
 import { MainLayout } from "@/components/layout/MainLayout";
