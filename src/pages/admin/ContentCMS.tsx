@@ -82,13 +82,8 @@ export function ContentCMS() {
             <HelpCircle className="w-4 h-4" />
             Quizzes
           </TabsTrigger>
-          <TabsTrigger
-            value="flashcards"
-            className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
-          >
-            <BrainCircuit className="w-4 h-4" />
-            Flashcards
-          </TabsTrigger>
+          {/* Flashcards are managed per class in the Class Hub (Phase 3B1). */}
+
           <TabsTrigger
             value="parents"
             className="gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 py-2.5"
@@ -122,9 +117,6 @@ export function ContentCMS() {
           <QuizManagerTab />
         </TabsContent>
 
-        <TabsContent value="flashcards" className="mt-6" key={`flashcards-${refreshKey}`}>
-          <FlashcardDecksTab />
-        </TabsContent>
 
         <TabsContent value="parents" className="mt-6" key={`parents-${refreshKey}`}>
           <ParentLinksTab />
