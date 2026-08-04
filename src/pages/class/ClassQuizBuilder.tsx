@@ -383,7 +383,7 @@ export function ClassQuizBuilder({ variant }: Props) {
       return saveQuizDefinition({
         classId,
         quizId: quizId,
-        definition: toRpcDefinition(state) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
+        definition: toRpcDefinition(state, locked) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
         publish: args.publish,
       });
     },
