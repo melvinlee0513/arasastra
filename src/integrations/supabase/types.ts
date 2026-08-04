@@ -829,6 +829,7 @@ export type Database = {
           class_id: string | null
           created_at: string
           created_by: string | null
+          definition_version: number
           description: string | null
           display_order: number
           id: string
@@ -844,6 +845,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           created_by?: string | null
+          definition_version?: number
           description?: string | null
           display_order?: number
           id?: string
@@ -859,6 +861,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           created_by?: string | null
+          definition_version?: number
           description?: string | null
           display_order?: number
           id?: string
@@ -2673,6 +2676,7 @@ export type Database = {
           _class_id: string
           _deck_id?: string
           _definition: Json
+          _expected_version?: number
           _publish?: boolean
         }
         Returns: Json

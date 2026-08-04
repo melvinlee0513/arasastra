@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import {
   Home, ChevronRight, BookOpen, User, Clock, Calendar,
-  LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info, Users, ImagePlus,
+  LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info, Users, ImagePlus, Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { ClassCover } from "@/components/class/ClassCover";
 import { ClassCoverManager } from "@/components/class/ClassCoverManager";
 import { tutorLabel } from "@/lib/classCovers";
+import { useFeatureEnabled, type FeatureFlag } from "@/hooks/useFeature";
+
 
 export type ClassSection =
   | "home"
@@ -19,7 +21,9 @@ export type ClassSection =
   | "students"
   | "discussions"
   | "quizzes"
+  | "flashcards"
   | "about";
+
 
 type BreadcrumbItem = { label: string; to?: string };
 
@@ -42,6 +46,8 @@ type NavEntry = {
   disabled?: boolean;
   disabledLabel?: string;
   managerOnly?: boolean; // tutor + admin only
+  /** Tenant feature flag that must be enabled for this item to appear. */
+  featureFlag?: FeatureFlag;
 };
 
 const NAV: NavEntry[] = [
@@ -51,13 +57,26 @@ const NAV: NavEntry[] = [
   { key: "students", label: "Students", icon: Users, managerOnly: true },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
   { key: "quizzes", label: "Quizzes", icon: HelpCircle },
+  // Student flashcard navigation ships in Phase 3B2; manager surface is live now.
+  { key: "flashcards", label: "Flashcards", icon: Layers, managerOnly: true, featureFlag: "flashcards" },
   { key: "about", label: "About", icon: Info },
 ];
+
 
 export function ClassShell({
   data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
 }: ClassShellProps) {
+  // Feature-flag gating for flag-scoped nav items. Client-side hiding only —
+  // backend RPCs remain the authoritative enforcement point.
+  const flashcardsEnabled = useFeatureEnabled("flashcards");
+  const flagEnabled = (flag?: FeatureFlag): boolean => {
+    if (!flag) return true;
+    if (flag === "flashcards") return flashcardsEnabled;
+    return true;
+  };
+
   if (isLoading) {
+
     return (
       <div className="min-h-screen bg-slate-50 p-5 md:p-8 space-y-6">
         <Skeleton className="h-6 w-1/2" />
@@ -163,7 +182,10 @@ export function ClassShell({
         {k && (
           <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
             <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm inline-flex gap-1 min-w-max">
-              {NAV.filter((item) => !(item.managerOnly && role === "student")).map((item) => {
+              {NAV.filter(
+                (item) => !(item.managerOnly && role === "student") && flagEnabled(item.featureFlag),
+              ).map((item) => {
+
                 const Icon = item.icon;
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -231,7 +253,10 @@ function resolveHref(key: ClassSection, basePath: string, materialsPath: string)
       return materialsPath;
     case "students":
       return `${basePath}/students`;
+    case "flashcards":
+      return `${basePath}/flashcards`;
     case "quizzes":
+
       return `${basePath}/quizzes`;
     case "about":
       return `${basePath}/about`;

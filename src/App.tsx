@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { FeatureRoute } from "@/components/common/FeatureRoute";
 
 // Layouts (kept eager – small, used on every page)
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -64,6 +65,8 @@ const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ 
 const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
 const ClassQuizBuilder = lazy(() => import("@/pages/class/ClassQuizBuilder").then(m => ({ default: m.ClassQuizBuilder })));
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
+const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
+const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
@@ -210,6 +213,13 @@ const App = () => (
             <Route path="/admin/classes/:classId/quizzes/:quizId/edit" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizBuilder variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            {/* Class flashcards (Phase 3B1) — tenant `flashcards` flag gated; server enforces role/tenant */}
+            <Route path="/admin/classes/:classId/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardsManager variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/flashcards/new" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/flashcards/:deckId/edit" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/flashcards" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><ClassFlashcardsManager variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/flashcards/new" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><ClassFlashcardBuilder variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/flashcards/:deckId/edit" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><ClassFlashcardBuilder variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/students" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorStudents /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/grading" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorGrading /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/notes" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorNotes /></TutorLayout></TenantGuard></ProtectedRoute>} />
