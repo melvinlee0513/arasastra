@@ -519,22 +519,48 @@ function ClassModal({
     e.preventDefault();
     if (!subject) return;
     setSaving(true);
-    const { error } = await supabase.from("classes").insert({
-      title: title.trim(),
-      cohort_label: cohort.trim() || null,
-      subject_id: subject.id,
-      // classes.tutor_id is legacy. Assignments are managed exclusively
-      // through class_tutors via the Assign-tutors modal — do not write it.
-      center_id: centerId,
-      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
-      is_published: true,
-    });
-    setSaving(false);
-    if (error) {
+    const { data: created, error } = await supabase
+      .from("classes")
+      .insert({
+        title: title.trim(),
+        cohort_label: cohort.trim() || null,
+        subject_id: subject.id,
+        // classes.tutor_id is legacy. Assignments are written to class_tutors below.
+        center_id: centerId,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
+        is_published: true,
+      })
+      .select("id")
+      .single();
+    if (error || !created) {
+      setSaving(false);
       showSupabaseError(error, "Could not create class");
-
       return;
     }
+
+    // Persist the selected tutor through the canonical class_tutors table.
+    const selectedTutor = tutors.find((t) => t.id === tutorId);
+    if (selectedTutor?.user_id) {
+      const { error: assignError } = await supabase.from("class_tutors").insert({
+        center_id: centerId,
+        class_id: created.id,
+        tutor_user_id: selectedTutor.user_id,
+      });
+      if (assignError) {
+        setSaving(false);
+        showSupabaseError(assignError, "Class created, but the tutor could not be assigned");
+        onCreated();
+        return;
+      }
+    } else if (tutorId) {
+      setSaving(false);
+      toast.error("Class created, but that tutor has no linked account yet");
+      onCreated();
+      return;
+    }
+
+    setSaving(false);
+
     setTitle("");
     setCohort("");
     setTutorId("");
