@@ -64,6 +64,8 @@ const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ 
 const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
 const ClassQuizBuilder = lazy(() => import("@/pages/class/ClassQuizBuilder").then(m => ({ default: m.ClassQuizBuilder })));
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
+const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
+const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
 const TutorVideos = lazy(() => import("@/pages/tutor/TutorVideos").then(m => ({ default: m.TutorVideos })));
 const TutorClassResources = lazy(() => import("@/pages/tutor/TutorClassResources"));
