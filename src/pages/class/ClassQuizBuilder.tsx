@@ -668,6 +668,7 @@ export function ClassQuizBuilder({ variant }: Props) {
                   type="datetime-local"
                   value={state.meta.available_from}
                   onChange={(e) => patchMeta("available_from", e.target.value)}
+                  disabled={locked}
                   className="mt-1"
                 />
               </div>
@@ -678,6 +679,7 @@ export function ClassQuizBuilder({ variant }: Props) {
                   type="datetime-local"
                   value={state.meta.due_at}
                   onChange={(e) => patchMeta("due_at", e.target.value)}
+                  disabled={locked}
                   className="mt-1"
                 />
               </div>
