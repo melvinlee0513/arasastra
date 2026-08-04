@@ -25,7 +25,7 @@ interface QuizItem {
   id: string;
   title: string;
   access_level: AccessLevel;
-  class?: { title: string | null; subject_id: string | null; subject?: { name: string | null } | null } | null;
+  class?: { id: string | null; title: string | null; subject_id: string | null; subject?: { name: string | null } | null } | null;
   questions_count: number;
   best_score: number | null;
   best_total: number | null;
@@ -52,7 +52,7 @@ export function QuizList({ embedded }: QuizListProps = {}) {
       const { data: quizData, error: qErr } = await supabase
         .from("quizzes")
         .select(
-          "id, title, access_level, class:classes(title, subject_id, subject:subjects(name))"
+          "id, title, access_level, class:classes(id, title, subject_id, subject:subjects(name))"
         )
         .order("created_at", { ascending: false });
       if (qErr) throw qErr;
