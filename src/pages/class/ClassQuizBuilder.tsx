@@ -230,8 +230,23 @@ function validateBuilder(state: BuilderState, forPublish: boolean): string[] {
   return errs;
 }
 
-function toRpcDefinition(state: BuilderState) {
+// Once a quiz has attempts the server freezes questions, shuffle, time limit
+// and schedule. Sending those keys — even unchanged — risks a locked error, so
+// a locked save carries only the fields the server still accepts.
+function toRpcDefinition(state: BuilderState, locked: boolean) {
   const tlMin = state.meta.time_limit_seconds.trim();
+  if (locked) {
+    return {
+      meta: {
+        title: state.meta.title.trim(),
+        description: state.meta.description,
+        instructions: state.meta.instructions,
+        attempt_limit: Math.max(1, parseInt(state.meta.attempt_limit, 10) || 1),
+        result_visibility: state.meta.result_visibility,
+      },
+      questions: [],
+    };
+  }
   return {
     meta: {
       title: state.meta.title.trim(),
@@ -257,6 +272,7 @@ function toRpcDefinition(state: BuilderState) {
     })),
   };
 }
+
 
 export function ClassQuizBuilder({ variant }: Props) {
   const params = useParams<{ classId: string; quizId?: string }>();
