@@ -124,7 +124,7 @@ export function QuizList({ embedded }: QuizListProps = {}) {
       });
       return;
     }
-    navigate(`/quiz/${quiz.id}/lobby`);
+    navigate(quiz.class?.id ? `/dashboard/classes/${quiz.class.id}/quizzes` : "/dashboard/classes");
   };
 
   // ── Loading ───────────────────────────────────────────────────────────────
