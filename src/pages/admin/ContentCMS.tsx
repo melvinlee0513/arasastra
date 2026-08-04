@@ -8,7 +8,6 @@ import { ClassCategoriesTab } from "@/components/admin/cms/ClassCategoriesTab";
 import { SiteContentTab } from "@/components/admin/cms/SiteContentTab";
 import { PricingPlansTab } from "@/components/admin/cms/PricingPlansTab";
 import { QuizManagerTab } from "@/components/admin/cms/QuizManagerTab";
-import { FlashcardDecksTab } from "@/components/admin/cms/FlashcardDecksTab";
 import { ParentLinksTab } from "@/components/admin/cms/ParentLinksTab";
 import { useState } from "react";
 
