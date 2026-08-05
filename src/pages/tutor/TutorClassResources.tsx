@@ -73,6 +73,8 @@ import {
   FolderPlus,
   FolderInput,
   Folder,
+  Image as ImageIcon,
+  ListOrdered,
 } from "lucide-react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import { ClassShell } from "@/components/class/ClassShell";
@@ -82,8 +84,13 @@ import {
   FolderCard,
   FolderGrid,
 } from "@/components/class/ContentFolderNav";
+import { FolderCoverManager } from "@/components/class/FolderCoverManager";
+import { FolderArrangeDialog } from "@/components/class/FolderArrangeDialog";
+import { ClassContentSearch } from "@/components/class/ClassContentSearch";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import {
   type ContentFolder,
+  type ContentSearchHit,
   UNFILED_LABEL,
   canAddSubfolder,
   childFolders,
@@ -95,6 +102,7 @@ import {
   moveTargets,
   saveContentFolder,
 } from "@/lib/contentFolders";
+
 
 const ELECTRIC_BLUE = "#0052FF";
 
@@ -158,6 +166,11 @@ export default function TutorClassResources() {
   const [folderName, setFolderName] = useState("");
   const [folderDesc, setFolderDesc] = useState("");
   const [savingFolder, setSavingFolder] = useState(false);
+  const [coverFolder, setCoverFolder] = useState<ContentFolder | null>(null);
+  const [arrangeFoldersOpen, setArrangeFoldersOpen] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
+  const flashcardsEnabled = useFeatureEnabled("flashcards");
+
 
   // Arrange mode — draftOrder is the full class order; tab filters the view.
   const [arrangeMode, setArrangeMode] = useState(false);
@@ -268,6 +281,27 @@ export default function TutorClassResources() {
     else next.delete("folder");
     setSearchParams(next, { replace: false });
   }
+
+  /** Search hits jump to the folder that holds the item, or its own manager. */
+  function openSearchHit(hit: ContentSearchHit) {
+    if (hit.kind === "folder") {
+      goToFolder(hit.id);
+      return;
+    }
+    if (hit.kind === "resource") {
+      setTab("all");
+      goToFolder(hit.folderId);
+      return;
+    }
+    const query = hit.folderId ? `?folder=${hit.folderId}` : "";
+    navigate(
+      hit.kind === "quiz"
+        ? `${basePath}/quizzes${query}`
+        : `${basePath}/flashcards${query}`,
+    );
+  }
+
+
 
   async function submitFolder() {
     if (!classId || !folderDialog) return;
@@ -528,13 +562,28 @@ export default function TutorClassResources() {
                 <FolderPlus className="h-4 w-4 mr-1" /> New folder
               </Button>
               <Button
+                onClick={() => setArrangeFoldersOpen(true)}
+                variant="outline"
+                className="rounded-full"
+                disabled={visibleFolders.length < 2 || searchActive}
+                title={
+                  searchActive
+                    ? "Clear the search to rearrange folders"
+                    : "Reorder the folders shown here"
+                }
+              >
+                <ListOrdered className="h-4 w-4 mr-1" /> Arrange folders
+              </Button>
+              <Button
                 onClick={enterArrangeMode}
                 variant="outline"
                 className="rounded-full"
-                disabled={resources.length < 2}
+                disabled={resources.length < 2 || searchActive}
+                title={searchActive ? "Clear the search to arrange materials" : undefined}
               >
                 <ArrowUpDown className="h-4 w-4 mr-1" /> Arrange materials
               </Button>
+
               <Button
                 onClick={() => {
                   setEditing(null);
@@ -570,6 +619,18 @@ export default function TutorClassResources() {
         </div>
       </div>
 
+      <ClassContentSearch
+        scope="manager"
+        classId={classId!}
+        tenantId={currentTenantId ?? null}
+        userId={user?.id}
+        folders={folders}
+        rootLabel={ctx.data?.klass?.title || classInfo?.title || "Class"}
+        flashcardsEnabled={flashcardsEnabled}
+        onSelect={openSearchHit}
+        onActiveChange={setSearchActive}
+      />
+
       <FolderBreadcrumb
         path={breadcrumbPath}
         rootLabel="All materials"
@@ -583,6 +644,7 @@ export default function TutorClassResources() {
               key={f.id}
               folder={f}
               classId={classId!}
+              compact={!!currentFolderId}
               centerId={classInfo?.center_id}
               onOpen={() => goToFolder(f.id)}
               actions={
@@ -599,6 +661,15 @@ export default function TutorClassResources() {
                   >
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Rename
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full h-9 px-3 text-slate-600"
+                    onClick={() => setCoverFolder(f)}
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 mr-1" /> Cover
+                  </Button>
+
                   <MoveToFolderSelect
                     label="Move"
                     folders={folders}

@@ -2950,6 +2950,18 @@ export type Database = {
         }
         Returns: Json
       }
+      search_class_content_for_manager: {
+        Args: { _class_id: string; _query: string }
+        Returns: Json
+      }
+      search_class_content_for_student: {
+        Args: { _class_id: string; _query: string }
+        Returns: Json
+      }
+      set_class_folder_cover: {
+        Args: { _cover_image_path?: string; _folder_id: string }
+        Returns: Json
+      }
       set_flashcard_deck_status: {
         Args: { _deck_id: string; _status: string }
         Returns: Json
