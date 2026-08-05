@@ -103,13 +103,21 @@ export function TutorClassHome() {
   return shell(
     <div className="space-y-5">
       {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Button asChild className="rounded-full h-11 justify-center">
           <Link to={materialsPath}><Plus className="w-4 h-4 mr-2" /> Add Material</Link>
         </Button>
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
-          <Link to={materialsPath}><Layers className="w-4 h-4 mr-2" /> Arrange</Link>
+          <Link to={materialsPath}><FolderPlus className="w-4 h-4 mr-2" /> Folders</Link>
         </Button>
+        <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+          <Link to={`${basePath}/quizzes/new`}><Plus className="w-4 h-4 mr-2" /> New quiz</Link>
+        </Button>
+        {flashcardsOn && (
+          <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+            <Link to={`${basePath}/flashcards/new`}><Layers className="w-4 h-4 mr-2" /> New deck</Link>
+          </Button>
+        )}
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/about`}><PencilLine className="w-4 h-4 mr-2" /> Edit About</Link>
         </Button>
