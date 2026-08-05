@@ -62,7 +62,15 @@ import {
   releaseQuizResults,
   setQuizStatus,
 } from "@/lib/quizzes";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, FolderInput } from "lucide-react";
+import { MoveToFolderDialog, type MoveTarget } from "@/components/class/MoveToFolderDialog";
+import {
+  fetchManagerContentTree,
+  folderKeys,
+  folderPath,
+  type ContentFolder,
+} from "@/lib/contentFolders";
+
 
 type Variant = "tutor" | "admin";
 
@@ -92,6 +100,7 @@ export function ClassQuizzesManager({ variant }: Props) {
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] = useState<QuizManagerRow | null>(null);
   const [pendingArchive, setPendingArchive] = useState<QuizManagerRow | null>(null);
+  const [pendingMove, setPendingMove] = useState<MoveTarget | null>(null);
 
   const canManage = !!ctx.data?.canManage;
 
@@ -102,6 +111,28 @@ export function ClassQuizzesManager({ variant }: Props) {
     staleTime: 15_000,
   });
 
+  // Folder placement lives in the canonical content tree, not the quiz list RPC.
+  const treeQ = useQuery({
+    queryKey: folderKeys.managerTree(currentTenantId, classId ?? "", user?.id),
+    enabled: !!classId && !!user && canManage,
+    queryFn: () => fetchManagerContentTree(classId!),
+    staleTime: 15_000,
+  });
+
+  const folders: ContentFolder[] = treeQ.data?.folders ?? [];
+  const folderByQuiz = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const q of treeQ.data?.quizzes ?? []) map.set(q.id, q.folder_id ?? null);
+    return map;
+  }, [treeQ.data]);
+
+  const folderLabel = (quizId: string): string | null => {
+    const folderId = folderByQuiz.get(quizId) ?? null;
+    if (!folderId) return null;
+    const path = folderPath(folders, folderId);
+    return path.length ? path.map((f) => f.name).join(" / ") : null;
+  };
+
   const filtered = useMemo(() => {
     const rows = listQ.data ?? [];
     const q = search.trim().toLowerCase();
@@ -111,6 +142,7 @@ export function ClassQuizzesManager({ variant }: Props) {
       return true;
     });
   }, [listQ.data, statusFilter, search]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: quizManagerKeys.list(currentTenantId, classId ?? "") });
@@ -123,6 +155,9 @@ export function ClassQuizzesManager({ variant }: Props) {
     // And the student-facing list/result caches — students should see status
     // changes (release/hide/archive) on next mount without a hard reload.
     qc.invalidateQueries({ queryKey: ["quiz-student"] });
+    // Folder placement/counts come from the shared content tree.
+    qc.invalidateQueries({ queryKey: ["class-content"] });
+
   };
 
   const statusMut = useMutation({
@@ -263,6 +298,16 @@ export function ClassQuizzesManager({ variant }: Props) {
                   onArchive={() => setPendingArchive(row)}
                   onDuplicate={() => dupMut.mutate(row.id)}
                   onReleaseResults={(release) => releaseMut.mutate({ id: row.id, release })}
+                  folderLabel={folderLabel(row.id)}
+                  onMove={() =>
+                    setPendingMove({
+                      kind: "quiz",
+                      id: row.id,
+                      title: row.title,
+                      folderId: folderByQuiz.get(row.id) ?? null,
+                    })
+                  }
+
                   busy={
                     statusMut.isPending ||
                     dupMut.isPending ||
@@ -321,6 +366,17 @@ export function ClassQuizzesManager({ variant }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveToFolderDialog
+        open={!!pendingMove}
+        onOpenChange={(open) => !open && setPendingMove(null)}
+        folders={folders}
+        target={pendingMove}
+        onMoved={() => {
+          setPendingMove(null);
+          invalidate();
+        }}
+      />
     </ClassShell>
   );
 }
@@ -333,6 +389,8 @@ function QuizCard({
   onArchive,
   onDuplicate,
   onReleaseResults,
+  folderLabel,
+  onMove,
   busy,
 }: {
   row: QuizManagerRow;
@@ -342,6 +400,8 @@ function QuizCard({
   onArchive: () => void;
   onDuplicate: () => void;
   onReleaseResults: (release: boolean) => void;
+  folderLabel: string | null;
+  onMove: () => void;
   busy: boolean;
 }) {
   const locked = attemptsLock(row);
@@ -359,6 +419,10 @@ function QuizCard({
           <h3 className="font-semibold text-slate-900 break-words">{row.title}</h3>
           <p className="text-xs text-slate-500 mt-0.5">
             Updated {formatRelative(row.updated_at)}
+          </p>
+          <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1 break-words">
+            <FolderInput className="w-3 h-3 shrink-0" />
+            {folderLabel ?? "Unfiled Materials"}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -402,6 +466,9 @@ function QuizCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="w-4 h-4 mr-2" /> Duplicate as draft
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onMove}>
+                <FolderInput className="w-4 h-4 mr-2" /> Move to folder
               </DropdownMenuItem>
               {row.result_visibility === "manual" && (
                 <>

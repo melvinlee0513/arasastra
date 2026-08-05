@@ -55,23 +55,29 @@ interface FolderCardProps {
   centerId?: string | null;
   onOpen: () => void;
   actions?: React.ReactNode;
+  /** Subfolders render as a compact icon tile — no custom artwork required. */
+  compact?: boolean;
 }
 
-export function FolderCard({ folder, classId, centerId, onOpen, actions }: FolderCardProps) {
+export function FolderCard({
+  folder,
+  classId,
+  centerId,
+  onOpen,
+  actions,
+  compact = false,
+}: FolderCardProps) {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    const path =
-      folder.cover_image_path ??
-      (centerId ? folderCoverPathFor(centerId, classId, folder.id) : null);
     if (!folder.cover_image_path) {
       setCoverUrl(null);
       return () => {
         active = false;
       };
     }
-    void getClassCoverSignedUrl(path).then((url) => {
+    void getClassCoverSignedUrl(folder.cover_image_path).then((url) => {
       if (active) setCoverUrl(url);
     });
     return () => {
@@ -89,8 +95,14 @@ export function FolderCard({ folder, classId, centerId, onOpen, actions }: Folde
         className="text-left group"
         aria-label={`Open folder ${folder.name}`}
       >
-        <div className={cn("relative aspect-video bg-gradient-to-br", fallbackGradient(folder.id))}>
-          {coverUrl ? (
+        <div
+          className={cn(
+            "relative w-full bg-gradient-to-br",
+            compact ? "aspect-[3/1]" : "aspect-square",
+            fallbackGradient(folder.id),
+          )}
+        >
+          {coverUrl && !compact ? (
             <img
               src={coverUrl}
               alt={`${folder.name} cover`}
@@ -99,21 +111,24 @@ export function FolderCard({ folder, classId, centerId, onOpen, actions }: Folde
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Folder className="w-10 h-10 text-primary/50" />
+              <Folder className={cn("text-primary/50", compact ? "w-7 h-7" : "w-12 h-12")} />
             </div>
           )}
         </div>
         <div className="p-4">
-          <h3 className="font-semibold text-slate-900 truncate group-hover:text-primary">
+          <h3 className="font-semibold text-slate-900 break-words group-hover:text-primary">
             {folder.name}
           </h3>
           {folder.description && (
-            <p className="text-xs text-slate-500 line-clamp-2 mt-1">{folder.description}</p>
+            <p className="text-xs text-slate-500 line-clamp-2 mt-1 break-words">
+              {folder.description}
+            </p>
           )}
           <div className="flex flex-wrap items-center gap-2 mt-3 text-[11px] text-slate-500">
             {folder.subfolder_count > 0 && (
               <span className="inline-flex items-center gap-1">
-                <Folder className="w-3 h-3" /> {folder.subfolder_count}
+                <Folder className="w-3 h-3" /> {folder.subfolder_count}{" "}
+                {folder.subfolder_count === 1 ? "subfolder" : "subfolders"}
               </span>
             )}
             <span className="inline-flex items-center gap-1">
@@ -139,6 +154,7 @@ export function FolderCard({ folder, classId, centerId, onOpen, actions }: Folde
     </div>
   );
 }
+
 
 export function FolderGrid({ children }: { children: React.ReactNode }) {
   return (

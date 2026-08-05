@@ -152,16 +152,135 @@ export async function reorderContentFolders(
   if (error) throw error;
 }
 
+export interface FolderDeleteResult {
+  deleted: string;
+  moved_items: number;
+  moved_subfolders: number;
+  moved_to: string | null;
+  parent_id: string | null;
+  cover_image_path: string | null;
+}
+
 export async function deleteContentFolderSafe(
   folderId: string,
   strategy: FolderDeleteStrategy,
-): Promise<void> {
-  const { error } = await supabase.rpc("delete_class_content_folder_safe", {
+): Promise<FolderDeleteResult> {
+  const { data, error } = await supabase.rpc("delete_class_content_folder_safe", {
     _folder_id: folderId,
     _strategy: strategy,
   });
   if (error) throw error;
+  return data as unknown as FolderDeleteResult;
 }
+
+/* ----------------------------- search ----------------------------- */
+
+export interface ContentSearchHit {
+  kind: "folder" | "resource" | "quiz" | "flashcard_deck";
+  id: string;
+  title: string;
+  /** Folder the item lives in; for folder hits this is the folder's parent. */
+  folderId: string | null;
+  status?: string | null;
+  resourceType?: string | null;
+}
+
+interface RawSearch {
+  folders?: Array<{ id: string; name: string; parent_id: string | null; description: string | null }>;
+  resources?: Array<{ id: string; title: string; folder_id: string | null; resource_type: string; status?: string }>;
+  quizzes?: Array<{ id: string; title: string; folder_id: string | null; status?: string }>;
+  flashcard_decks?: Array<{ id: string; title: string; folder_id: string | null; status?: string }>;
+}
+
+function toHits(raw: unknown): ContentSearchHit[] {
+  const r = (raw ?? {}) as RawSearch;
+  return [
+    ...(r.folders ?? []).map((f) => ({
+      kind: "folder" as const,
+      id: f.id,
+      title: f.name,
+      folderId: f.parent_id ?? null,
+    })),
+    ...(r.resources ?? []).map((x) => ({
+      kind: "resource" as const,
+      id: x.id,
+      title: x.title,
+      folderId: x.folder_id ?? null,
+      status: x.status ?? null,
+      resourceType: x.resource_type ?? null,
+    })),
+    ...(r.quizzes ?? []).map((x) => ({
+      kind: "quiz" as const,
+      id: x.id,
+      title: x.title,
+      folderId: x.folder_id ?? null,
+      status: x.status ?? null,
+    })),
+    ...(r.flashcard_decks ?? []).map((x) => ({
+      kind: "flashcard_deck" as const,
+      id: x.id,
+      title: x.title,
+      folderId: x.folder_id ?? null,
+      status: x.status ?? null,
+    })),
+  ];
+}
+
+/** Tenant + class scoped search enforced inside the RPC (includes drafts). */
+export async function searchClassContentForManager(
+  classId: string,
+  query: string,
+): Promise<ContentSearchHit[]> {
+  const { data, error } = await supabase.rpc("search_class_content_for_manager", {
+    _class_id: classId,
+    _query: query,
+  });
+  if (error) throw error;
+  return toHits(data);
+}
+
+/** Published-only, enrolment-gated search enforced inside the RPC. */
+export async function searchClassContentForStudent(
+  classId: string,
+  query: string,
+): Promise<ContentSearchHit[]> {
+  const { data, error } = await supabase.rpc("search_class_content_for_student", {
+    _class_id: classId,
+    _query: query,
+  });
+  if (error) throw error;
+  return toHits(data);
+}
+
+/* ----------------------------- cache keys ----------------------------- */
+
+export const folderKeys = {
+  managerTree: (tenantId: string | null, classId: string, userId?: string) =>
+    ["class-content", "manager", tenantId, classId, userId] as const,
+  studentTree: (tenantId: string | null, classId: string, userId?: string) =>
+    ["class-content", "student", tenantId, classId, userId] as const,
+  search: (
+    scope: "manager" | "student",
+    tenantId: string | null,
+    classId: string,
+    query: string,
+  ) => ["class-content", "search", scope, tenantId, classId, query] as const,
+};
+
+/** Invalidate every folder-aware surface after a folder/content mutation. */
+export function invalidateFolderCaches(
+  qc: { invalidateQueries: (f: { queryKey: readonly unknown[] }) => void },
+) {
+  qc.invalidateQueries({ queryKey: ["class-content"] });
+  qc.invalidateQueries({ queryKey: ["classroom-materials"] });
+  qc.invalidateQueries({ queryKey: ["class-resources"] });
+  qc.invalidateQueries({ queryKey: ["quiz-manager"] });
+  qc.invalidateQueries({ queryKey: ["quiz-student"] });
+  qc.invalidateQueries({ queryKey: ["flashcards"] });
+  qc.invalidateQueries({ queryKey: ["tutor-class-home"] });
+  qc.invalidateQueries({ queryKey: ["student-class-home"] });
+}
+
 
 export async function moveContentItem(
   itemType: ContentItemType,

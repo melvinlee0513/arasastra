@@ -1,7 +1,7 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Video, FileText, ClipboardList, Plus, Layers, PencilLine,
+  Video, FileText, ClipboardList, Plus, Layers, PencilLine, FolderPlus,
   Users, CheckCircle2, ArrowRight, Megaphone, Pin, HelpCircle, BarChart3, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 import {
   listClassQuizzesForManager,
@@ -59,6 +60,8 @@ export function TutorClassHome() {
   });
 
   // Single manager-scoped aggregate query — no per-quiz requests.
+  const flashcardsOn = useFeatureEnabled("flashcards");
+
   const quizzesQ = useQuery({
     queryKey: quizManagerKeys.list(currentTenantId, classId ?? ""),
     enabled: !!classId && !!user && !!ctx.data?.canManage,
@@ -103,13 +106,21 @@ export function TutorClassHome() {
   return shell(
     <div className="space-y-5">
       {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <Button asChild className="rounded-full h-11 justify-center">
           <Link to={materialsPath}><Plus className="w-4 h-4 mr-2" /> Add Material</Link>
         </Button>
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
-          <Link to={materialsPath}><Layers className="w-4 h-4 mr-2" /> Arrange</Link>
+          <Link to={materialsPath}><FolderPlus className="w-4 h-4 mr-2" /> Folders</Link>
         </Button>
+        <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+          <Link to={`${basePath}/quizzes/new`}><Plus className="w-4 h-4 mr-2" /> New quiz</Link>
+        </Button>
+        {flashcardsOn && (
+          <Button asChild variant="outline" className="rounded-full h-11 justify-center">
+            <Link to={`${basePath}/flashcards/new`}><Layers className="w-4 h-4 mr-2" /> New deck</Link>
+          </Button>
+        )}
         <Button asChild variant="outline" className="rounded-full h-11 justify-center">
           <Link to={`${basePath}/about`}><PencilLine className="w-4 h-4 mr-2" /> Edit About</Link>
         </Button>
