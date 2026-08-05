@@ -298,6 +298,16 @@ export function ClassQuizzesManager({ variant }: Props) {
                   onArchive={() => setPendingArchive(row)}
                   onDuplicate={() => dupMut.mutate(row.id)}
                   onReleaseResults={(release) => releaseMut.mutate({ id: row.id, release })}
+                  folderLabel={folderLabel(row.id)}
+                  onMove={() =>
+                    setPendingMove({
+                      type: "quiz",
+                      id: row.id,
+                      title: row.title,
+                      folderId: folderByQuiz.get(row.id) ?? null,
+                    })
+                  }
+
                   busy={
                     statusMut.isPending ||
                     dupMut.isPending ||
