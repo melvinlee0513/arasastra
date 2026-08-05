@@ -822,6 +822,82 @@ export type Database = {
           },
         ]
       }
+      flashcard_deck_progress: {
+        Row: {
+          center_id: string
+          class_id: string
+          completed_at: string | null
+          completed_ids: Json
+          created_at: string
+          current_card_id: string | null
+          deck_id: string
+          id: string
+          last_studied_at: string
+          progress_revision: number
+          queue: Json
+          reviewed_ids: Json
+          started_at: string
+          student_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          completed_at?: string | null
+          completed_ids?: Json
+          created_at?: string
+          current_card_id?: string | null
+          deck_id: string
+          id?: string
+          last_studied_at?: string
+          progress_revision?: number
+          queue?: Json
+          reviewed_ids?: Json
+          started_at?: string
+          student_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          completed_at?: string | null
+          completed_ids?: Json
+          created_at?: string
+          current_card_id?: string | null
+          deck_id?: string
+          id?: string
+          last_studied_at?: string
+          progress_revision?: number
+          queue?: Json
+          reviewed_ids?: Json
+          started_at?: string
+          student_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_deck_progress_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_deck_progress_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_deck_progress_deck_id_fkey"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "flashcard_decks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcard_decks: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
@@ -2383,6 +2459,41 @@ export type Database = {
         Args: { _class_id: string }
         Returns: string
       }
+      _flashcard_progress_json: {
+        Args: {
+          _row: Database["public"]["Tables"]["flashcard_deck_progress"]["Row"]
+        }
+        Returns: Json
+      }
+      _flashcard_student_deck: {
+        Args: { _deck_id: string }
+        Returns: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
+          center_id: string
+          class_id: string | null
+          created_at: string
+          created_by: string | null
+          definition_version: number
+          description: string | null
+          display_order: number
+          id: string
+          published_at: string | null
+          status: string
+          subject_id: string | null
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "flashcard_decks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _flashcard_valid_card_ids: {
+        Args: { _deck_id: string }
+        Returns: string[]
+      }
       _grade_and_finalize_attempt: {
         Args: {
           _answers: Json
@@ -2658,6 +2769,7 @@ export type Database = {
           theme_config: Json
         }[]
       }
+      restart_flashcard_deck: { Args: { _deck_id: string }; Returns: Json }
       reveal_invitation_token: {
         Args: { _invitation_id: string }
         Returns: {
@@ -2679,6 +2791,10 @@ export type Database = {
           _expected_version?: number
           _publish?: boolean
         }
+        Returns: Json
+      }
+      save_flashcard_progress: {
+        Args: { _deck_id: string; _expected_revision: number; _state: Json }
         Returns: Json
       }
       save_quiz_definition: {
@@ -2705,6 +2821,10 @@ export type Database = {
       }
       set_quiz_status: {
         Args: { _quiz_id: string; _status: string }
+        Returns: Json
+      }
+      start_or_resume_flashcard_deck: {
+        Args: { _deck_id: string }
         Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }

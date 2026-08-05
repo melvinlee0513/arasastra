@@ -19,6 +19,7 @@
  * enrolment + same tenant + the `flashcards` feature flag, inside the RPCs.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -80,7 +81,15 @@ export interface FlashcardDeckStudentRow {
   display_order: number;
   published_at: string | null;
   card_count: number;
+  /** True once completion XP has been awarded for this deck. */
   completed: boolean;
+  /** Cards marked "Got It" in the current study run. */
+  completed_card_count: number;
+  /** True once the student has opened the deck at least once. */
+  started: boolean;
+  /** Set when the current run reached the end of the queue. */
+  run_completed_at: string | null;
+  last_studied_at: string | null;
 }
 
 export interface FlashcardDeckStudy {
@@ -337,7 +346,7 @@ export async function reorderFlashcardDecks(classId: string, deckIds: string[]):
   return unwrap<{ reordered: number }>(data).reordered;
 }
 
-// ─── Student RPC wrappers (consumed in Phase 3B2) ───────────────────────────
+// ─── Student RPC wrappers (Phase 3B2) ───────────────────────────────────────
 export async function listClassFlashcardDecksForStudent(classId: string): Promise<FlashcardDeckStudentRow[]> {
   const { data, error } = await supabase.rpc("list_class_flashcard_decks_for_student", { _class_id: classId });
   if (error) throw error;
@@ -358,3 +367,64 @@ export async function recordFlashcardDeckCompletion(
   if (error) throw error;
   return unwrap<{ awarded: boolean; reason?: string }>(data);
 }
+
+/**
+ * Canonical, server-owned study progress for one student + deck.
+ * `queue` is the remaining card order, `completed_ids` are cards marked "Got It",
+ * and `progress_revision` guards against a stale tab overwriting newer progress.
+ */
+export interface FlashcardStudyProgress {
+  deck_id: string;
+  queue: string[];
+  completed_ids: string[];
+  reviewed_ids: string[];
+  current_card_id: string | null;
+  progress_revision: number;
+  started_at: string;
+  last_studied_at: string;
+  completed_at: string | null;
+}
+
+export interface FlashcardStudySession {
+  deck: FlashcardDeckStudy;
+  progress: FlashcardStudyProgress;
+}
+
+export interface FlashcardProgressPatch {
+  queue: string[];
+  completed_ids: string[];
+  reviewed_ids: string[];
+  current_card_id: string | null;
+}
+
+export async function startOrResumeFlashcardDeck(deckId: string): Promise<FlashcardStudySession> {
+  const { data, error } = await supabase.rpc("start_or_resume_flashcard_deck", { _deck_id: deckId });
+  if (error) throw error;
+  return unwrap<FlashcardStudySession>(data);
+}
+
+export async function saveFlashcardProgress(
+  deckId: string,
+  state: FlashcardProgressPatch,
+  expectedRevision: number,
+): Promise<FlashcardStudyProgress> {
+  const { data, error } = await supabase.rpc("save_flashcard_progress", {
+    _deck_id: deckId,
+    _state: state as unknown as Json,
+    _expected_revision: expectedRevision,
+  });
+  if (error) throw error;
+  return unwrap<FlashcardStudyProgress>(data);
+}
+
+export async function restartFlashcardDeck(deckId: string): Promise<FlashcardStudySession> {
+  const { data, error } = await supabase.rpc("restart_flashcard_deck", { _deck_id: deckId });
+  if (error) throw error;
+  return unwrap<FlashcardStudySession>(data);
+}
+
+/** True when a progress save was rejected because another tab saved first. */
+export function isFlashcardProgressConflict(err: unknown): boolean {
+  return /flashcard_progress_conflict/i.test(errMessage(err));
+}
+
