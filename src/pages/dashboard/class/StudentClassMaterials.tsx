@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -20,7 +20,9 @@ import {
   FolderCard,
   FolderGrid,
 } from "@/components/class/ContentFolderNav";
+import { ClassContentSearch } from "@/components/class/ClassContentSearch";
 import {
+  type ContentSearchHit,
   type FolderQuiz,
   type FolderResource,
   childFolders,
@@ -33,6 +35,7 @@ export function StudentClassMaterials() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
+  const navigate = useNavigate();
   const replaysOn = useFeatureEnabled("videoReplays");
   const flashcardsOn = useFeatureEnabled("flashcards");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +65,19 @@ export function StudentClassMaterials() {
     if (folderId) next.set("folder", folderId);
     else next.delete("folder");
     setSearchParams(next, { replace: false });
+  }
+
+  /** Search hits open the folder holding the item, or its own class section. */
+  function openSearchHit(hit: ContentSearchHit) {
+    if (hit.kind === "quiz") {
+      navigate(`${basePath}/quizzes`);
+      return;
+    }
+    if (hit.kind === "flashcard_deck") {
+      navigate(`${basePath}/flashcards`);
+      return;
+    }
+    goToFolder(hit.kind === "folder" ? hit.id : hit.folderId);
   }
 
   const shell = (children: React.ReactNode) => (
@@ -108,6 +124,17 @@ export function StudentClassMaterials() {
 
   return shell(
     <div className="space-y-6">
+      <ClassContentSearch
+        scope="student"
+        classId={classId!}
+        tenantId={currentTenantId ?? null}
+        userId={user?.id}
+        folders={folders}
+        rootLabel={ctx.data?.klass?.title || "Class"}
+        flashcardsEnabled={flashcardsOn}
+        onSelect={openSearchHit}
+      />
+
       <FolderBreadcrumb path={breadcrumbPath} rootLabel="All materials" onNavigate={goToFolder} />
 
       {visibleFolders.length > 0 && (
@@ -117,6 +144,7 @@ export function StudentClassMaterials() {
               key={f.id}
               folder={f}
               classId={classId!}
+              compact={!!currentFolderId}
               onOpen={() => goToFolder(f.id)}
             />
           ))}
