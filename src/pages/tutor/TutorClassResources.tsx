@@ -400,22 +400,19 @@ export default function TutorClassResources() {
   }
 
   /**
-   * Merge a reordered filtered subset back into the full draft order.
-   * Non-matching resources keep their existing global slots; the filtered
+   * Merge a reordered in-scope subset back into the full draft order.
+   * Out-of-scope resources keep their existing global slots; the in-scope
    * items simply fill those slots in the new order.
    */
   function applyFilteredReorder(newFiltered: Resource[]) {
     setDraftOrder((prev) => {
-      if (tab === "all") return newFiltered;
       let i = 0;
-      return prev.map((item) =>
-        matchesResourceTab(item, tab) ? newFiltered[i++] ?? item : item,
-      );
+      return prev.map((item) => (inScope(item) ? newFiltered[i++] ?? item : item));
     });
   }
 
   function moveDraftFiltered(id: string, dir: -1 | 1) {
-    const current = draftOrder.filter((r) => matchesResourceTab(r, tab));
+    const current = draftOrder.filter(inScope);
     const idx = current.findIndex((r) => r.id === id);
     const next = idx + dir;
     if (idx < 0 || next < 0 || next >= current.length) return;
