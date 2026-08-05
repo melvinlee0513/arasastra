@@ -208,13 +208,21 @@ export default function TutorClassResources() {
     const { data: res } = await supabase
       .from("class_resources")
       .select(
-        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, thumbnail_path, status, created_at, published_at, display_order",
+        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, thumbnail_path, status, created_at, published_at, display_order, folder_id",
       )
       .eq("class_id", classId)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true })
       .order("id", { ascending: true });
     setResources((res ?? []) as Resource[]);
+
+    // Folder metadata (with per-folder counts) comes from the canonical RPC.
+    try {
+      const tree = await fetchManagerContentTree(classId);
+      setFolders(tree.folders);
+    } catch {
+      setFolders([]);
+    }
     setLoading(false);
   }
 
@@ -222,19 +230,112 @@ export default function TutorClassResources() {
   // sees pending rearrangements across filters. Otherwise show saved order.
   const viewSource = arrangeMode ? draftOrder : resources;
 
-  const filtered = useMemo(
-    () => viewSource.filter((r) => matchesResourceTab(r, tab)),
-    [viewSource, tab],
+  /** A resource is in scope when it matches both the active folder and tab. */
+  const inScope = useMemo(
+    () => (r: Resource) =>
+      (r.folder_id ?? null) === (currentFolderId ?? null) && matchesResourceTab(r, tab),
+    [currentFolderId, tab],
+  );
+
+  const filtered = useMemo(() => viewSource.filter(inScope), [viewSource, inScope]);
+
+  const inFolder = useMemo(
+    () => viewSource.filter((r) => (r.folder_id ?? null) === (currentFolderId ?? null)),
+    [viewSource, currentFolderId],
   );
 
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: viewSource.length };
+    const counts: Record<string, number> = { all: inFolder.length };
     for (const t of RESOURCE_TABS) {
       if (t.key === "all") continue;
-      counts[t.key] = viewSource.filter((r) => matchesResourceTab(r, t.key)).length;
+      counts[t.key] = inFolder.filter((r) => matchesResourceTab(r, t.key)).length;
     }
     return counts;
-  }, [viewSource]);
+  }, [inFolder]);
+
+  const visibleFolders = useMemo(
+    () => childFolders(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+  const breadcrumbPath = useMemo(
+    () => folderPath(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+
+  function goToFolder(folderId: string | null) {
+    const next = new URLSearchParams(searchParams);
+    if (folderId) next.set("folder", folderId);
+    else next.delete("folder");
+    setSearchParams(next, { replace: false });
+  }
+
+  async function submitFolder() {
+    if (!classId || !folderDialog) return;
+    if (!folderName.trim()) {
+      toast.error("Folder name is required");
+      return;
+    }
+    setSavingFolder(true);
+    try {
+      await saveContentFolder({
+        classId,
+        name: folderName,
+        description: folderDesc.trim() || null,
+        folderId: folderDialog.mode === "rename" ? folderDialog.folder?.id : null,
+        parentId:
+          folderDialog.mode === "rename"
+            ? folderDialog.folder?.parent_id ?? null
+            : currentFolderId ?? null,
+      });
+      toast.success(folderDialog.mode === "rename" ? "Folder updated" : "Folder created");
+      setFolderDialog(null);
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not save folder");
+    } finally {
+      setSavingFolder(false);
+    }
+  }
+
+  async function removeFolder(folder: ContentFolder) {
+    const hasContents =
+      folder.subfolder_count > 0 ||
+      folder.resource_count + folder.quiz_count + folder.deck_count > 0;
+    const strategy = hasContents ? "move_to_parent" : "reject";
+    const msg = hasContents
+      ? `Delete "${folder.name}"? Its contents move to ${folder.parent_id ? "the parent folder" : UNFILED_LABEL}. Nothing is deleted.`
+      : `Delete "${folder.name}"?`;
+    if (!confirm(msg)) return;
+    try {
+      await deleteContentFolderSafe(folder.id, strategy);
+      toast.success("Folder deleted");
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not delete folder");
+    }
+  }
+
+  async function relocateFolder(folder: ContentFolder, parentId: string | null) {
+    try {
+      await moveContentFolder(folder.id, parentId);
+      toast.success("Folder moved");
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not move folder");
+    }
+  }
+
+  async function relocateResource(r: Resource, folderId: string | null) {
+    try {
+      await moveContentItem("resource", r.id, folderId);
+      toast.success("Material moved");
+      await load();
+      await queryClient.invalidateQueries({ queryKey: ["classroom-materials"] });
+    } catch (error) {
+      showSupabaseError(error, "Could not move material");
+    }
+  }
+
 
   // Dirty when the draft id sequence differs from the last saved sequence.
   const isDirty = useMemo(() => {
