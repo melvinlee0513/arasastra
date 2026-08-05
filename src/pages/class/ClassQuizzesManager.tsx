@@ -366,6 +366,17 @@ export function ClassQuizzesManager({ variant }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MoveToFolderDialog
+        open={!!pendingMove}
+        onOpenChange={(open) => !open && setPendingMove(null)}
+        folders={folders}
+        target={pendingMove}
+        onMoved={() => {
+          setPendingMove(null);
+          invalidate();
+        }}
+      />
     </ClassShell>
   );
 }
@@ -409,6 +420,10 @@ function QuizCard({
           <p className="text-xs text-slate-500 mt-0.5">
             Updated {formatRelative(row.updated_at)}
           </p>
+          <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1 break-words">
+            <FolderInput className="w-3 h-3 shrink-0" />
+            {folderLabel ?? "Unfiled Materials"}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge className={`rounded-full ${statusColor}`}>{STATUS_LABEL[row.status]}</Badge>
@@ -451,6 +466,9 @@ function QuizCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="w-4 h-4 mr-2" /> Duplicate as draft
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onMove}>
+                <FolderInput className="w-4 h-4 mr-2" /> Move to folder
               </DropdownMenuItem>
               {row.result_visibility === "manual" && (
                 <>
