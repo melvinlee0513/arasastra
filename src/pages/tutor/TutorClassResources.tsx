@@ -653,11 +653,16 @@ export default function TutorClassResources() {
           ) : filtered.length === 0 ? (
             <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
               <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-              <p className="font-medium text-slate-900">No materials yet</p>
+              <p className="font-medium text-slate-900">
+                {currentFolderId ? "This folder is empty" : "No materials yet"}
+              </p>
               <p className="text-sm text-slate-500 mt-1">
-                Attach your first note, video, or link to this class.
+                {currentFolderId
+                  ? "Attach material here, or move existing material into this folder."
+                  : "Attach your first note, video, or link to this class."}
               </p>
             </Card>
+
           ) : (
             <div
               className="grid gap-4"
