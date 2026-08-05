@@ -70,7 +70,31 @@ import {
   Check,
   ExternalLink,
   Pencil,
+  FolderPlus,
+  FolderInput,
+  Folder,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { ClassShell } from "@/components/class/ClassShell";
+import { useClassContext } from "@/hooks/useClassContext";
+import {
+  FolderBreadcrumb,
+  FolderCard,
+  FolderGrid,
+} from "@/components/class/ContentFolderNav";
+import {
+  type ContentFolder,
+  UNFILED_LABEL,
+  canAddSubfolder,
+  childFolders,
+  deleteContentFolderSafe,
+  fetchManagerContentTree,
+  folderPath,
+  moveContentFolder,
+  moveContentItem,
+  moveTargets,
+  saveContentFolder,
+} from "@/lib/contentFolders";
 
 const ELECTRIC_BLUE = "#0052FF";
 
