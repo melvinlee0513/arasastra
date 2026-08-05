@@ -74,7 +74,7 @@ import {
   FolderInput,
   Folder,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
 import {
