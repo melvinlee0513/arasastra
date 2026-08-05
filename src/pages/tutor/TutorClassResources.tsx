@@ -713,6 +713,13 @@ export default function TutorClassResources() {
                           </>
                         )}
                       </Button>
+                      <MoveToFolderSelect
+                        label="Move"
+                        folders={folders}
+                        value={r.folder_id}
+                        onChange={(target) => void relocateResource(r, target)}
+                      />
+
                       <Button
                         size="icon"
                         variant="ghost"
