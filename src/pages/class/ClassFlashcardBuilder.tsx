@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -24,6 +24,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FolderSelect } from "@/components/class/FolderSelect";
+import {
+  fetchManagerContentTree,
+  folderKeys,
+  moveContentItem,
+} from "@/lib/contentFolders";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -100,6 +106,7 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
 
 export function ClassFlashcardBuilder({ variant }: Props) {
   const { classId, deckId } = useParams<{ classId: string; deckId?: string }>();
+  const [searchParams] = useSearchParams();
   const isNew = !deckId;
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -119,6 +126,27 @@ export function ClassFlashcardBuilder({ variant }: Props) {
     queryFn: () => getFlashcardDeckForManager(deckId!),
     staleTime: 15_000,
   });
+
+  // Folder placement — new decks default to the folder the tutor came from.
+  const treeQ = useQuery({
+    queryKey: folderKeys.managerTree(currentTenantId, classId ?? "", user?.id),
+    enabled: !!classId && !!user && canManage,
+    queryFn: () => fetchManagerContentTree(classId!),
+    staleTime: 15_000,
+  });
+  const folders = treeQ.data?.folders ?? [];
+  const persistedFolderId = useMemo(() => {
+    if (!deckId) return null;
+    const row = (treeQ.data?.flashcard_decks ?? []).find((d) => d.id === deckId);
+    return row?.folder_id ?? null;
+  }, [treeQ.data, deckId]);
+  const [folderId, setFolderId] = useState<string | null>(searchParams.get("folder"));
+  const folderSeededRef = useRef(false);
+  useEffect(() => {
+    if (isNew || folderSeededRef.current || !treeQ.data) return;
+    folderSeededRef.current = true;
+    setFolderId(persistedFolderId);
+  }, [isNew, treeQ.data, persistedFolderId]);
 
   const [state, setState] = useState<BuilderState>(() => emptyState());
   const [initialized, setInitialized] = useState(isNew);
@@ -222,13 +250,18 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         const v = validateFlashcardDeck(definition);
         if (!v.canPublish) throw new Error(v.errors.join("\n"));
       }
-      return saveFlashcardDeck({
+      const res = await saveFlashcardDeck({
         classId: classId!,
         deckId: deckId ?? null,
         definition,
         publish: args.publish,
         expectedVersion: isNew ? null : state.definitionVersion,
       });
+      // Placement is a separate, non-destructive move — content is untouched.
+      if (folderId !== persistedFolderId || (isNew && folderId)) {
+        await moveContentItem("flashcard_deck", res.deck_id, folderId);
+      }
+      return res;
     },
     onSuccess: async (res, args) => {
       clearDraft();
@@ -239,6 +272,7 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       qc.invalidateQueries({ queryKey: ["class-context", currentTenantId, classId] });
       qc.invalidateQueries({ queryKey: ["tutor-class-home"] });
       qc.invalidateQueries({ queryKey: ["student-class-materials"] });
+      qc.invalidateQueries({ queryKey: ["class-content"] });
       toast({ title: args.publish ? "Deck published" : "Deck saved" });
 
       if (isNew) {
@@ -409,6 +443,18 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                 onChange={(e) => patch((s) => ({ ...s, title: e.target.value }))}
                 placeholder="e.g. Form 4 Biology — Cell Structure"
                 className="rounded-2xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deck-folder">Folder</Label>
+              <FolderSelect
+                id="deck-folder"
+                folders={folders}
+                value={folderId}
+                onChange={(next) => {
+                  setFolderId(next);
+                  setDirty(true);
+                }}
               />
             </div>
             <div className="space-y-2">
