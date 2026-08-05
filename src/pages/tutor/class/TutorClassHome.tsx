@@ -1,7 +1,7 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Video, FileText, ClipboardList, Plus, Layers, PencilLine,
+  Video, FileText, ClipboardList, Plus, Layers, PencilLine, FolderPlus,
   Users, CheckCircle2, ArrowRight, Megaphone, Pin, HelpCircle, BarChart3, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 import {
   listClassQuizzesForManager,
@@ -59,6 +60,8 @@ export function TutorClassHome() {
   });
 
   // Single manager-scoped aggregate query — no per-quiz requests.
+  const flashcardsOn = useFeatureEnabled("flashcards");
+
   const quizzesQ = useQuery({
     queryKey: quizManagerKeys.list(currentTenantId, classId ?? ""),
     enabled: !!classId && !!user && !!ctx.data?.canManage,
