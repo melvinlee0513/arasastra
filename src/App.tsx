@@ -64,6 +64,8 @@ const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ 
 const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
 const ClassQuizBuilder = lazy(() => import("@/pages/class/ClassQuizBuilder").then(m => ({ default: m.ClassQuizBuilder })));
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
+const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/StudentClassFlashcards").then(m => ({ default: m.StudentClassFlashcards })));
+const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
 const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
 const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
@@ -174,6 +176,8 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/materials" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassMaterials /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/announcements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassAnnouncements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/about" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassAboutPage variant="student" /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/flashcards" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><StudentClassFlashcards /></DashboardLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassQuizzes /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><StudentQuizAttempt /></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentQuizResult /></DashboardLayout></TenantGuard></ProtectedRoute>} />

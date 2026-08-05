@@ -57,8 +57,7 @@ const NAV: NavEntry[] = [
   { key: "students", label: "Students", icon: Users, managerOnly: true },
   { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
   { key: "quizzes", label: "Quizzes", icon: HelpCircle },
-  // Student flashcard navigation ships in Phase 3B2; manager surface is live now.
-  { key: "flashcards", label: "Flashcards", icon: Layers, managerOnly: true, featureFlag: "flashcards" },
+  { key: "flashcards", label: "Flashcards", icon: Layers, featureFlag: "flashcards" },
   { key: "about", label: "About", icon: Info },
 ];
 

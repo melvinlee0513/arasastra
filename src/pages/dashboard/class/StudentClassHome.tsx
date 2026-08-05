@@ -18,6 +18,7 @@ import { hasValidSource, openClassResource } from "@/lib/classResources";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
 import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import { listStudentClassQuizzes, quizStudentKeys, formatDateTime, type StudentQuizListRow } from "@/lib/quizzes";
 
 type ResourceRow = {
@@ -39,6 +40,7 @@ export function StudentClassHome() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
+  const flashcardsOn = useFeatureEnabled("flashcards");
 
   const resourcesQ = useQuery({
     queryKey: ["class-home-recent", currentTenantId, classId, user?.id],
@@ -239,6 +241,8 @@ export function StudentClassHome() {
 
         <QuizWidget classId={classId!} basePath={basePath} loading={quizzesQ.isLoading} quiz={priorityQuiz} />
 
+        {flashcardsOn && <FlashcardsWidget basePath={basePath} />}
+
 
         {ctx.data?.klass?.scheduled_at && (
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
@@ -307,6 +311,20 @@ function pickPriorityQuiz(rows: StudentQuizListRow[]): StudentQuizListRow | null
     .sort((a, b) => new Date(a.available_from!).getTime() - new Date(b.available_from!).getTime());
   if (upcoming.length) return upcoming[0];
   return null;
+}
+
+function FlashcardsWidget({ basePath }: { basePath: string }) {
+  return (
+    <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+      <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+        <Layers className="w-4 h-4 text-primary" /> Flashcards
+      </h3>
+      <p className="text-sm text-slate-600">Drill key facts with published decks for this class.</p>
+      <Button asChild className="rounded-full w-full mt-4">
+        <Link to={`${basePath}/flashcards`}>Study flashcards</Link>
+      </Button>
+    </section>
+  );
 }
 
 function QuizWidget({
