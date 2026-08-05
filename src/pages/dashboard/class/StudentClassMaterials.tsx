@@ -1,35 +1,32 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Video, FileText, HelpCircle, PlayCircle, ClipboardList, ExternalLink, Layers,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toSafeMessage } from "@/components/common/TenantGate";
-import { hasValidSource, openClassResource } from "@/lib/classResources";
+import { openClassResource } from "@/lib/classResources";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { toast } from "sonner";
 import { ClassShell } from "@/components/class/ClassShell";
 import { useClassContext } from "@/hooks/useClassContext";
-
-type ResourceRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  resource_type: string;
-  source_type: string;
-  file_url: string | null;
-  file_path: string | null;
-  external_url: string | null;
-  embed_url: string | null;
-  thumbnail_path: string | null;
-  published_at: string | null;
-};
-type QuizRow = { id: string; title: string; description: string | null; total_points: number };
+import {
+  FolderBreadcrumb,
+  FolderCard,
+  FolderGrid,
+} from "@/components/class/ContentFolderNav";
+import {
+  type FolderQuiz,
+  type FolderResource,
+  childFolders,
+  fetchStudentContentTree,
+  folderPath,
+} from "@/lib/contentFolders";
 
 export function StudentClassMaterials() {
   const { classId } = useParams<{ classId: string }>();
@@ -38,36 +35,34 @@ export function StudentClassMaterials() {
   const ctx = useClassContext(classId);
   const replaysOn = useFeatureEnabled("videoReplays");
   const flashcardsOn = useFeatureEnabled("flashcards");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderId = searchParams.get("folder");
 
   const q = useQuery({
     queryKey: ["classroom-materials", currentTenantId, classId, user?.id],
     enabled: !!classId && !!user && !!ctx.data?.canView,
-    queryFn: async () => {
-      const [{ data: resources }, { data: quizzes }] = await Promise.all([
-        supabase
-          .from("class_resources")
-          .select("id,title,description,resource_type,source_type,file_url,file_path,external_url,embed_url,thumbnail_path,published_at")
-          .eq("class_id", classId!)
-          .eq("status", "published")
-          .order("display_order", { ascending: true })
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true }),
-        supabase
-          .from("quizzes")
-          .select("id,title,description,total_points")
-          .eq("class_id", classId!)
-          .eq("status", "published")
-          .order("published_at", { ascending: false }),
-      ]);
-      return {
-        resources: (resources || []).filter(hasValidSource) as ResourceRow[],
-        quizzes: (quizzes || []) as QuizRow[],
-      };
-    },
+    queryFn: () => fetchStudentContentTree(classId!),
   });
 
   const basePath = `/dashboard/classes/${classId}`;
   const materialsPath = `${basePath}/materials`;
+
+  const folders = q.data?.folders ?? [];
+  const visibleFolders = useMemo(
+    () => childFolders(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+  const breadcrumbPath = useMemo(
+    () => folderPath(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+
+  function goToFolder(folderId: string | null) {
+    const next = new URLSearchParams(searchParams);
+    if (folderId) next.set("folder", folderId);
+    else next.delete("folder");
+    setSearchParams(next, { replace: false });
+  }
 
   const shell = (children: React.ReactNode) => (
     <ClassShell
@@ -95,86 +90,113 @@ export function StudentClassMaterials() {
   if (q.isLoading || !q.data) {
     return shell(<div className="text-sm text-slate-500 text-center py-10">Loading materials…</div>);
   }
+  if (q.isError) {
+    return shell(<Msg title="Couldn't load materials" body={toSafeMessage(q.error, "Please try again.")} />);
+  }
 
-  const replays = q.data.resources.filter((r) => r.resource_type === "video" || r.resource_type === "replay");
-  const notes = q.data.resources.filter((r) => r.resource_type === "note");
-  const worksheets = q.data.resources.filter((r) => r.resource_type === "worksheet");
-  const links = q.data.resources.filter((r) => r.resource_type === "link");
+  const scoped = q.data.resources.filter(
+    (r) => (r.folder_id ?? null) === (currentFolderId ?? null),
+  );
+  const quizzes = q.data.quizzes.filter(
+    (quiz) => (quiz.folder_id ?? null) === (currentFolderId ?? null),
+  );
+
+  const replays = scoped.filter((r) => r.resource_type === "video" || r.resource_type === "replay");
+  const notes = scoped.filter((r) => r.resource_type === "note");
+  const worksheets = scoped.filter((r) => r.resource_type === "worksheet");
+  const links = scoped.filter((r) => r.resource_type === "link");
 
   return shell(
-    <Tabs defaultValue={replaysOn ? "replays" : "notes"} className="w-full">
-      <div className="overflow-x-auto -mx-1 px-1">
-        <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
-          {replaysOn && (
-            <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
-          )}
-          <Tab value="notes" icon={<FileText className="w-4 h-4 mr-1.5" />} label={`Notes (${notes.length})`} />
-          <Tab value="worksheets" icon={<ClipboardList className="w-4 h-4 mr-1.5" />} label={`Worksheets (${worksheets.length})`} />
-          <Tab value="quizzes" icon={<HelpCircle className="w-4 h-4 mr-1.5" />} label={`Quizzes (${q.data.quizzes.length})`} />
-          {links.length > 0 && (
-            <Tab value="links" icon={<ExternalLink className="w-4 h-4 mr-1.5" />} label={`Links (${links.length})`} />
-          )}
-          {flashcardsOn && (
-            <Tab value="flashcards" icon={<Layers className="w-4 h-4 mr-1.5" />} label="Flashcards" />
-          )}
-        </TabsList>
-      </div>
+    <div className="space-y-6">
+      <FolderBreadcrumb path={breadcrumbPath} rootLabel="All materials" onNavigate={goToFolder} />
 
-      {replaysOn && (
-        <TabsContent value="replays" className="mt-5">
-          {replays.length === 0 ? <Empty icon={<Video />} label="No replays yet" /> : <Grid items={replays} />}
-        </TabsContent>
+      {visibleFolders.length > 0 && (
+        <FolderGrid>
+          {visibleFolders.map((f) => (
+            <FolderCard
+              key={f.id}
+              folder={f}
+              classId={classId!}
+              onOpen={() => goToFolder(f.id)}
+            />
+          ))}
+        </FolderGrid>
       )}
-      <TabsContent value="notes" className="mt-5">
-        {notes.length === 0 ? <Empty icon={<FileText />} label="No notes yet" /> : <Grid items={notes} />}
-      </TabsContent>
-      <TabsContent value="worksheets" className="mt-5">
-        {worksheets.length === 0 ? <Empty icon={<ClipboardList />} label="No worksheets yet" /> : <Grid items={worksheets} />}
-      </TabsContent>
-      <TabsContent value="quizzes" className="mt-5">
-        {q.data.quizzes.length === 0 ? (
-          <Empty icon={<HelpCircle />} label="No quizzes yet" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {q.data.quizzes.map((quiz) => (
-              <Link
-                key={quiz.id}
-                to={`/dashboard/classes/${classId}/quizzes`}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-center gap-4 group"
-              >
-                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <PlayCircle className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-slate-900 truncate">{quiz.title}</h4>
-                  {quiz.description && <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>}
-                </div>
-                <Button size="sm" className="rounded-full">Start</Button>
-              </Link>
-            ))}
-          </div>
+
+      <Tabs defaultValue={replaysOn ? "replays" : "notes"} className="w-full">
+        <div className="overflow-x-auto -mx-1 px-1">
+          <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
+            {replaysOn && (
+              <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
+            )}
+            <Tab value="notes" icon={<FileText className="w-4 h-4 mr-1.5" />} label={`Notes (${notes.length})`} />
+            <Tab value="worksheets" icon={<ClipboardList className="w-4 h-4 mr-1.5" />} label={`Worksheets (${worksheets.length})`} />
+            <Tab value="quizzes" icon={<HelpCircle className="w-4 h-4 mr-1.5" />} label={`Quizzes (${quizzes.length})`} />
+            {links.length > 0 && (
+              <Tab value="links" icon={<ExternalLink className="w-4 h-4 mr-1.5" />} label={`Links (${links.length})`} />
+            )}
+            {flashcardsOn && (
+              <Tab value="flashcards" icon={<Layers className="w-4 h-4 mr-1.5" />} label="Flashcards" />
+            )}
+          </TabsList>
+        </div>
+
+        {replaysOn && (
+          <TabsContent value="replays" className="mt-5">
+            {replays.length === 0 ? <Empty icon={<Video />} label="No replays here" /> : <Grid items={replays} />}
+          </TabsContent>
         )}
-      </TabsContent>
-      {links.length > 0 && (
-        <TabsContent value="links" className="mt-5"><Grid items={links} /></TabsContent>
-      )}
-      {flashcardsOn && (
-        <TabsContent value="flashcards" className="mt-5">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center">
-              <Layers className="w-6 h-6 text-primary" />
-            </div>
-            <p className="mt-3 font-semibold text-slate-800">Study with flashcards</p>
-            <p className="text-sm text-slate-500 mt-1">
-              Published decks for this class live in the flashcard library.
-            </p>
-            <Button asChild className="rounded-full mt-5 min-h-[44px]">
-              <Link to={`${basePath}/flashcards`}>Open flashcards</Link>
-            </Button>
-          </div>
+        <TabsContent value="notes" className="mt-5">
+          {notes.length === 0 ? <Empty icon={<FileText />} label="No notes here" /> : <Grid items={notes} />}
         </TabsContent>
-      )}
-    </Tabs>
+        <TabsContent value="worksheets" className="mt-5">
+          {worksheets.length === 0 ? <Empty icon={<ClipboardList />} label="No worksheets here" /> : <Grid items={worksheets} />}
+        </TabsContent>
+        <TabsContent value="quizzes" className="mt-5">
+          {quizzes.length === 0 ? (
+            <Empty icon={<HelpCircle />} label="No quizzes here" />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {quizzes.map((quiz: FolderQuiz) => (
+                <Link
+                  key={quiz.id}
+                  to={`/dashboard/classes/${classId}/quizzes`}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-center gap-4 group"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <PlayCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-slate-900 truncate">{quiz.title}</h4>
+                    {quiz.description && <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>}
+                  </div>
+                  <Button size="sm" className="rounded-full">Start</Button>
+                </Link>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        {links.length > 0 && (
+          <TabsContent value="links" className="mt-5"><Grid items={links} /></TabsContent>
+        )}
+        {flashcardsOn && (
+          <TabsContent value="flashcards" className="mt-5">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center">
+                <Layers className="w-6 h-6 text-primary" />
+              </div>
+              <p className="mt-3 font-semibold text-slate-800">Study with flashcards</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Published decks for this class live in the flashcard library.
+              </p>
+              <Button asChild className="rounded-full mt-5 min-h-[44px]">
+                <Link to={`${basePath}/flashcards`}>Open flashcards</Link>
+              </Button>
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>,
   );
 }
 
@@ -189,7 +211,7 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
   );
 }
 
-function Grid({ items }: { items: ResourceRow[] }) {
+function Grid({ items }: { items: FolderResource[] }) {
   return (
     <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
       {items.map((r) => (

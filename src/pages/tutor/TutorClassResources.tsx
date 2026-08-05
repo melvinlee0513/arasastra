@@ -70,7 +70,31 @@ import {
   Check,
   ExternalLink,
   Pencil,
+  FolderPlus,
+  FolderInput,
+  Folder,
 } from "lucide-react";
+import { useSearchParams, useLocation } from "react-router-dom";
+import { ClassShell } from "@/components/class/ClassShell";
+import { useClassContext } from "@/hooks/useClassContext";
+import {
+  FolderBreadcrumb,
+  FolderCard,
+  FolderGrid,
+} from "@/components/class/ContentFolderNav";
+import {
+  type ContentFolder,
+  UNFILED_LABEL,
+  canAddSubfolder,
+  childFolders,
+  deleteContentFolderSafe,
+  fetchManagerContentTree,
+  folderPath,
+  moveContentFolder,
+  moveContentItem,
+  moveTargets,
+  saveContentFolder,
+} from "@/lib/contentFolders";
 
 const ELECTRIC_BLUE = "#0052FF";
 
@@ -92,6 +116,7 @@ type Resource = {
   created_at: string;
   published_at: string | null;
   display_order: number | null;
+  folder_id: string | null;
 };
 
 type ClassInfo = {
@@ -115,14 +140,24 @@ export default function TutorClassResources() {
   const { user, isAdmin } = useAuth();
   const { currentTenantId } = useTenant();
   const queryClient = useQueryClient();
+  const ctx = useClassContext(classId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderId = searchParams.get("folder");
 
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [folders, setFolders] = useState<ContentFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Resource | null>(null);
   const [tab, setTab] = useState<string>("all");
+
+  // Folder dialogs
+  const [folderDialog, setFolderDialog] = useState<{ mode: "create" | "rename"; folder?: ContentFolder } | null>(null);
+  const [folderName, setFolderName] = useState("");
+  const [folderDesc, setFolderDesc] = useState("");
+  const [savingFolder, setSavingFolder] = useState(false);
 
   // Arrange mode — draftOrder is the full class order; tab filters the view.
   const [arrangeMode, setArrangeMode] = useState(false);
@@ -130,6 +165,7 @@ export default function TutorClassResources() {
   const [savingOrder, setSavingOrder] = useState(false);
 
   useEffect(() => {
+
     if (!classId || !user?.id) return;
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,13 +208,21 @@ export default function TutorClassResources() {
     const { data: res } = await supabase
       .from("class_resources")
       .select(
-        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, thumbnail_path, status, created_at, published_at, display_order",
+        "id, title, description, resource_type, source_type, file_url, file_path, external_url, embed_url, thumbnail_path, status, created_at, published_at, display_order, folder_id",
       )
       .eq("class_id", classId)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true })
       .order("id", { ascending: true });
     setResources((res ?? []) as Resource[]);
+
+    // Folder metadata (with per-folder counts) comes from the canonical RPC.
+    try {
+      const tree = await fetchManagerContentTree(classId);
+      setFolders(tree.folders);
+    } catch {
+      setFolders([]);
+    }
     setLoading(false);
   }
 
@@ -186,19 +230,112 @@ export default function TutorClassResources() {
   // sees pending rearrangements across filters. Otherwise show saved order.
   const viewSource = arrangeMode ? draftOrder : resources;
 
-  const filtered = useMemo(
-    () => viewSource.filter((r) => matchesResourceTab(r, tab)),
-    [viewSource, tab],
+  /** A resource is in scope when it matches both the active folder and tab. */
+  const inScope = useMemo(
+    () => (r: Resource) =>
+      (r.folder_id ?? null) === (currentFolderId ?? null) && matchesResourceTab(r, tab),
+    [currentFolderId, tab],
+  );
+
+  const filtered = useMemo(() => viewSource.filter(inScope), [viewSource, inScope]);
+
+  const inFolder = useMemo(
+    () => viewSource.filter((r) => (r.folder_id ?? null) === (currentFolderId ?? null)),
+    [viewSource, currentFolderId],
   );
 
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: viewSource.length };
+    const counts: Record<string, number> = { all: inFolder.length };
     for (const t of RESOURCE_TABS) {
       if (t.key === "all") continue;
-      counts[t.key] = viewSource.filter((r) => matchesResourceTab(r, t.key)).length;
+      counts[t.key] = inFolder.filter((r) => matchesResourceTab(r, t.key)).length;
     }
     return counts;
-  }, [viewSource]);
+  }, [inFolder]);
+
+  const visibleFolders = useMemo(
+    () => childFolders(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+  const breadcrumbPath = useMemo(
+    () => folderPath(folders, currentFolderId ?? null),
+    [folders, currentFolderId],
+  );
+
+  function goToFolder(folderId: string | null) {
+    const next = new URLSearchParams(searchParams);
+    if (folderId) next.set("folder", folderId);
+    else next.delete("folder");
+    setSearchParams(next, { replace: false });
+  }
+
+  async function submitFolder() {
+    if (!classId || !folderDialog) return;
+    if (!folderName.trim()) {
+      toast.error("Folder name is required");
+      return;
+    }
+    setSavingFolder(true);
+    try {
+      await saveContentFolder({
+        classId,
+        name: folderName,
+        description: folderDesc.trim() || null,
+        folderId: folderDialog.mode === "rename" ? folderDialog.folder?.id : null,
+        parentId:
+          folderDialog.mode === "rename"
+            ? folderDialog.folder?.parent_id ?? null
+            : currentFolderId ?? null,
+      });
+      toast.success(folderDialog.mode === "rename" ? "Folder updated" : "Folder created");
+      setFolderDialog(null);
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not save folder");
+    } finally {
+      setSavingFolder(false);
+    }
+  }
+
+  async function removeFolder(folder: ContentFolder) {
+    const hasContents =
+      folder.subfolder_count > 0 ||
+      folder.resource_count + folder.quiz_count + folder.deck_count > 0;
+    const strategy = hasContents ? "move_to_parent" : "reject";
+    const msg = hasContents
+      ? `Delete "${folder.name}"? Its contents move to ${folder.parent_id ? "the parent folder" : UNFILED_LABEL}. Nothing is deleted.`
+      : `Delete "${folder.name}"?`;
+    if (!confirm(msg)) return;
+    try {
+      await deleteContentFolderSafe(folder.id, strategy);
+      toast.success("Folder deleted");
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not delete folder");
+    }
+  }
+
+  async function relocateFolder(folder: ContentFolder, parentId: string | null) {
+    try {
+      await moveContentFolder(folder.id, parentId);
+      toast.success("Folder moved");
+      await load();
+    } catch (error) {
+      showSupabaseError(error, "Could not move folder");
+    }
+  }
+
+  async function relocateResource(r: Resource, folderId: string | null) {
+    try {
+      await moveContentItem("resource", r.id, folderId);
+      toast.success("Material moved");
+      await load();
+      await queryClient.invalidateQueries({ queryKey: ["classroom-materials"] });
+    } catch (error) {
+      showSupabaseError(error, "Could not move material");
+    }
+  }
+
 
   // Dirty when the draft id sequence differs from the last saved sequence.
   const isDirty = useMemo(() => {
@@ -263,22 +400,19 @@ export default function TutorClassResources() {
   }
 
   /**
-   * Merge a reordered filtered subset back into the full draft order.
-   * Non-matching resources keep their existing global slots; the filtered
+   * Merge a reordered in-scope subset back into the full draft order.
+   * Out-of-scope resources keep their existing global slots; the in-scope
    * items simply fill those slots in the new order.
    */
   function applyFilteredReorder(newFiltered: Resource[]) {
     setDraftOrder((prev) => {
-      if (tab === "all") return newFiltered;
       let i = 0;
-      return prev.map((item) =>
-        matchesResourceTab(item, tab) ? newFiltered[i++] ?? item : item,
-      );
+      return prev.map((item) => (inScope(item) ? newFiltered[i++] ?? item : item));
     });
   }
 
   function moveDraftFiltered(id: string, dir: -1 | 1) {
-    const current = draftOrder.filter((r) => matchesResourceTab(r, tab));
+    const current = draftOrder.filter(inScope);
     const idx = current.findIndex((r) => r.id === id);
     const next = idx + dir;
     if (idx < 0 || next < 0 || next >= current.length) return;
@@ -315,13 +449,36 @@ export default function TutorClassResources() {
     setDraftOrder([]);
   }
 
+  // Class Hub shell — tutors and centre admins share the same navigation.
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const basePath = isAdminRoute ? `/admin/classes/${classId}` : `/tutor/classes/${classId}`;
+  const materialsPath = `${basePath}/resources`;
+  const shell = (children: React.ReactNode) => (
+    <ClassShell
+      data={ctx.data}
+      isLoading={ctx.isLoading || loading || allowed === null}
+      role={isAdminRoute ? "admin" : "tutor"}
+      section="materials"
+      basePath={basePath}
+      materialsPath={materialsPath}
+      breadcrumbs={[
+        { label: isAdminRoute ? "Admin" : "Tutor", to: isAdminRoute ? "/admin" : "/tutor" },
+        { label: "Classes", to: isAdminRoute ? "/admin/curriculum" : "/tutor/classes" },
+        { label: ctx.data?.klass?.title || classInfo?.title || "Class", to: basePath },
+        { label: "Materials" },
+      ]}
+    >
+      {children}
+    </ClassShell>
+  );
+
   if (loading || allowed === null) {
-    return (
-      <div className="p-6 space-y-4">
+    return shell(
+      <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      </div>,
     );
   }
 
@@ -333,32 +490,43 @@ export default function TutorClassResources() {
           Ask a centre admin to assign you as a tutor for this class.
         </p>
         <Button asChild variant="outline" className="rounded-full mt-4">
-          <Link to="/tutor/classes">Back to classes</Link>
+          <Link to={isAdminRoute ? "/admin/curriculum" : "/tutor/classes"}>Back to classes</Link>
         </Button>
       </div>
     );
   }
 
-  return (
-    <div className="p-4 sm:p-6 md:p-10 max-w-6xl mx-auto space-y-6">
+  return shell(
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </button>
-          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
-            {classInfo?.title ?? "Class"}
-          </h1>
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
+            Materials library
+          </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Attach notes, replay videos, worksheets, and links for enrolled students.
+            Organise notes, replays, worksheets and links into chapter folders for enrolled students.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {!arrangeMode ? (
             <>
+              <Button
+                onClick={() => {
+                  setFolderName("");
+                  setFolderDesc("");
+                  setFolderDialog({ mode: "create" });
+                }}
+                variant="outline"
+                className="rounded-full"
+                disabled={!canAddSubfolder(folders, currentFolderId ?? null)}
+                title={
+                  canAddSubfolder(folders, currentFolderId ?? null)
+                    ? "Create a folder here"
+                    : "Maximum folder depth reached"
+                }
+              >
+                <FolderPlus className="h-4 w-4 mr-1" /> New folder
+              </Button>
               <Button
                 onClick={enterArrangeMode}
                 variant="outline"
@@ -402,6 +570,59 @@ export default function TutorClassResources() {
         </div>
       </div>
 
+      <FolderBreadcrumb
+        path={breadcrumbPath}
+        rootLabel="All materials"
+        onNavigate={goToFolder}
+      />
+
+      {!arrangeMode && visibleFolders.length > 0 && (
+        <FolderGrid>
+          {visibleFolders.map((f) => (
+            <FolderCard
+              key={f.id}
+              folder={f}
+              classId={classId!}
+              centerId={classInfo?.center_id}
+              onOpen={() => goToFolder(f.id)}
+              actions={
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full h-9 px-3 text-slate-600"
+                    onClick={() => {
+                      setFolderName(f.name);
+                      setFolderDesc(f.description ?? "");
+                      setFolderDialog({ mode: "rename", folder: f });
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Rename
+                  </Button>
+                  <MoveToFolderSelect
+                    label="Move"
+                    folders={folders}
+                    excludeFolderId={f.id}
+                    value={f.parent_id}
+                    onChange={(target) => void relocateFolder(f, target)}
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
+                    aria-label={`Delete folder ${f.name}`}
+                    onClick={() => void removeFolder(f)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              }
+            />
+          ))}
+        </FolderGrid>
+      )}
+
+
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center gap-3 flex-wrap">
           <TabsList className="rounded-full bg-slate-100/70 p-1 flex-wrap h-auto">
@@ -432,11 +653,16 @@ export default function TutorClassResources() {
           ) : filtered.length === 0 ? (
             <Card className="p-12 text-center rounded-3xl bg-white/60 border-slate-200">
               <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-              <p className="font-medium text-slate-900">No materials yet</p>
+              <p className="font-medium text-slate-900">
+                {currentFolderId ? "This folder is empty" : "No materials yet"}
+              </p>
               <p className="text-sm text-slate-500 mt-1">
-                Attach your first note, video, or link to this class.
+                {currentFolderId
+                  ? "Attach material here, or move existing material into this folder."
+                  : "Attach your first note, video, or link to this class."}
               </p>
             </Card>
+
           ) : (
             <div
               className="grid gap-4"
@@ -487,6 +713,13 @@ export default function TutorClassResources() {
                           </>
                         )}
                       </Button>
+                      <MoveToFolderSelect
+                        label="Move"
+                        folders={folders}
+                        value={r.folder_id}
+                        onChange={(target) => void relocateResource(r, target)}
+                      />
+
                       <Button
                         size="icon"
                         variant="ghost"
@@ -517,6 +750,7 @@ export default function TutorClassResources() {
           uploaderId={user!.id}
           existingCount={resources.length}
           editing={editing}
+          folderId={currentFolderId ?? null}
           onSaved={() => {
             setFormOpen(false);
             setEditing(null);
@@ -524,9 +758,111 @@ export default function TutorClassResources() {
           }}
         />
       )}
+
+      <Dialog open={!!folderDialog} onOpenChange={(v) => !v && setFolderDialog(null)}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {folderDialog?.mode === "rename" ? "Rename folder" : "New folder"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="folder-name" className="text-sm font-medium text-slate-700">
+                Folder name
+              </label>
+              <Input
+                id="folder-name"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="e.g. Chapter 1 — Cell Biology"
+                className="mt-1 rounded-xl"
+                maxLength={160}
+              />
+            </div>
+            <div>
+              <label htmlFor="folder-desc" className="text-sm font-medium text-slate-700">
+                Description (optional)
+              </label>
+              <Textarea
+                id="folder-desc"
+                value={folderDesc}
+                onChange={(e) => setFolderDesc(e.target.value)}
+                className="mt-1 rounded-xl"
+                rows={3}
+              />
+            </div>
+            {folderDialog?.mode === "create" && currentFolderId && (
+              <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                <Folder className="h-3 w-3" /> Created inside{" "}
+                {breadcrumbPath[breadcrumbPath.length - 1]?.name}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setFolderDialog(null)}
+              disabled={savingFolder}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full text-white"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+              onClick={() => void submitFolder()}
+              disabled={savingFolder || !folderName.trim()}
+            >
+              {savingFolder ? "Saving…" : "Save folder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+/** Compact folder picker used to move a folder or a content item. */
+function MoveToFolderSelect({
+  label,
+  folders,
+  value,
+  excludeFolderId,
+  onChange,
+}: {
+  label: string;
+  folders: ContentFolder[];
+  value: string | null;
+  excludeFolderId?: string;
+  onChange: (folderId: string | null) => void;
+}) {
+  const targets = moveTargets(folders, excludeFolderId);
+  return (
+    <Select
+      value={value ?? "__root__"}
+      onValueChange={(v) => onChange(v === "__root__" ? null : v)}
+    >
+      <SelectTrigger
+        className="h-9 rounded-full w-auto min-w-[120px] px-3 text-xs border-slate-200"
+        aria-label={`${label} to folder`}
+      >
+        <FolderInput className="h-3.5 w-3.5 mr-1 shrink-0" />
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__root__">{UNFILED_LABEL}</SelectItem>
+        {targets.map((t) => (
+          <SelectItem key={t.id} value={t.id}>
+            {"\u00A0".repeat(t.depth * 2)}
+            {t.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 
 function ArrangeList({
   items,
@@ -688,6 +1024,7 @@ function ResourceFormModal({
   onSaved,
   existingCount,
   editing,
+  folderId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -697,6 +1034,7 @@ function ResourceFormModal({
   onSaved: () => void;
   existingCount: number;
   editing: Resource | null;
+  folderId: string | null;
 }) {
   const isEdit = !!editing;
   const draftKey = useMemo(() => {
@@ -1057,6 +1395,7 @@ function ResourceFormModal({
         status,
         published_at: publish ? now : null,
         display_order: existingCount + 1,
+        folder_id: folderId,
       });
       if (error) {
         await cleanupUploads();

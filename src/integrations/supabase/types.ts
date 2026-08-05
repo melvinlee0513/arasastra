@@ -343,6 +343,70 @@ export type Database = {
           },
         ]
       }
+      class_content_folders: {
+        Row: {
+          center_id: string
+          class_id: string
+          cover_image_path: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          cover_image_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          cover_image_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_content_folders_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_content_folders_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_content_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "class_content_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_enrollments: {
         Row: {
           center_id: string
@@ -392,6 +456,7 @@ export type Database = {
           external_url: string | null
           file_path: string | null
           file_url: string | null
+          folder_id: string | null
           id: string
           published_at: string | null
           resource_type: string
@@ -413,6 +478,7 @@ export type Database = {
           external_url?: string | null
           file_path?: string | null
           file_url?: string | null
+          folder_id?: string | null
           id?: string
           published_at?: string | null
           resource_type?: string
@@ -434,6 +500,7 @@ export type Database = {
           external_url?: string | null
           file_path?: string | null
           file_url?: string | null
+          folder_id?: string | null
           id?: string
           published_at?: string | null
           resource_type?: string
@@ -451,6 +518,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_resources_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_content_folders"
             referencedColumns: ["id"]
           },
         ]
@@ -908,6 +982,7 @@ export type Database = {
           definition_version: number
           description: string | null
           display_order: number
+          folder_id: string | null
           id: string
           published_at: string | null
           status: string
@@ -924,6 +999,7 @@ export type Database = {
           definition_version?: number
           description?: string | null
           display_order?: number
+          folder_id?: string | null
           id?: string
           published_at?: string | null
           status?: string
@@ -940,6 +1016,7 @@ export type Database = {
           definition_version?: number
           description?: string | null
           display_order?: number
+          folder_id?: string | null
           id?: string
           published_at?: string | null
           status?: string
@@ -960,6 +1037,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_decks_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_content_folders"
             referencedColumns: ["id"]
           },
           {
@@ -1703,6 +1787,7 @@ export type Database = {
           definition_version: number
           description: string | null
           due_at: string | null
+          folder_id: string | null
           id: string
           instructions: string | null
           published_at: string | null
@@ -1729,6 +1814,7 @@ export type Database = {
           definition_version?: number
           description?: string | null
           due_at?: string | null
+          folder_id?: string | null
           id?: string
           instructions?: string | null
           published_at?: string | null
@@ -1755,6 +1841,7 @@ export type Database = {
           definition_version?: number
           description?: string | null
           due_at?: string | null
+          folder_id?: string | null
           id?: string
           instructions?: string | null
           published_at?: string | null
@@ -1783,6 +1870,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_content_folders"
             referencedColumns: ["id"]
           },
         ]
@@ -2449,6 +2543,12 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      _ccf_depth: { Args: { _folder_id: string }; Returns: number }
+      _ccf_is_descendant: {
+        Args: { _ancestor: string; _candidate: string }
+        Returns: boolean
+      }
+      _ccf_subtree_height: { Args: { _folder_id: string }; Returns: number }
       _cover_path_center: { Args: { _name: string }; Returns: string }
       _cover_path_class: { Args: { _name: string }; Returns: string }
       _finalize_expired_attempt: {
@@ -2476,6 +2576,7 @@ export type Database = {
           definition_version: number
           description: string | null
           display_order: number
+          folder_id: string | null
           id: string
           published_at: string | null
           status: string
@@ -2531,6 +2632,10 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      delete_class_content_folder_safe: {
+        Args: { _folder_id: string; _strategy?: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2650,6 +2755,14 @@ export type Database = {
           used_at: string
         }[]
       }
+      list_class_content_tree_for_manager: {
+        Args: { _class_id: string }
+        Returns: Json
+      }
+      list_class_content_tree_for_student: {
+        Args: { _class_id: string }
+        Returns: Json
+      }
       list_class_flashcard_decks_for_manager: {
         Args: { _class_id: string }
         Returns: Json
@@ -2704,6 +2817,14 @@ export type Database = {
           title: string
         }[]
       }
+      move_class_content_folder: {
+        Args: { _folder_id: string; _new_parent_id?: string }
+        Returns: Json
+      }
+      move_class_content_item: {
+        Args: { _folder_id?: string; _item_id: string; _item_type: string }
+        Returns: Json
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2742,6 +2863,10 @@ export type Database = {
         }[]
       }
       release_quiz_results: { Args: { _quiz_id: string }; Returns: string }
+      reorder_class_content_folders: {
+        Args: { _class_id: string; _ordered_ids: string[]; _parent_id?: string }
+        Returns: undefined
+      }
       reorder_class_resources: {
         Args: { ordered_resource_ids: string[]; requested_class_id: string }
         Returns: {
@@ -2782,6 +2907,16 @@ export type Database = {
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean
+      }
+      save_class_content_folder: {
+        Args: {
+          _class_id: string
+          _description?: string
+          _folder_id?: string
+          _name: string
+          _parent_id?: string
+        }
+        Returns: Json
       }
       save_flashcard_deck: {
         Args: {
