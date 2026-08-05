@@ -100,6 +100,7 @@ export function ClassQuizzesManager({ variant }: Props) {
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] = useState<QuizManagerRow | null>(null);
   const [pendingArchive, setPendingArchive] = useState<QuizManagerRow | null>(null);
+  const [pendingMove, setPendingMove] = useState<MoveTarget | null>(null);
 
   const canManage = !!ctx.data?.canManage;
 
@@ -110,6 +111,28 @@ export function ClassQuizzesManager({ variant }: Props) {
     staleTime: 15_000,
   });
 
+  // Folder placement lives in the canonical content tree, not the quiz list RPC.
+  const treeQ = useQuery({
+    queryKey: folderKeys.managerTree(currentTenantId, classId ?? "", user?.id),
+    enabled: !!classId && !!user && canManage,
+    queryFn: () => fetchManagerContentTree(classId!),
+    staleTime: 15_000,
+  });
+
+  const folders: ContentFolder[] = treeQ.data?.folders ?? [];
+  const folderByQuiz = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const q of treeQ.data?.quizzes ?? []) map.set(q.id, q.folder_id ?? null);
+    return map;
+  }, [treeQ.data]);
+
+  const folderLabel = (quizId: string): string | null => {
+    const folderId = folderByQuiz.get(quizId) ?? null;
+    if (!folderId) return null;
+    const path = folderPath(folders, folderId);
+    return path.length ? path.map((f) => f.name).join(" / ") : null;
+  };
+
   const filtered = useMemo(() => {
     const rows = listQ.data ?? [];
     const q = search.trim().toLowerCase();
@@ -119,6 +142,7 @@ export function ClassQuizzesManager({ variant }: Props) {
       return true;
     });
   }, [listQ.data, statusFilter, search]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: quizManagerKeys.list(currentTenantId, classId ?? "") });
