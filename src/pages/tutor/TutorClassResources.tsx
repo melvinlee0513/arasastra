@@ -449,13 +449,36 @@ export default function TutorClassResources() {
     setDraftOrder([]);
   }
 
+  // Class Hub shell — tutors and centre admins share the same navigation.
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const basePath = isAdminRoute ? `/admin/classes/${classId}` : `/tutor/classes/${classId}`;
+  const materialsPath = `${basePath}/resources`;
+  const shell = (children: React.ReactNode) => (
+    <ClassShell
+      data={ctx.data}
+      isLoading={ctx.isLoading || loading || allowed === null}
+      role={isAdminRoute ? "admin" : "tutor"}
+      section="materials"
+      basePath={basePath}
+      materialsPath={materialsPath}
+      breadcrumbs={[
+        { label: isAdminRoute ? "Admin" : "Tutor", to: isAdminRoute ? "/admin" : "/tutor" },
+        { label: "Classes", to: isAdminRoute ? "/admin/curriculum" : "/tutor/classes" },
+        { label: ctx.data?.klass?.title || classInfo?.title || "Class", to: basePath },
+        { label: "Materials" },
+      ]}
+    >
+      {children}
+    </ClassShell>
+  );
+
   if (loading || allowed === null) {
-    return (
-      <div className="p-6 space-y-4">
+    return shell(
+      <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
-      </div>
+      </div>,
     );
   }
 
@@ -467,32 +490,43 @@ export default function TutorClassResources() {
           Ask a centre admin to assign you as a tutor for this class.
         </p>
         <Button asChild variant="outline" className="rounded-full mt-4">
-          <Link to="/tutor/classes">Back to classes</Link>
+          <Link to={isAdminRoute ? "/admin/curriculum" : "/tutor/classes"}>Back to classes</Link>
         </Button>
       </div>
     );
   }
 
-  return (
-    <div className="p-4 sm:p-6 md:p-10 max-w-6xl mx-auto space-y-6">
+  return shell(
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </button>
-          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">
-            {classInfo?.title ?? "Class"}
-          </h1>
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
+            Materials library
+          </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Attach notes, replay videos, worksheets, and links for enrolled students.
+            Organise notes, replays, worksheets and links into chapter folders for enrolled students.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {!arrangeMode ? (
             <>
+              <Button
+                onClick={() => {
+                  setFolderName("");
+                  setFolderDesc("");
+                  setFolderDialog({ mode: "create" });
+                }}
+                variant="outline"
+                className="rounded-full"
+                disabled={!canAddSubfolder(folders, currentFolderId ?? null)}
+                title={
+                  canAddSubfolder(folders, currentFolderId ?? null)
+                    ? "Create a folder here"
+                    : "Maximum folder depth reached"
+                }
+              >
+                <FolderPlus className="h-4 w-4 mr-1" /> New folder
+              </Button>
               <Button
                 onClick={enterArrangeMode}
                 variant="outline"
@@ -535,6 +569,59 @@ export default function TutorClassResources() {
           )}
         </div>
       </div>
+
+      <FolderBreadcrumb
+        path={breadcrumbPath}
+        rootLabel="All materials"
+        onNavigate={goToFolder}
+      />
+
+      {!arrangeMode && visibleFolders.length > 0 && (
+        <FolderGrid>
+          {visibleFolders.map((f) => (
+            <FolderCard
+              key={f.id}
+              folder={f}
+              classId={classId!}
+              centerId={classInfo?.center_id}
+              onOpen={() => goToFolder(f.id)}
+              actions={
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full h-9 px-3 text-slate-600"
+                    onClick={() => {
+                      setFolderName(f.name);
+                      setFolderDesc(f.description ?? "");
+                      setFolderDialog({ mode: "rename", folder: f });
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Rename
+                  </Button>
+                  <MoveToFolderSelect
+                    label="Move"
+                    folders={folders}
+                    excludeFolderId={f.id}
+                    value={f.parent_id}
+                    onChange={(target) => void relocateFolder(f, target)}
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="rounded-full h-9 w-9 ml-auto text-slate-500 hover:text-red-600"
+                    aria-label={`Delete folder ${f.name}`}
+                    onClick={() => void removeFolder(f)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              }
+            />
+          ))}
+        </FolderGrid>
+      )}
+
 
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex items-center gap-3 flex-wrap">
