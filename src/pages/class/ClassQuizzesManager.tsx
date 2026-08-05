@@ -301,7 +301,7 @@ export function ClassQuizzesManager({ variant }: Props) {
                   folderLabel={folderLabel(row.id)}
                   onMove={() =>
                     setPendingMove({
-                      type: "quiz",
+                      kind: "quiz",
                       id: row.id,
                       title: row.title,
                       folderId: folderByQuiz.get(row.id) ?? null,
@@ -378,6 +378,8 @@ function QuizCard({
   onArchive,
   onDuplicate,
   onReleaseResults,
+  folderLabel,
+  onMove,
   busy,
 }: {
   row: QuizManagerRow;
@@ -387,6 +389,8 @@ function QuizCard({
   onArchive: () => void;
   onDuplicate: () => void;
   onReleaseResults: (release: boolean) => void;
+  folderLabel: string | null;
+  onMove: () => void;
   busy: boolean;
 }) {
   const locked = attemptsLock(row);
