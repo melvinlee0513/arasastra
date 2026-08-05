@@ -155,6 +155,9 @@ export function ClassQuizzesManager({ variant }: Props) {
     // And the student-facing list/result caches — students should see status
     // changes (release/hide/archive) on next mount without a hard reload.
     qc.invalidateQueries({ queryKey: ["quiz-student"] });
+    // Folder placement/counts come from the shared content tree.
+    qc.invalidateQueries({ queryKey: ["class-content"] });
+
   };
 
   const statusMut = useMutation({
