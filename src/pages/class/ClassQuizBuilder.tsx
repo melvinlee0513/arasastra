@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -23,6 +23,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FolderSelect } from "@/components/class/FolderSelect";
+import {
+  fetchManagerContentTree,
+  folderKeys,
+  moveContentItem,
+} from "@/lib/contentFolders";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -303,6 +309,28 @@ export function ClassQuizBuilder({ variant }: Props) {
   const [state, setState] = useState<BuilderState>(() => emptyBuilderState());
   const [initialized, setInitialized] = useState(isNew);
   const [dirty, setDirty] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  // Folder placement — new quizzes default to the folder the tutor came from.
+  const treeQ = useQuery({
+    queryKey: folderKeys.managerTree(currentTenantId, classId, user?.id),
+    enabled: !!classId && !!user && canManage,
+    queryFn: () => fetchManagerContentTree(classId),
+    staleTime: 15_000,
+  });
+  const folders = treeQ.data?.folders ?? [];
+  const persistedFolderId = useMemo(() => {
+    if (!quizId) return null;
+    const row = (treeQ.data?.quizzes ?? []).find((q) => q.id === quizId);
+    return row?.folder_id ?? null;
+  }, [treeQ.data, quizId]);
+  const [folderId, setFolderId] = useState<string | null>(searchParams.get("folder"));
+  const folderSeededRef = useRef(false);
+  useEffect(() => {
+    if (isNew || folderSeededRef.current || !treeQ.data) return;
+    folderSeededRef.current = true;
+    setFolderId(persistedFolderId);
+  }, [isNew, treeQ.data, persistedFolderId]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const restoredDraftRef = useRef(false);
@@ -380,17 +408,24 @@ export function ClassQuizBuilder({ variant }: Props) {
     mutationFn: async (args: { publish: boolean }) => {
       const errs = validateBuilder(state, args.publish);
       if (errs.length) throw new Error(errs.join("\n"));
-      return saveQuizDefinition({
+      const res = await saveQuizDefinition({
         classId,
         quizId: quizId,
         definition: toRpcDefinition(state, locked) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
         publish: args.publish,
       });
+      // Placement is a separate, non-destructive move — attempts and results
+      // are untouched because only `folder_id` changes.
+      if (folderId !== persistedFolderId || (isNew && folderId)) {
+        await moveContentItem("quiz", res.id, folderId);
+      }
+      return res;
     },
     onSuccess: async (res, args) => {
       qc.invalidateQueries({ queryKey: quizManagerKeys.list(currentTenantId, classId) });
       qc.invalidateQueries({ queryKey: ["class-context", currentTenantId, classId] });
       qc.invalidateQueries({ queryKey: ["tutor-class-home"] });
+      qc.invalidateQueries({ queryKey: ["class-content"] });
       clearDraft();
       toast({
         title: args.publish ? "Quiz published" : "Saved",
@@ -637,6 +672,20 @@ export function ClassQuizBuilder({ variant }: Props) {
                   placeholder="e.g. Chapter 5 — Quadratic Equations"
                   className="mt-1"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="quiz-folder">Folder</Label>
+                <div className="mt-1">
+                  <FolderSelect
+                    id="quiz-folder"
+                    folders={folders}
+                    value={folderId}
+                    onChange={(next) => {
+                      setFolderId(next);
+                      setDirty(true);
+                    }}
+                  />
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="quiz-desc">Description</Label>
