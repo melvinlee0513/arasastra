@@ -14,6 +14,7 @@ import {
   Pencil,
   Plus,
   RefreshCcw,
+  FolderInput,
   Search,
   Send,
   Trash2,
@@ -62,6 +63,13 @@ import {
   reorderFlashcardDecks,
   setFlashcardDeckStatus,
 } from "@/lib/flashcards";
+import { MoveToFolderDialog, type MoveTarget } from "@/components/class/MoveToFolderDialog";
+import {
+  fetchManagerContentTree,
+  folderKeys,
+  folderPath,
+  type ContentFolder,
+} from "@/lib/contentFolders";
 
 type Variant = "tutor" | "admin";
 
@@ -90,6 +98,7 @@ export function ClassFlashcardsManager({ variant }: Props) {
   const [localOrder, setLocalOrder] = useState<FlashcardDeckManagerRow[] | null>(null);
   const [pendingDelete, setPendingDelete] = useState<FlashcardDeckManagerRow | null>(null);
   const [pendingArchive, setPendingArchive] = useState<FlashcardDeckManagerRow | null>(null);
+  const [pendingMove, setPendingMove] = useState<MoveTarget | null>(null);
 
   const canManage = !!ctx.data?.canManage;
   const classMissing = !ctx.isLoading && !ctx.data?.klass;
@@ -100,6 +109,28 @@ export function ClassFlashcardsManager({ variant }: Props) {
     queryFn: () => listClassFlashcardDecksForManager(classId!),
     staleTime: 15_000,
   });
+
+  // Folder placement comes from the canonical content tree.
+  const treeQ = useQuery({
+    queryKey: folderKeys.managerTree(currentTenantId, classId ?? "", user?.id),
+    enabled: !!classId && !!user && canManage,
+    queryFn: () => fetchManagerContentTree(classId!),
+    staleTime: 15_000,
+  });
+
+  const folders: ContentFolder[] = treeQ.data?.folders ?? [];
+  const folderByDeck = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const d of treeQ.data?.flashcard_decks ?? []) map.set(d.id, d.folder_id ?? null);
+    return map;
+  }, [treeQ.data]);
+
+  const folderLabel = (deckId: string): string | null => {
+    const folderId = folderByDeck.get(deckId) ?? null;
+    if (!folderId) return null;
+    const path = folderPath(folders, folderId);
+    return path.length ? path.map((f) => f.name).join(" / ") : null;
+  };
 
   const rows = localOrder ?? listQ.data ?? [];
 
@@ -120,6 +151,7 @@ export function ClassFlashcardsManager({ variant }: Props) {
     qc.invalidateQueries({ queryKey: ["class-context", currentTenantId, classId] });
     qc.invalidateQueries({ queryKey: ["tutor-class-home"] });
     qc.invalidateQueries({ queryKey: ["student-class-materials"] });
+    qc.invalidateQueries({ queryKey: ["class-content"] });
   }, [qc, currentTenantId, classId]);
 
   const statusMut = useMutation({
@@ -322,6 +354,15 @@ export function ClassFlashcardsManager({ variant }: Props) {
                     onDelete={() => setPendingDelete(row)}
                     onDuplicate={() => dupMut.mutate(row.id)}
                     onMove={(delta) => move(index, delta)}
+                    folderLabel={folderLabel(row.id)}
+                    onMoveToFolder={() =>
+                      setPendingMove({
+                        kind: "flashcard_deck",
+                        id: row.id,
+                        title: row.title,
+                        folderId: folderByDeck.get(row.id) ?? null,
+                      })
+                    }
                   />
                 );
               })}
@@ -376,6 +417,16 @@ export function ClassFlashcardsManager({ variant }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <MoveToFolderDialog
+        open={!!pendingMove}
+        onOpenChange={(open) => !open && setPendingMove(null)}
+        folders={folders}
+        target={pendingMove}
+        onMoved={() => {
+          setPendingMove(null);
+          invalidate();
+        }}
+      />
     </ClassShell>
   );
 }
@@ -392,6 +443,8 @@ function DeckCard({
   onDelete,
   onDuplicate,
   onMove,
+  folderLabel,
+  onMoveToFolder,
 }: {
   row: FlashcardDeckManagerRow;
   index: number;
@@ -404,6 +457,8 @@ function DeckCard({
   onDelete: () => void;
   onDuplicate: () => void;
   onMove: (delta: number) => void;
+  folderLabel: string | null;
+  onMoveToFolder: () => void;
 }) {
   const statusColor =
     row.status === "published"
@@ -418,6 +473,10 @@ function DeckCard({
         <div className="min-w-0">
           <h3 className="font-semibold text-slate-900 break-words">{row.title}</h3>
           <p className="text-xs text-slate-500 mt-0.5">Updated {formatFlashcardRelative(row.updated_at)}</p>
+          <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1 break-words">
+            <FolderInput className="w-3 h-3 shrink-0" />
+            {folderLabel ?? "Unfiled Materials"}
+          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge className={`rounded-full ${statusColor}`}>{FLASHCARD_STATUS_LABEL[row.status]}</Badge>
@@ -459,6 +518,9 @@ function DeckCard({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onMoveToFolder}>
+                <FolderInput className="w-4 h-4 mr-2" /> Move to folder
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="w-4 h-4 mr-2" /> Duplicate as draft
               </DropdownMenuItem>
