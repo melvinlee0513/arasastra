@@ -1,0 +1,69 @@
+-- Phase 3B2 — student flashcard study flow access-control regression matrix.
+--
+-- Run as a superuser against a scratch/QA database. Each case sets a JWT claim
+-- via `set_config('request.jwt.claims', ...)` and asserts the expected outcome.
+-- Substitute the placeholder UUIDs with fixtures from your QA tenant:
+--   :student_enrolled   student in centre A, active enrolment in :class_a
+--   :student_other      student in centre A, NOT enrolled in :class_a
+--   :student_tenant_b   student in centre B
+--   :deck_published     published deck on :class_a with >= 2 valid cards
+--   :deck_draft         draft deck on :class_a
+--
+-- Expected results:
+--
+-- 1. start_or_resume_flashcard_deck(:deck_published) as :student_enrolled
+--      -> succeeds, returns {deck, progress}; queue length = valid card count.
+-- 2. start_or_resume_flashcard_deck(:deck_published) called twice
+--      -> second call returns the SAME progress_revision and queue (idempotent resume).
+-- 3. start_or_resume_flashcard_deck(:deck_draft) as :student_enrolled
+--      -> ERROR 'deck not available' (drafts are never studiable).
+-- 4. start_or_resume_flashcard_deck(:deck_published) as :student_other
+--      -> ERROR 'not permitted' (no active enrolment).
+-- 5. start_or_resume_flashcard_deck(:deck_published) as :student_tenant_b
+--      -> ERROR 'not permitted' (cross-tenant).
+-- 6. Any of the three student RPCs with no JWT (anon)
+--      -> ERROR (EXECUTE revoked from anon/public).
+-- 7. save_flashcard_progress with the correct _expected_revision
+--      -> succeeds, progress_revision increments by exactly 1.
+-- 8. save_flashcard_progress replayed with the now-stale revision
+--      -> ERROR 'flashcard_progress_conflict' (stale tab cannot overwrite).
+-- 9. save_flashcard_progress with a card id from another deck
+--      -> ERROR 'invalid card id'.
+-- 10. save_flashcard_progress with the same id in both queue and completed_ids
+--      -> ERROR 'invalid progress payload'.
+-- 11. save_flashcard_progress until queue = [] and completed_ids = all cards
+--      -> completed_at is set.
+-- 12. record_flashcard_deck_completion before the deck is finished
+--      -> ERROR 'deck not completed' (no XP for partial study).
+-- 13. record_flashcard_deck_completion after completion
+--      -> {"awarded": true}; exactly ONE student_xp_events row of type
+--         'flashcard_completed' for (student, deck).
+-- 14. record_flashcard_deck_completion called again
+--      -> {"awarded": false, "reason": "already_completed"}; still one XP row.
+-- 15. restart_flashcard_deck(:deck_published)
+--      -> queue refilled, completed_ids = [], completed_at NULL,
+--         progress_revision incremented; XP history and student_xp_events
+--         rows are untouched.
+-- 16. After a tutor deletes one card from the deck, start_or_resume
+--      -> the removed id disappears from queue/completed_ids/reviewed_ids
+--         and no error is raised.
+-- 17. After a tutor adds a card, start_or_resume
+--      -> the new card is appended to the queue and completed_at resets to NULL.
+-- 18. Tenant feature flag flashcards = false for centre A
+--      -> all three student RPCs ERROR 'flashcards disabled'.
+-- 19. Direct SELECT on public.flashcard_deck_progress as :student_other
+--      -> zero rows for :student_enrolled's progress (RLS own-rows only).
+-- 20. Direct INSERT/UPDATE/DELETE on public.flashcard_deck_progress as any
+--      authenticated student -> permission denied (only SELECT is granted).
+
+BEGIN;
+
+-- Example harness for case 19 (own-rows-only read isolation):
+-- SELECT set_config('request.jwt.claims',
+--   json_build_object('sub', :'student_other', 'role', 'authenticated')::text, true);
+-- SET LOCAL ROLE authenticated;
+-- SELECT count(*) = 0 AS passes_case_19
+-- FROM public.flashcard_deck_progress
+-- WHERE student_user_id = :'student_enrolled';
+
+ROLLBACK;
