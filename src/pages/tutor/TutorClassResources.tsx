@@ -140,14 +140,24 @@ export default function TutorClassResources() {
   const { user, isAdmin } = useAuth();
   const { currentTenantId } = useTenant();
   const queryClient = useQueryClient();
+  const ctx = useClassContext(classId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderId = searchParams.get("folder");
 
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [folders, setFolders] = useState<ContentFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Resource | null>(null);
   const [tab, setTab] = useState<string>("all");
+
+  // Folder dialogs
+  const [folderDialog, setFolderDialog] = useState<{ mode: "create" | "rename"; folder?: ContentFolder } | null>(null);
+  const [folderName, setFolderName] = useState("");
+  const [folderDesc, setFolderDesc] = useState("");
+  const [savingFolder, setSavingFolder] = useState(false);
 
   // Arrange mode — draftOrder is the full class order; tab filters the view.
   const [arrangeMode, setArrangeMode] = useState(false);
@@ -155,6 +165,7 @@ export default function TutorClassResources() {
   const [savingOrder, setSavingOrder] = useState(false);
 
   useEffect(() => {
+
     if (!classId || !user?.id) return;
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
