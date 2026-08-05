@@ -40,6 +40,7 @@ export function StudentClassHome() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const ctx = useClassContext(classId);
+  const flashcardsOn = useFeatureEnabled("flashcards");
 
   const resourcesQ = useQuery({
     queryKey: ["class-home-recent", currentTenantId, classId, user?.id],
