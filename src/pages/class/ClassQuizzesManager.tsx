@@ -62,7 +62,15 @@ import {
   releaseQuizResults,
   setQuizStatus,
 } from "@/lib/quizzes";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, FolderInput } from "lucide-react";
+import { MoveToFolderDialog, type MoveTarget } from "@/components/class/MoveToFolderDialog";
+import {
+  fetchManagerContentTree,
+  folderKeys,
+  folderPath,
+  type ContentFolder,
+} from "@/lib/contentFolders";
+
 
 type Variant = "tutor" | "admin";
 
