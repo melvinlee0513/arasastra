@@ -1394,6 +1394,7 @@ function ResourceFormModal({
         status,
         published_at: publish ? now : null,
         display_order: existingCount + 1,
+        folder_id: folderId,
       });
       if (error) {
         await cleanupUploads();
