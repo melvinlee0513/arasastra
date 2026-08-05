@@ -116,6 +116,7 @@ type Resource = {
   created_at: string;
   published_at: string | null;
   display_order: number | null;
+  folder_id: string | null;
 };
 
 type ClassInfo = {
