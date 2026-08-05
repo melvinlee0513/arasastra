@@ -890,7 +890,34 @@ export default function TutorClassResources() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {coverFolder && (
+        <FolderCoverManager
+          open
+          onOpenChange={(v) => !v && setCoverFolder(null)}
+          folder={coverFolder}
+          classId={classId!}
+          centerId={classInfo?.center_id}
+          onSaved={() => {
+            setCoverFolder(null);
+            void load();
+          }}
+        />
+      )}
+
+      <FolderArrangeDialog
+        open={arrangeFoldersOpen}
+        onOpenChange={setArrangeFoldersOpen}
+        classId={classId!}
+        parentId={currentFolderId ?? null}
+        siblings={visibleFolders}
+        onSaved={() => {
+          setArrangeFoldersOpen(false);
+          void load();
+        }}
+      />
     </div>
+
   );
 }
 
