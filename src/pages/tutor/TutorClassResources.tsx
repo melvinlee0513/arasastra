@@ -757,9 +757,111 @@ export default function TutorClassResources() {
           }}
         />
       )}
+
+      <Dialog open={!!folderDialog} onOpenChange={(v) => !v && setFolderDialog(null)}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {folderDialog?.mode === "rename" ? "Rename folder" : "New folder"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="folder-name" className="text-sm font-medium text-slate-700">
+                Folder name
+              </label>
+              <Input
+                id="folder-name"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="e.g. Chapter 1 — Cell Biology"
+                className="mt-1 rounded-xl"
+                maxLength={160}
+              />
+            </div>
+            <div>
+              <label htmlFor="folder-desc" className="text-sm font-medium text-slate-700">
+                Description (optional)
+              </label>
+              <Textarea
+                id="folder-desc"
+                value={folderDesc}
+                onChange={(e) => setFolderDesc(e.target.value)}
+                className="mt-1 rounded-xl"
+                rows={3}
+              />
+            </div>
+            {folderDialog?.mode === "create" && currentFolderId && (
+              <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                <Folder className="h-3 w-3" /> Created inside{" "}
+                {breadcrumbPath[breadcrumbPath.length - 1]?.name}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setFolderDialog(null)}
+              disabled={savingFolder}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full text-white"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+              onClick={() => void submitFolder()}
+              disabled={savingFolder || !folderName.trim()}
+            >
+              {savingFolder ? "Saving…" : "Save folder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+/** Compact folder picker used to move a folder or a content item. */
+function MoveToFolderSelect({
+  label,
+  folders,
+  value,
+  excludeFolderId,
+  onChange,
+}: {
+  label: string;
+  folders: ContentFolder[];
+  value: string | null;
+  excludeFolderId?: string;
+  onChange: (folderId: string | null) => void;
+}) {
+  const targets = moveTargets(folders, excludeFolderId);
+  return (
+    <Select
+      value={value ?? "__root__"}
+      onValueChange={(v) => onChange(v === "__root__" ? null : v)}
+    >
+      <SelectTrigger
+        className="h-9 rounded-full w-auto min-w-[120px] px-3 text-xs border-slate-200"
+        aria-label={`${label} to folder`}
+      >
+        <FolderInput className="h-3.5 w-3.5 mr-1 shrink-0" />
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__root__">{UNFILED_LABEL}</SelectItem>
+        {targets.map((t) => (
+          <SelectItem key={t.id} value={t.id}>
+            {"\u00A0".repeat(t.depth * 2)}
+            {t.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 
 function ArrangeList({
   items,
