@@ -750,6 +750,7 @@ export default function TutorClassResources() {
           uploaderId={user!.id}
           existingCount={resources.length}
           editing={editing}
+          folderId={currentFolderId ?? null}
           onSaved={() => {
             setFormOpen(false);
             setEditing(null);
