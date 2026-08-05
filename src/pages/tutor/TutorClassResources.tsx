@@ -1023,6 +1023,7 @@ function ResourceFormModal({
   onSaved,
   existingCount,
   editing,
+  folderId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1032,6 +1033,7 @@ function ResourceFormModal({
   onSaved: () => void;
   existingCount: number;
   editing: Resource | null;
+  folderId: string | null;
 }) {
   const isEdit = !!editing;
   const draftKey = useMemo(() => {
