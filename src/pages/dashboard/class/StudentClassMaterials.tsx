@@ -160,7 +160,18 @@ export function StudentClassMaterials() {
       )}
       {flashcardsOn && (
         <TabsContent value="flashcards" className="mt-5">
-          <Empty icon={<Layers />} label="Flashcard decks coming soon" />
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center">
+              <Layers className="w-6 h-6 text-primary" />
+            </div>
+            <p className="mt-3 font-semibold text-slate-800">Study with flashcards</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Published decks for this class live in the flashcard library.
+            </p>
+            <Button asChild className="rounded-full mt-5 min-h-[44px]">
+              <Link to={`${basePath}/flashcards`}>Open flashcards</Link>
+            </Button>
+          </div>
         </TabsContent>
       )}
     </Tabs>
