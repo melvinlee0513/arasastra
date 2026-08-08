@@ -91,9 +91,19 @@ export function ClassCoverManager({
         throw new Error("cover_not_persisted");
       }
 
+      // Persistence confirmed — safe to drop the superseded object.
+      if (currentPath && currentPath !== path) {
+        try {
+          await supabase.storage.from(CLASS_COVER_BUCKET).remove([currentPath]);
+        } catch {
+          // best-effort cleanup; the new cover is already live
+        }
+        invalidateClassCoverCache(currentPath);
+      }
       invalidateClassCoverCache(path);
       return path;
     },
+
     onSuccess: async () => {
       toast.success("Class cover updated");
       resetPreview();
