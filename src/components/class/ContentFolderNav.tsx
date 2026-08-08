@@ -17,7 +17,7 @@ interface BreadcrumbProps {
 
 export function FolderBreadcrumb({ path, rootLabel, onNavigate }: BreadcrumbProps) {
   return (
-    <nav aria-label="Folder path" className="flex flex-wrap items-center gap-1 text-sm">
+    <nav aria-label="Folder path" className="hidden md:flex flex-wrap items-center gap-1 text-sm">
       <button
         type="button"
         onClick={() => onNavigate(null)}
@@ -88,7 +88,7 @@ export function FolderCard({
   const items = folderItemCount(folder);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
+    <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
       <button
         type="button"
         onClick={onOpen}
@@ -98,7 +98,7 @@ export function FolderCard({
         <div
           className={cn(
             "relative w-full bg-gradient-to-br",
-            compact ? "aspect-[3/1]" : "aspect-square",
+            compact ? "aspect-[16/7] sm:aspect-[3/1]" : "aspect-square",
             fallbackGradient(folder.id),
           )}
         >
@@ -115,20 +115,22 @@ export function FolderCard({
             </div>
           )}
         </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-slate-900 break-words group-hover:text-primary">
+        <div className="p-3 md:p-4">
+          <h3 className="text-[14px] md:text-base font-semibold text-slate-900 break-words group-hover:text-primary line-clamp-2 leading-snug">
             {folder.name}
           </h3>
           {folder.description && (
-            <p className="text-xs text-slate-500 line-clamp-2 mt-1 break-words">
+            <p className="hidden sm:block text-xs text-slate-500 line-clamp-2 mt-1 break-words">
               {folder.description}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-2 mt-3 text-[11px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-3 text-[12px] text-slate-500">
             {folder.subfolder_count > 0 && (
               <span className="inline-flex items-center gap-1">
-                <Folder className="w-3 h-3" /> {folder.subfolder_count}{" "}
-                {folder.subfolder_count === 1 ? "subfolder" : "subfolders"}
+                <Folder className="w-3 h-3" /> {folder.subfolder_count}
+                <span className="hidden sm:inline">
+                  {folder.subfolder_count === 1 ? " subfolder" : " subfolders"}
+                </span>
               </span>
             )}
             <span className="inline-flex items-center gap-1">
@@ -158,11 +160,87 @@ export function FolderCard({
 
 export function FolderGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="grid gap-4"
-      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
-    >
+    <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
       {children}
+    </div>
+  );
+}
+
+interface MobileFolderBarProps {
+  /** Ancestor chain for the current folder (root first). */
+  path: ContentFolder[];
+  rootLabel: string;
+  onNavigate: (folderId: string | null) => void;
+}
+
+/**
+ * Mobile replacement for long folder breadcrumbs: `← Parent   Current`, with an
+ * optional ancestor jump list. Desktop keeps the full breadcrumb trail.
+ */
+export function MobileFolderBar({ path, rootLabel, onNavigate }: MobileFolderBarProps) {
+  const [openList, setOpenList] = useState(false);
+  if (path.length === 0) return null;
+
+  const current = path[path.length - 1];
+  const parent = path.length > 1 ? path[path.length - 2] : null;
+
+  return (
+    <div className="md:hidden">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onNavigate(parent ? parent.id : null)}
+          className="inline-flex items-center gap-0.5 min-h-[44px] pr-2 text-[15px] font-medium text-primary active:opacity-70"
+          aria-label={`Back to ${parent ? parent.name : rootLabel}`}
+        >
+          <ChevronRight className="w-5 h-5 rotate-180 shrink-0" aria-hidden="true" />
+          <span className="max-w-[34vw] truncate">{parent ? parent.name : rootLabel}</span>
+        </button>
+        <span className="flex-1 min-w-0 text-[15px] font-semibold text-slate-900 truncate">
+          {current.name}
+        </span>
+        {path.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setOpenList((v) => !v)}
+            aria-expanded={openList}
+            aria-label="Jump to a parent folder"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+          >
+            <FolderOpen className="w-[18px] h-[18px]" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      {openList && (
+        <ul className="mt-1 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                setOpenList(false);
+                onNavigate(null);
+              }}
+              className="w-full text-left px-4 min-h-[44px] text-sm text-slate-700 active:bg-slate-100"
+            >
+              {rootLabel}
+            </button>
+          </li>
+          {path.slice(0, -1).map((f) => (
+            <li key={f.id} className="border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenList(false);
+                  onNavigate(f.id);
+                }}
+                className="w-full text-left px-4 min-h-[44px] text-sm text-slate-700 active:bg-slate-100 truncate"
+              >
+                {f.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
