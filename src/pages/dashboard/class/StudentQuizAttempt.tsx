@@ -252,8 +252,25 @@ export function StudentQuizAttempt() {
 
 
   const payload = attemptQ.data;
+  if (!payload.questions.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <Card className="max-w-md p-8 text-center rounded-3xl">
+          <AlertCircle className="w-8 h-8 mx-auto text-amber-500 mb-2" />
+          <h1 className="font-semibold text-slate-900 mb-1">No questions yet</h1>
+          <p className="text-sm text-slate-500 mb-4">
+            Your tutor hasn't added any questions to this quiz. Nothing to answer right now.
+          </p>
+          <Button onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)} className="rounded-full">
+            Back to quizzes
+          </Button>
+        </Card>
+      </div>
+    );
+  }
   const q = payload.questions[current];
   const unanswered = payload.questions.filter((qq) => !answers[qq.id]).length;
+
 
   if (submitted) {
     return (
