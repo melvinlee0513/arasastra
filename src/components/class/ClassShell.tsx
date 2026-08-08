@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   Home, ChevronRight, BookOpen, User, Clock, Calendar,
   LayoutGrid, Megaphone, FileText, MessageCircle, HelpCircle, Info, Users, ImagePlus, Layers,
@@ -12,6 +12,7 @@ import { ClassCover } from "@/components/class/ClassCover";
 import { ClassCoverManager } from "@/components/class/ClassCoverManager";
 import { tutorLabel } from "@/lib/classCovers";
 import { useFeatureEnabled, type FeatureFlag } from "@/hooks/useFeature";
+import { MobileTopBar } from "@/components/layout/MobileTopBar";
 
 
 export type ClassSection =
@@ -36,12 +37,25 @@ interface ClassShellProps {
   materialsPath: string; // student uses /materials, tutor/admin uses /resources
   breadcrumbs: BreadcrumbItem[];
   headerRight?: ReactNode;
+  /**
+   * Immersive activities (quiz result review, etc.) keep only the mobile back
+   * bar — no compact header and no section launcher on phones.
+   */
+  mobileImmersive?: boolean;
+  /** Overrides for the mobile back bar when the page is not a plain section. */
+  mobileTitle?: string;
+  mobileBackTo?: string;
+  mobileBackLabel?: string;
+  /** Trailing slot in the mobile back bar (progress, actions). */
+  mobileHeaderRight?: ReactNode;
   children: ReactNode;
 }
 
 type NavEntry = {
   key: ClassSection;
   label: string;
+  /** Shorter label used by the compact mobile launcher. */
+  shortLabel?: string;
   icon: typeof Home;
   disabled?: boolean;
   disabledLabel?: string;
@@ -52,19 +66,38 @@ type NavEntry = {
 
 const NAV: NavEntry[] = [
   { key: "home", label: "Home", icon: LayoutGrid },
-  { key: "announcements", label: "Announcements", icon: Megaphone },
+  { key: "announcements", label: "Announcements", shortLabel: "News", icon: Megaphone },
   { key: "materials", label: "Materials", icon: FileText },
   { key: "students", label: "Students", icon: Users, managerOnly: true },
-  { key: "discussions", label: "Discussions", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
-  { key: "quizzes", label: "Quizzes", icon: HelpCircle },
-  { key: "flashcards", label: "Flashcards", icon: Layers, featureFlag: "flashcards" },
+  { key: "discussions", label: "Discussions", shortLabel: "Discuss", icon: MessageCircle, disabled: true, disabledLabel: "Coming soon" },
+  { key: "quizzes", label: "Quizzes", shortLabel: "Quiz", icon: HelpCircle },
+  { key: "flashcards", label: "Flashcards", shortLabel: "Cards", icon: Layers, featureFlag: "flashcards" },
   { key: "about", label: "About", icon: Info },
 ];
 
+const SECTION_TITLES: Record<ClassSection, string> = {
+  home: "Class",
+  announcements: "Announcements",
+  materials: "Materials",
+  students: "Students",
+  discussions: "Discussions",
+  quizzes: "Quizzes",
+  flashcards: "Flashcards",
+  about: "About",
+};
+
+function classListRoute(role: ClassShellProps["role"]): { to: string; label: string } {
+  if (role === "student") return { to: "/dashboard/classes", label: "My Classes" };
+  if (role === "tutor") return { to: "/tutor/classes", label: "Classes" };
+  return { to: "/admin/curriculum", label: "Classes" };
+}
 
 export function ClassShell({
-  data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight, children,
+  data, isLoading, role, section, basePath, materialsPath, breadcrumbs, headerRight,
+  mobileImmersive = false, mobileTitle, mobileBackTo, mobileBackLabel, mobileHeaderRight,
+  children,
 }: ClassShellProps) {
+  useLocation(); // keep the shell re-rendering with route changes
   // Feature-flag gating for flag-scoped nav items. Client-side hiding only —
   // backend RPCs remain the authoritative enforcement point.
   const flashcardsEnabled = useFeatureEnabled("flashcards");
@@ -77,11 +110,11 @@ export function ClassShell({
   if (isLoading) {
 
     return (
-      <div className="min-h-screen bg-slate-50 p-5 md:p-8 space-y-6">
-        <Skeleton className="h-6 w-1/2" />
-        <Skeleton className="h-40 rounded-3xl" />
-        <Skeleton className="h-12 rounded-full w-full max-w-2xl" />
-        <Skeleton className="h-64 rounded-3xl" />
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8 space-y-4 md:space-y-6">
+        <Skeleton className="h-12 md:h-6 w-full md:w-1/2 rounded-2xl" />
+        <Skeleton className="h-36 md:h-40 rounded-2xl md:rounded-3xl" />
+        <Skeleton className="h-24 md:h-12 rounded-2xl md:rounded-full w-full max-w-2xl" />
+        <Skeleton className="h-64 rounded-2xl md:rounded-3xl" />
       </div>
     );
   }
@@ -89,11 +122,32 @@ export function ClassShell({
   const k = data?.klass;
   const tutorText = tutorLabel(data?.tutors);
   const canManageCover = !!data?.canManage && !!k?.center_id;
+  const list = classListRoute(role);
+  const classTitle = k?.title || "Class";
+
+  // Mobile back bar defaults: sections return to class home, class home returns
+  // to the class list. Always a resolved route, never history-only.
+  const backTo = mobileBackTo ?? (section === "home" ? list.to : basePath);
+  const backLabel = mobileBackLabel ?? (section === "home" ? list.label : classTitle);
+  const barTitle =
+    mobileTitle ?? (section === "home" ? classTitle : SECTION_TITLES[section]);
+
+  const visibleNav = NAV.filter(
+    (item) => !(item.managerOnly && role === "student") && flagEnabled(item.featureFlag),
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        <nav className="flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 md:space-y-6">
+        {/* Mobile: native app bar. Desktop/tablet: breadcrumbs. */}
+        <MobileTopBar
+          backTo={backTo}
+          backLabel={backLabel}
+          title={barTitle}
+          right={mobileHeaderRight}
+        />
+
+        <nav className="hidden md:flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
           {breadcrumbs.map((b, i) => (
             <span key={i} className="inline-flex items-center gap-1.5">
               {i > 0 && <ChevronRight className="w-3.5 h-3.5" />}
@@ -109,14 +163,19 @@ export function ClassShell({
         </nav>
 
         {k && (
-          <header className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <header
+            className={cn(
+              "bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden",
+              mobileImmersive && "hidden md:block",
+            )}
+          >
             {/* Compact banner: 16:9 on mobile, banner-height on tablet/desktop. */}
             <ClassCover
               classId={k.id}
               coverPath={k.cover_image_path}
               version={k.cover_image_updated_at}
               priority
-              sizeClassName="h-40 sm:h-44 md:h-52 lg:h-60"
+              sizeClassName="aspect-video sm:aspect-auto sm:h-44 md:h-52 lg:h-60"
               overlay={
                 <>
                   {/* Subtle gradient for legibility of any overlay text/actions */}
@@ -131,7 +190,7 @@ export function ClassShell({
                         trigger={
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-white/60 text-slate-800 hover:bg-white shadow-sm px-3 py-1.5 text-xs font-medium"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-white/60 text-slate-800 hover:bg-white shadow-sm px-3 py-1.5 text-xs font-medium min-h-[36px]"
                           >
                             <ImagePlus className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">
@@ -146,18 +205,23 @@ export function ClassShell({
               }
             />
             <div className="p-4 sm:p-6">
-              <div className="flex flex-col md:flex-row md:items-start gap-4">
+              <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 break-words">{k.title}</h1>
-                  {k.cohort_label && <p className="text-sm text-slate-500 mt-1">{k.cohort_label}</p>}
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <h1 className="text-[20px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-tight">
+                    {k.title}
+                  </h1>
+                  {k.cohort_label && (
+                    <p className="text-[13px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{k.cohort_label}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                     {k.subject?.name && (
                       <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
                         <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
                       </Badge>
                     )}
-                    <Badge variant="outline" className="rounded-full">
-                      <User className="w-3 h-3 mr-1" /> {tutorText}
+                    <Badge variant="outline" className="rounded-full max-w-full">
+                      <User className="w-3 h-3 mr-1 shrink-0" />{" "}
+                      <span className="truncate">{tutorText}</span>
                     </Badge>
                     {k.schedule_label && (
                       <Badge variant="outline" className="rounded-full">
@@ -166,7 +230,8 @@ export function ClassShell({
                     )}
                     {k.scheduled_at && (
                       <Badge variant="secondary" className="rounded-full">
-                        <Calendar className="w-3 h-3 mr-1" /> Next: {new Date(k.scheduled_at).toLocaleString()}
+                        <Calendar className="w-3 h-3 mr-1" /> Next:{" "}
+                        {new Date(k.scheduled_at).toLocaleString()}
                       </Badge>
                     )}
                   </div>
@@ -177,14 +242,11 @@ export function ClassShell({
           </header>
         )}
 
-        {/* Class-level navigation */}
+        {/* Class-level navigation — desktop pill row */}
         {k && (
-          <div className="overflow-x-auto -mx-1 px-1 scrollbar-thin">
+          <div className="hidden md:block overflow-x-auto -mx-1 px-1 scrollbar-thin">
             <div className="bg-white border border-slate-200 rounded-full p-1 shadow-sm inline-flex gap-1 min-w-max">
-              {NAV.filter(
-                (item) => !(item.managerOnly && role === "student") && flagEnabled(item.featureFlag),
-              ).map((item) => {
-
+              {visibleNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -234,6 +296,70 @@ export function ClassShell({
               })}
             </div>
           </div>
+        )}
+
+        {/* Class-level navigation — compact mobile launcher (no horizontal scroll) */}
+        {k && !mobileImmersive && (
+          <nav
+            aria-label="Class sections"
+            className="md:hidden bg-white border border-slate-200 rounded-2xl shadow-sm p-2"
+          >
+            <ul className="grid grid-cols-4 gap-1">
+              {visibleNav.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.key === section;
+                const href = resolveHref(item.key, basePath, materialsPath);
+                const disabled = item.disabled || !href;
+                const short = item.shortLabel ?? item.label;
+                const inner = (
+                  <>
+                    <span
+                      className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center",
+                        isActive ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-600",
+                        disabled && "bg-slate-100 text-slate-300",
+                      )}
+                    >
+                      <Icon className="w-[18px] h-[18px]" aria-hidden="true" />
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[11px] leading-tight text-center",
+                        isActive ? "font-semibold text-primary" : "text-slate-600",
+                        disabled && "text-slate-400",
+                      )}
+                    >
+                      {short}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={item.key}>
+                    {disabled ? (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label={`${item.label} — coming soon`}
+                        className="w-full min-h-[68px] flex flex-col items-center justify-center gap-1 rounded-xl cursor-not-allowed"
+                      >
+                        {inner}
+                      </button>
+                    ) : (
+                      <Link
+                        to={href!}
+                        aria-label={item.label}
+                        aria-current={isActive ? "page" : undefined}
+                        className="w-full min-h-[68px] flex flex-col items-center justify-center gap-1 rounded-xl active:bg-slate-100"
+                      >
+                        {inner}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         )}
 
         <div>{children}</div>
