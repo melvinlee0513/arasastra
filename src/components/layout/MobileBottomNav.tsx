@@ -1,48 +1,78 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Calendar, BookOpen, Inbox, User, Video, Trophy } from "lucide-react";
+import { Home, LayoutGrid, GraduationCap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { path: "/", icon: Home, label: "Home" },
-  { path: "/timetable", icon: Calendar, label: "Schedule" },
-  { path: "/dashboard/achievements", icon: Trophy, label: "Awards" },
-  { path: "/account", icon: User, label: "Profile" },
+interface TabItem {
+  path: string;
+  icon: typeof Home;
+  label: string;
+  /** Accessible name when the visual label is shortened. */
+  accessibleLabel?: string;
+  /** Extra prefixes that keep this tab active. */
+  matches?: string[];
+}
+
+const tabs: TabItem[] = [
+  { path: "/dashboard", icon: Home, label: "Home", matches: ["/dashboard/achievements", "/dashboard/resources"] },
+  {
+    path: "/dashboard/more",
+    icon: LayoutGrid,
+    label: "More",
+    accessibleLabel: "More student services",
+    matches: ["/timetable", "/inbox", "/dashboard/leaderboard"],
+  },
+  {
+    path: "/dashboard/classes",
+    icon: GraduationCap,
+    label: "Study",
+    accessibleLabel: "Study — my classes",
+  },
+  { path: "/dashboard/profile", icon: User, label: "Profile", matches: ["/account"] },
 ];
 
+/**
+ * Student mobile tab bar. Rendered only on root-level student routes — the
+ * route-aware student shell hides it inside classes and learning activities.
+ */
 export function MobileBottomNav() {
-  const location = useLocation();
+  const { pathname } = useLocation();
+
+  const isActive = (tab: TabItem) => {
+    if (pathname === tab.path) return true;
+    return (tab.matches ?? []).some((m) => pathname === m || pathname.startsWith(`${m}/`));
+  };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-[60] safe-area-inset-bottom">
-      <div className="flex items-center justify-around px-2 py-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+    <nav
+      aria-label="Student navigation"
+      className="fixed bottom-0 left-0 right-0 z-[60] bg-card/95 backdrop-blur-lg border-t border-border pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="flex items-stretch justify-around px-1">
+        {tabs.map((tab) => {
+          const active = isActive(tab);
           return (
             <NavLink
-              key={item.path}
-              to={item.path}
+              key={tab.path}
+              to={tab.path}
+              aria-label={tab.accessibleLabel ?? tab.label}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200",
-                "min-w-[60px] relative",
-                isActive 
-                  ? "text-accent bg-accent/10" 
-                  : "text-muted-foreground hover:text-foreground"
+                "relative flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-[44px] py-2 rounded-xl transition-colors",
+                active ? "text-primary" : "text-muted-foreground",
               )}
             >
-              <item.icon 
-                className={cn(
-                  "w-5 h-5 transition-transform duration-200",
-                  isActive && "scale-110"
-                )} 
+              <tab.icon
+                className={cn("w-[22px] h-[22px] transition-transform", active && "scale-110")}
+                aria-hidden="true"
               />
-              <span className={cn(
-                "text-[10px] font-medium",
-                isActive && "text-accent"
-              )}>
-                {item.label}
+              <span className={cn("text-[11px] font-medium leading-none", active && "font-semibold")}>
+                {tab.label}
               </span>
-              {isActive && (
-                <div className="absolute -bottom-1 w-8 h-1 rounded-full bg-accent" />
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0 w-8 h-[3px] rounded-full bg-primary"
+                />
               )}
             </NavLink>
           );

@@ -64,6 +64,13 @@ interface ResourcePreviewCardProps {
   actions?: ReactNode;
   dragHandle?: ReactNode;
   className?: string;
+  /**
+   * When provided the whole tile becomes one tap target (mobile-native student
+   * behaviour). The title link is dropped so no interactive element nests.
+   */
+  onOpen?: () => void;
+  /** Hide description/hostname chrome — used by compact mobile grids. */
+  compact?: boolean;
 }
 
 export function ResourcePreviewCard({
@@ -72,6 +79,8 @@ export function ResourcePreviewCard({
   actions,
   dragHandle,
   className,
+  onOpen,
+  compact = false,
 }: ResourcePreviewCardProps) {
   const preview = buildResourcePreview(resource);
   const meta = CATEGORY_META[preview.category];
@@ -80,7 +89,7 @@ export function ResourcePreviewCard({
   const [storedThumbFailed, setStoredThumbFailed] = useState(false);
   const [pdfFallbackFailed, setPdfFallbackFailed] = useState(false);
 
-  const showTitleAsLink = role === "student" && preview.href;
+  const showTitleAsLink = role === "student" && !onOpen && preview.href;
 
   // Pre-generated stored thumbnail (private storage; signed URL cached).
   const storedThumb = useSignedThumbnailUrl(
@@ -195,16 +204,10 @@ export function ResourcePreviewCard({
     </div>
   );
 
-  return (
-    <Card
-      className={cn(
-        "group flex flex-col h-full overflow-hidden rounded-2xl bg-white/90 border-slate-200",
-        "shadow-[0_4px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_28px_rgb(0,0,0,0.08)] transition-shadow",
-        className,
-      )}
-    >
+  const body = (
+    <>
       {cover}
-      <div className="flex-1 min-w-0 flex flex-col gap-2 p-4">
+      <div className={cn("flex-1 min-w-0 flex flex-col gap-1.5 p-3 md:gap-2 md:p-4")}>
         {/* Metadata row */}
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <Badge
@@ -218,11 +221,11 @@ export function ResourcePreviewCard({
               Published
             </Badge>
           )}
-          {preview.hostname ? (
+          {!compact && preview.hostname ? (
             <span className="text-[11px] text-slate-400 truncate min-w-0 max-w-full">
               {preview.hostname}
             </span>
-          ) : preview.filename ? (
+          ) : !compact && preview.filename ? (
             <span className="text-[11px] text-slate-400 truncate min-w-0 max-w-full">
               {preview.filename}
             </span>
@@ -230,7 +233,7 @@ export function ResourcePreviewCard({
         </div>
 
         {/* Title — reserved 2 lines of height so cards align across the row */}
-        <div className="min-w-0 min-h-[2.75rem]">
+        <div className="min-w-0 min-h-[2.5rem] md:min-h-[2.75rem]">
           {showTitleAsLink ? (
             <a
               href={preview.href!}
@@ -243,7 +246,7 @@ export function ResourcePreviewCard({
             </a>
           ) : (
             <p
-              className="font-semibold text-slate-900 break-words line-clamp-2 leading-snug"
+              className="text-[14px] md:text-base font-semibold text-slate-900 break-words line-clamp-2 leading-snug text-left"
               title={resource.title}
             >
               {resource.title}
@@ -251,15 +254,17 @@ export function ResourcePreviewCard({
           )}
         </div>
 
-        {/* Description — always reserves a fixed 2 lines to keep card heights consistent */}
-        <p
-          className={cn(
-            "text-xs text-slate-500 break-words line-clamp-2 min-h-[2rem]",
-            !(preview.excerpt || resource.description) && "opacity-0",
-          )}
-        >
-          {preview.excerpt || resource.description || "\u00A0"}
-        </p>
+        {/* Description — hidden on compact mobile tiles; detail view shows it. */}
+        {!compact && (
+          <p
+            className={cn(
+              "text-xs text-slate-500 break-words line-clamp-2 min-h-[2rem]",
+              !(preview.excerpt || resource.description) && "opacity-0",
+            )}
+          >
+            {preview.excerpt || resource.description || "\u00A0"}
+          </p>
+        )}
 
         {actions && (
           <div className="mt-auto pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1 min-w-0">
@@ -267,6 +272,29 @@ export function ResourcePreviewCard({
           </div>
         )}
       </div>
-    </Card>
+    </>
   );
+
+  const shell = cn(
+    "group flex flex-col h-full overflow-hidden rounded-2xl bg-white/90 border-slate-200",
+    "shadow-[0_4px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_28px_rgb(0,0,0,0.08)] transition-shadow",
+    className,
+  );
+
+  if (onOpen) {
+    return (
+      <Card className={cn(shell, "p-0")}>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Open ${resource.title}`}
+          className="flex flex-col h-full text-left w-full active:opacity-90"
+        >
+          {body}
+        </button>
+      </Card>
+    );
+  }
+
+  return <Card className={shell}>{body}</Card>;
 }

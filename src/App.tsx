@@ -41,6 +41,8 @@ const ReplayLibrary = lazy(() => import("@/pages/dashboard/ReplayLibrary").then(
 const QuizList = lazy(() => import("@/pages/dashboard/QuizList").then(m => ({ default: m.QuizList })));
 const NotesBank = lazy(() => import("@/pages/dashboard/NotesBank").then(m => ({ default: m.NotesBank })));
 const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m => ({ default: m.Achievements })));
+const MorePage = lazy(() => import("@/pages/dashboard/MorePage").then(m => ({ default: m.MorePage })));
+const LeaderboardPage = lazy(() => import("@/pages/dashboard/LeaderboardPage").then(m => ({ default: m.LeaderboardPage })));
 const MyClasses = lazy(() => import("@/pages/dashboard/MyClasses").then(m => ({ default: m.MyClasses })));
 const StudentClassHome = lazy(() => import("@/pages/dashboard/class/StudentClassHome").then(m => ({ default: m.StudentClassHome })));
 const StudentClassMaterials = lazy(() => import("@/pages/dashboard/class/StudentClassMaterials").then(m => ({ default: m.StudentClassMaterials })));
@@ -163,6 +165,11 @@ const App = () => (
             <Route path="/dashboard/quizzes" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
+
+            {/* Student "More" hub + root-level services reached from it */}
+            <Route path="/dashboard/more" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MorePage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/leaderboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LeaderboardPage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/profile" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><AccountPage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
             <Route path="/dashboard/resources" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ResourceHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/achievements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><Achievements /></DashboardLayout></TenantGuard></ProtectedRoute>} />

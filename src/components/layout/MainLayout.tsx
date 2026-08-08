@@ -1,4 +1,5 @@
 import { ReactNode, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { NotificationBell } from "./NotificationBell";
@@ -8,6 +9,7 @@ import { StreakWidget } from "@/components/dashboard/StreakWidget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { usePWAAnalytics } from "@/hooks/usePWAAnalytics";
+import { showsMobileTabBar } from "@/lib/studentNav";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +22,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useAuth();
+  const { pathname } = useLocation();
+  const showTabBar = isMobile && !!user && showsMobileTabBar(pathname);
   usePWAAnalytics();
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,7 +68,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main 
         className={`
           transition-all duration-300 ease-in-out
-          ${isMobile ? 'pb-20' : sidebarCollapsed ? 'ml-16' : 'ml-64'}
+          ${isMobile ? (showTabBar ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))]' : '') : sidebarCollapsed ? 'ml-16' : 'ml-64'}
           ${user ? 'pt-14' : ''}
         `}
       >
@@ -72,8 +77,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </main>
       
-      {/* Mobile Bottom Navigation */}
-      {isMobile && <MobileBottomNav />}
+      {/* Mobile Bottom Navigation — root-level student routes only */}
+      {showTabBar && <MobileBottomNav />}
+
     </div>
   );
 }

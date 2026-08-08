@@ -19,6 +19,7 @@ import {
   FolderBreadcrumb,
   FolderCard,
   FolderGrid,
+  MobileFolderBar,
 } from "@/components/class/ContentFolderNav";
 import { ClassContentSearch } from "@/components/class/ClassContentSearch";
 import {
@@ -94,6 +95,9 @@ export function StudentClassMaterials() {
         { label: ctx.data?.klass?.title || "Class", to: basePath },
         { label: "Materials" },
       ]}
+      mobileTitle="Materials"
+      mobileBackTo={basePath}
+      mobileBackLabel={ctx.data?.klass?.title || "Class"}
     >
       {children}
     </ClassShell>
@@ -104,7 +108,16 @@ export function StudentClassMaterials() {
   if (!ctx.isLoading && ctx.data && !ctx.data.canView) return shell(<Msg title="Access restricted" body="You're not enrolled in this class." />);
 
   if (q.isLoading || !q.data) {
-    return shell(<div className="text-sm text-slate-500 text-center py-10">Loading materials…</div>);
+    return shell(
+      <div className="space-y-4">
+        <div className="h-10 rounded-full bg-slate-200/70 animate-pulse" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-44 rounded-2xl bg-slate-200/70 animate-pulse" />
+          ))}
+        </div>
+      </div>,
+    );
   }
   if (q.isError) {
     return shell(<Msg title="Couldn't load materials" body={toSafeMessage(q.error, "Please try again.")} />);
@@ -136,6 +149,7 @@ export function StudentClassMaterials() {
       />
 
       <FolderBreadcrumb path={breadcrumbPath} rootLabel="All materials" onNavigate={goToFolder} />
+      <MobileFolderBar path={breadcrumbPath} rootLabel="Materials" onNavigate={goToFolder} />
 
       {visibleFolders.length > 0 && (
         <FolderGrid>
@@ -152,7 +166,7 @@ export function StudentClassMaterials() {
       )}
 
       <Tabs defaultValue={replaysOn ? "replays" : "notes"} className="w-full">
-        <div className="overflow-x-auto -mx-1 px-1">
+        <div className="overflow-x-auto -mx-4 px-4 md:-mx-1 md:px-1 scrollbar-thin">
           <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
             {replaysOn && (
               <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
@@ -184,21 +198,20 @@ export function StudentClassMaterials() {
           {quizzes.length === 0 ? (
             <Empty icon={<HelpCircle />} label="No quizzes here" />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3">
               {quizzes.map((quiz: FolderQuiz) => (
                 <Link
                   key={quiz.id}
                   to={`/dashboard/classes/${classId}/quizzes`}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-5 flex items-center gap-4 group"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md p-3 md:p-4 flex flex-col gap-2 min-h-[112px]"
                 >
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <PlayCircle className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-900 truncate">{quiz.title}</h4>
-                    {quiz.description && <p className="text-xs text-slate-500 line-clamp-1">{quiz.description}</p>}
-                  </div>
-                  <Button size="sm" className="rounded-full">Start</Button>
+                  <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <PlayCircle className="w-5 h-5 text-primary" aria-hidden="true" />
+                  </span>
+                  <h4 className="text-[14px] font-semibold text-slate-900 line-clamp-2 leading-snug">
+                    {quiz.title}
+                  </h4>
+                  <span className="mt-auto text-[12px] font-semibold text-primary">Open quiz</span>
                 </Link>
               ))}
             </div>
@@ -232,7 +245,7 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
   return (
     <TabsTrigger
       value={value}
-      className="rounded-full px-3.5 py-2 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
+      className="rounded-full px-3 py-2 min-h-[40px] text-[13px] md:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
     >
       {icon} {label}
     </TabsTrigger>
@@ -240,26 +253,19 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
 }
 
 function Grid({ items }: { items: FolderResource[] }) {
+  const open = async (r: FolderResource) => {
+    const ok = await openClassResource(r);
+    if (!ok) toast.error("This file isn't available right now.");
+  };
   return (
-    <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
+    <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4">
       {items.map((r) => (
         <ResourcePreviewCard
           key={r.id}
           resource={r}
           role="student"
-          actions={
-            <Button
-              size="sm"
-              variant="ghost"
-              className="rounded-full h-9 px-3 text-primary min-h-[44px] sm:min-h-0"
-              onClick={async () => {
-                const ok = await openClassResource(r);
-                if (!ok) toast.error("This file isn't available right now.");
-              }}
-            >
-              <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
-            </Button>
-          }
+          compact
+          onOpen={() => void open(r)}
         />
       ))}
     </div>
@@ -268,7 +274,7 @@ function Grid({ items }: { items: FolderResource[] }) {
 
 function Empty({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-3xl py-14 text-center">
+    <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-2xl md:rounded-3xl py-10 md:py-14 px-4 text-center">
       <div className="w-12 h-12 rounded-2xl bg-slate-100 mx-auto flex items-center justify-center text-slate-400">{icon}</div>
       <p className="mt-3 font-semibold text-slate-700">{label}</p>
       <p className="text-sm text-slate-500">Check back once your tutor publishes new material.</p>

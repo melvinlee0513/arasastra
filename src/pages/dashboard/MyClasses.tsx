@@ -78,87 +78,105 @@ export function MyClasses() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto p-5 md:p-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-5 md:p-8 space-y-5 md:space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-primary" />
+          <div className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5 md:w-6 md:h-6 text-primary" aria-hidden="true" />
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">My Classes</h1>
-            <p className="text-sm text-slate-500">Enrolled cohorts you can access right now.</p>
+          <div className="min-w-0">
+            <h1 className="text-[22px] md:text-3xl font-bold text-slate-900 leading-tight">My Classes</h1>
+            <p className="text-[13px] md:text-sm text-slate-500">
+              Enrolled cohorts you can access right now.
+            </p>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-72 rounded-3xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[104px] sm:h-72 rounded-2xl sm:rounded-3xl" />
             ))}
           </div>
         ) : isError ? (
-          <div className="bg-white border border-slate-200 rounded-3xl py-16 text-center">
+          <div className="bg-white border border-slate-200 rounded-2xl md:rounded-3xl py-12 md:py-16 text-center px-4">
             <p className="font-semibold text-slate-800">Couldn't load your classes</p>
             <p className="text-sm text-slate-500 mt-1">
               {(error as Error)?.message || "Please try again in a moment."}
             </p>
             <button
               onClick={() => refetch()}
-              className="mt-4 text-sm font-semibold text-primary hover:underline"
+              className="mt-4 min-h-[44px] px-4 text-sm font-semibold text-primary hover:underline"
             >
               Retry
             </button>
           </div>
         ) : !classes || classes.length === 0 ? (
-          <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-3xl py-16 text-center">
-            <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <div className="bg-white/80 backdrop-blur-md border border-dashed border-slate-200 rounded-2xl md:rounded-3xl py-12 md:py-16 text-center px-4">
+            <GraduationCap className="w-12 h-12 text-slate-300 mx-auto mb-3" aria-hidden="true" />
             <p className="font-semibold text-slate-700">You're not enrolled in any classes yet</p>
             <p className="text-sm text-slate-500">
               Once an admin enrolls you in a class instance, it will appear here.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
             {classes.map((c) => (
               <Link
                 key={c.id}
                 to={`/dashboard/classes/${c.id}`}
-                className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
+                className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-row sm:flex-col"
               >
-                <ClassCover
-                  classId={c.id}
-                  coverPath={c.cover_image_path}
-                  version={c.cover_image_updated_at}
-                  overlay={
-                    c.subject_name ? (
-                      <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5">
-                        <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
-                          {c.subject_name}
-                        </Badge>
-                      </div>
-                    ) : undefined
-                  }
-                />
+                {/* Mobile: compact 96px thumbnail. Tablet+: 16:9 cover. */}
+                <div className="w-[104px] shrink-0 sm:w-full">
+                  <ClassCover
+                    classId={c.id}
+                    coverPath={c.cover_image_path}
+                    version={c.cover_image_updated_at}
+                    sizeClassName="h-full min-h-[104px] sm:h-auto sm:min-h-0 sm:aspect-video"
+                    overlay={
+                      c.subject_name ? (
+                        <div className="hidden sm:flex absolute bottom-3 left-3 right-3 flex-wrap gap-1.5">
+                          <Badge className="rounded-full bg-white/95 text-slate-900 hover:bg-white shadow-sm">
+                            {c.subject_name}
+                          </Badge>
+                        </div>
+                      ) : undefined
+                    }
+                  />
+                </div>
 
-                <div className="p-5 flex-1 flex flex-col gap-2">
-                  <h3 className="font-semibold text-slate-900 line-clamp-2 leading-snug">{c.title}</h3>
-                  {c.cohort_label && (
-                    <p className="text-xs text-slate-500 line-clamp-1">{c.cohort_label}</p>
+                <div className="flex-1 min-w-0 p-3 sm:p-5 flex flex-col gap-1 sm:gap-2">
+                  <h3 className="text-[15px] sm:text-base font-semibold text-slate-900 line-clamp-2 leading-snug">
+                    {c.title}
+                  </h3>
+                  {c.subject_name && (
+                    <p className="sm:hidden text-[12px] text-primary font-medium line-clamp-1">
+                      {c.subject_name}
+                    </p>
                   )}
-                  <p className="text-xs text-slate-600 inline-flex items-start gap-1.5 line-clamp-2">
-                    <User className="w-3.5 h-3.5 mt-[1px] shrink-0 text-slate-400" />
-                    <span className="line-clamp-2">{tutorLabel(c.tutors)}</span>
+                  {c.cohort_label && (
+                    <p className="text-[12px] text-slate-500 line-clamp-1">{c.cohort_label}</p>
+                  )}
+                  <p className="text-[12px] text-slate-600 inline-flex items-start gap-1.5">
+                    <User className="w-3.5 h-3.5 mt-[1px] shrink-0 text-slate-400" aria-hidden="true" />
+                    <span className="line-clamp-1 sm:line-clamp-2">{tutorLabel(c.tutors)}</span>
                   </p>
-                  <div className="text-xs text-slate-500 flex items-center gap-3 mt-auto pt-1">
+                  <div className="text-[12px] text-slate-500 flex items-center gap-3 mt-auto pt-0.5">
                     <span className="inline-flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {c.scheduled_at ? new Date(c.scheduled_at).toLocaleDateString() : "Scheduled soon"}
+                      <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+                      {c.scheduled_at
+                        ? new Date(c.scheduled_at).toLocaleDateString()
+                        : "Scheduled soon"}
                     </span>
                   </div>
 
-                  <span className="mt-2 text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span className="hidden sm:inline-flex mt-2 text-sm font-semibold text-primary items-center gap-1 group-hover:gap-2 transition-all">
                     Open class <ArrowRight className="w-4 h-4" />
                   </span>
                 </div>
+                <span className="sm:hidden self-center pr-3 text-slate-300" aria-hidden="true">
+                  <ArrowRight className="w-4 h-4" />
+                </span>
               </Link>
             ))}
           </div>
@@ -167,3 +185,4 @@ export function MyClasses() {
     </div>
   );
 }
+
