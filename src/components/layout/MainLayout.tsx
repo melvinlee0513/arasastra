@@ -68,7 +68,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main 
         className={`
           transition-all duration-300 ease-in-out
-          ${isMobile ? 'pb-20' : sidebarCollapsed ? 'ml-16' : 'ml-64'}
+          ${isMobile ? (showTabBar ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))]' : '') : sidebarCollapsed ? 'ml-16' : 'ml-64'}
           ${user ? 'pt-14' : ''}
         `}
       >
@@ -77,8 +77,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </main>
       
-      {/* Mobile Bottom Navigation */}
-      {isMobile && <MobileBottomNav />}
+      {/* Mobile Bottom Navigation — root-level student routes only */}
+      {showTabBar && <MobileBottomNav />}
+
     </div>
   );
 }
