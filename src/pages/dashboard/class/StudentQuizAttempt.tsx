@@ -204,21 +204,52 @@ export function StudentQuizAttempt() {
     );
   }
   if (attemptQ.isError || !attemptQ.data) {
+    const rawMessage =
+      attemptQ.error instanceof Error ? attemptQ.error.message : String(attemptQ.error ?? "");
+    if (import.meta.env.DEV && attemptQ.error) {
+      // Safe developer diagnostics only — never rendered to students.
+      console.warn("[quiz-attempt] load failed", { attemptId, quizId, classId, rawMessage });
+    }
+    const knownStates: Array<{ match: string; title: string; body: string; recoverable: boolean }> = [
+      { match: "not_authenticated", title: "Please sign in again", body: "Your session expired. Sign in and reopen this quiz.", recoverable: false },
+      { match: "attempt_not_found", title: "Attempt not found", body: "This attempt doesn't exist, or it belongs to a different account.", recoverable: false },
+      { match: "quiz_unavailable", title: "Quiz unavailable", body: "This quiz is no longer published for your class.", recoverable: false },
+      { match: "quiz_not_available", title: "Not open yet", body: "This quiz hasn't opened yet. Check back later.", recoverable: false },
+      { match: "quiz_past_due", title: "Quiz closed", body: "This quiz is past its due date.", recoverable: false },
+      { match: "not enrolled", title: "No longer enrolled", body: "You're no longer enrolled in this class.", recoverable: false },
+      { match: "attempt_not_editable", title: "Already submitted", body: "This attempt has been submitted. Open your result instead.", recoverable: false },
+    ];
+    const state = knownStates.find((s) => rawMessage.includes(s.match));
+    const title = state?.title ?? "We couldn't load this attempt";
+    const body =
+      state?.body ??
+      "Something interrupted loading. Your saved answers are safe — try again in a moment.";
+    const canRetry = !state;
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <Card className="max-w-md p-8 text-center rounded-3xl">
           <AlertCircle className="w-8 h-8 mx-auto text-destructive mb-2" />
-          <h1 className="font-semibold text-slate-900 mb-1">This attempt isn't available</h1>
-          <p className="text-sm text-slate-500 mb-4">
-            {mapQuizError(attemptQ.error) || "It may have been submitted, cancelled, or belongs to another user."}
-          </p>
-          <Button onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)} className="rounded-full">
-            Back to quizzes
-          </Button>
+          <h1 className="font-semibold text-slate-900 mb-1">{title}</h1>
+          <p className="text-sm text-slate-500 mb-4">{body}</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {canRetry && (
+              <Button onClick={() => void attemptQ.refetch()} className="rounded-full">
+                Try again
+              </Button>
+            )}
+            <Button
+              variant={canRetry ? "outline" : "default"}
+              onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)}
+              className="rounded-full"
+            >
+              Back to quizzes
+            </Button>
+          </div>
         </Card>
       </div>
     );
   }
+
 
   const payload = attemptQ.data;
   const q = payload.questions[current];
