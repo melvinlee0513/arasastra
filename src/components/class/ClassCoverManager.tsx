@@ -75,44 +75,81 @@ export function ClassCoverManager({
         });
       if (upErr) throw upErr;
 
-      const { error: dbErr } = await supabase
+      // Persist the canonical path and confirm the row was actually written —
+      // an RLS-blocked update returns zero rows without raising an error.
+      const { data: rows, error: dbErr } = await supabase
         .from("classes")
         .update({
           cover_image_path: path,
           cover_image_updated_at: new Date().toISOString(),
           cover_image_updated_by: user?.id ?? null,
         })
-        .eq("id", classId);
+        .eq("id", classId)
+        .select("id,cover_image_path");
       if (dbErr) throw dbErr;
+      if (!rows?.length || rows[0].cover_image_path !== path) {
+        throw new Error("cover_not_persisted");
+      }
 
+      // Persistence confirmed — safe to drop the superseded object.
+      if (currentPath && currentPath !== path) {
+        try {
+          await supabase.storage.from(CLASS_COVER_BUCKET).remove([currentPath]);
+        } catch {
+          // best-effort cleanup; the new cover is already live
+        }
+        invalidateClassCoverCache(currentPath);
+      }
       invalidateClassCoverCache(path);
       return path;
     },
+
     onSuccess: async () => {
       toast.success("Class cover updated");
       resetPreview();
       setOpen(false);
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["class-cover-signed"] }),
-        qc.invalidateQueries({ queryKey: ["class-context"] }),
-        qc.invalidateQueries({ queryKey: ["student-enrolled-classes"] }),
-      ]);
+      try {
+        await refreshCoverQueries();
+      } catch {
+        toast.warning("Cover saved, but the preview could not refresh. Reload the page.");
+      }
     },
-    onError: (e) => showSupabaseError(e, "Couldn't update the class cover."),
+    onError: (e) => {
+      if (e instanceof Error && e.message === "cover_not_persisted") {
+        toast.error("You don't have permission to change this class cover.");
+        return;
+      }
+      showSupabaseError(e, "Couldn't update the class cover.");
+    },
   });
+
+  async function refreshCoverQueries() {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["class-cover-signed"] }),
+      qc.invalidateQueries({ queryKey: ["class-context"] }),
+      qc.invalidateQueries({ queryKey: ["student-enrolled-classes"] }),
+      qc.refetchQueries({ queryKey: ["class-context"], type: "active" }),
+    ]);
+  }
 
   const remove = useMutation({
     mutationFn: async () => {
       const path = currentPath;
-      const { error: dbErr } = await supabase
+      // Clear the canonical path first; only delete the object once the row is
+      // confirmed updated so a failed update never destroys a working cover.
+      const { data: rows, error: dbErr } = await supabase
         .from("classes")
         .update({
           cover_image_path: null,
           cover_image_updated_at: new Date().toISOString(),
           cover_image_updated_by: user?.id ?? null,
         })
-        .eq("id", classId);
+        .eq("id", classId)
+        .select("id,cover_image_path");
       if (dbErr) throw dbErr;
+      if (!rows?.length || rows[0].cover_image_path !== null) {
+        throw new Error("cover_not_persisted");
+      }
       if (path) {
         try {
           await supabase.storage.from(CLASS_COVER_BUCKET).remove([path]);
@@ -126,14 +163,21 @@ export function ClassCoverManager({
       toast.success("Cover removed");
       resetPreview();
       setOpen(false);
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["class-cover-signed"] }),
-        qc.invalidateQueries({ queryKey: ["class-context"] }),
-        qc.invalidateQueries({ queryKey: ["student-enrolled-classes"] }),
-      ]);
+      try {
+        await refreshCoverQueries();
+      } catch {
+        toast.warning("Cover removed, but the preview could not refresh. Reload the page.");
+      }
     },
-    onError: (e) => showSupabaseError(e, "Couldn't remove the class cover."),
+    onError: (e) => {
+      if (e instanceof Error && e.message === "cover_not_persisted") {
+        toast.error("You don't have permission to change this class cover.");
+        return;
+      }
+      showSupabaseError(e, "Couldn't remove the class cover.");
+    },
   });
+
 
   return (
     <>

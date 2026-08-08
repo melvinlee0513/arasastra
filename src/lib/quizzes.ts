@@ -644,6 +644,7 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
   if (msg.includes("attempt_deadline_passed")) return "The deadline for this attempt has passed.";
   if (msg.includes("attempt_not_found")) return "We couldn't find that attempt.";
   if (msg.includes("quiz_no_longer_accessible")) return "This quiz is no longer available.";
+  if (msg.includes("quiz_unavailable")) return "This quiz is no longer available.";
   if (msg.includes("attempts_exhausted")) return "You've used all your attempts on this quiz.";
   if (msg.includes("quiz_not_available")) return "This quiz isn't available yet.";
   if (msg.includes("quiz_past_due")) return "This quiz is past its due date.";

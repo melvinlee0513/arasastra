@@ -3,10 +3,15 @@ import { bestDisplayName } from "@/lib/profile";
 
 export const CLASS_COVER_BUCKET = "class-covers";
 
-/** Canonical object path — `{center_id}/{class_id}/cover.webp`. */
+/**
+ * Canonical class-banner object path — `{center_id}/{class_id}/banner-{uuid}.webp`.
+ * A fresh filename per upload avoids CDN/browser reuse of a replaced cover.
+ * Folder covers live under `{center_id}/{class_id}/folders/…` and are untouched.
+ */
 export function coverPathFor(centerId: string, classId: string): string {
-  return `${centerId}/${classId}/cover.webp`;
+  return `${centerId}/${classId}/banner-${crypto.randomUUID()}.webp`;
 }
+
 
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
