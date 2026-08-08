@@ -1,4 +1,5 @@
 import { ReactNode, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { NotificationBell } from "./NotificationBell";
@@ -8,6 +9,7 @@ import { StreakWidget } from "@/components/dashboard/StreakWidget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { usePWAAnalytics } from "@/hooks/usePWAAnalytics";
+import { showsMobileTabBar } from "@/lib/studentNav";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +22,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useAuth();
+  const { pathname } = useLocation();
+  const showTabBar = isMobile && !!user && showsMobileTabBar(pathname);
   usePWAAnalytics();
+
 
   return (
     <div className="min-h-screen bg-background">
