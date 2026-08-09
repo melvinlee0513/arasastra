@@ -95,6 +95,17 @@
     --subject-slate: 215 30% 96%;
     --subject-slate-accent: 215 25% 38%;
 
+    /* Student mobile Leaderboard — warm podium surface + restrained medals. */
+    --podium-surface: 45 100% 96%;
+    --podium-border: 42 75% 88%;
+    --medal-gold: 40 88% 44%;
+    --medal-gold-soft: 44 96% 90%;
+    --medal-silver: 215 16% 47%;
+    --medal-silver-soft: 214 24% 93%;
+    --medal-bronze: 25 62% 42%;
+    --medal-bronze-soft: 28 70% 92%;
+
+
 
 
 
