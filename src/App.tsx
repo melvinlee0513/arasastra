@@ -11,6 +11,8 @@ import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { FeatureRoute } from "@/components/common/FeatureRoute";
+import { ScrollRestoration } from "@/lib/scrollRestoration";
+
 
 // Layouts (kept eager – small, used on every page)
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -135,7 +137,9 @@ const App = () => (
         <AppUpdatePrompt />
         <MaintenanceGate>
         <BrowserRouter>
+          <ScrollRestoration />
           <Suspense fallback={<PageLoader />}>
+
           <Routes>
             {/* Auth Pages */}
             <Route path="/auth" element={<AuthPage />} />
