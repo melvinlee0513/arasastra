@@ -31,8 +31,9 @@ const tabs: TabItem[] = [
 ];
 
 /**
- * Student mobile tab bar. Rendered only on root-level student routes — the
- * route-aware student shell hides it inside classes and learning activities.
+ * Student mobile tab bar — a floating capsule that never touches the viewport
+ * edges. Rendered only on root-level student routes; the route-aware student
+ * shell hides it inside classes and learning activities.
  */
 export function MobileBottomNav() {
   const { pathname } = useLocation();
@@ -45,9 +46,14 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Student navigation"
-      className="fixed bottom-0 left-0 right-0 z-[60] bg-card/95 backdrop-blur-lg border-t border-border pb-[env(safe-area-inset-bottom)]"
+      className={cn(
+        "fixed z-[60] left-3 right-3 mx-auto w-auto max-w-[420px]",
+        "bottom-[calc(0.625rem+env(safe-area-inset-bottom))]",
+        "h-[66px] rounded-full border border-slate-200/80 bg-white/95 backdrop-blur-lg",
+        "shadow-[0_6px_24px_rgba(15,23,42,0.12)]",
+      )}
     >
-      <div className="flex items-stretch justify-around px-1">
+      <div className="flex h-full items-stretch px-1.5">
         {tabs.map((tab) => {
           const active = isActive(tab);
           return (
@@ -57,23 +63,26 @@ export function MobileBottomNav() {
               aria-label={tab.accessibleLabel ?? tab.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-[44px] py-2 rounded-xl transition-colors",
-                active ? "text-primary" : "text-muted-foreground",
+                "relative flex flex-1 basis-0 flex-col items-center justify-center gap-[3px]",
+                "min-h-[44px] min-w-0 rounded-full transition-colors active:opacity-80",
+                active ? "text-primary" : "text-slate-500",
               )}
             >
-              <tab.icon
-                className={cn("w-[22px] h-[22px] transition-transform", active && "scale-110")}
-                aria-hidden="true"
-              />
-              <span className={cn("text-[11px] font-medium leading-none", active && "font-semibold")}>
-                {tab.label}
-              </span>
               {active && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0 w-8 h-[3px] rounded-full bg-primary"
+                  className="absolute inset-y-[7px] inset-x-1 rounded-full bg-primary/10"
                 />
               )}
+              <tab.icon className="relative w-[21px] h-[21px]" aria-hidden="true" />
+              <span
+                className={cn(
+                  "relative text-[11px] leading-none",
+                  active ? "font-semibold" : "font-medium",
+                )}
+              >
+                {tab.label}
+              </span>
             </NavLink>
           );
         })}

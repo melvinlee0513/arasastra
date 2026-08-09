@@ -53,7 +53,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main
         className={cn(
           "transition-all duration-300 ease-in-out",
-          showTabBar && "pb-[calc(4.25rem+env(safe-area-inset-bottom))]",
+          showTabBar && "pb-[calc(5.5rem+env(safe-area-inset-bottom))]",
           !isMobile && (showSidebar ? (sidebarCollapsed ? "ml-16" : "ml-64") : ""),
         )}
       >
