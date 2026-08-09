@@ -230,6 +230,13 @@ export function AccountPage() {
     return <Navigate to="/tutor/account" replace />;
   }
 
+  // Mobile students get the simplified profile (summary + Edit sheet +
+  // personalisation). Desktop, tutors and admins keep the existing page.
+  if (isMobile && !isAdmin && !hasRole("tutor")) {
+    return <StudentMobileProfile />;
+  }
+
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
       {/* Onboarding Tour (Part 1) */}
