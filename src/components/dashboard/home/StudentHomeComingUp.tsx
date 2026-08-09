@@ -1,8 +1,23 @@
 import { Link } from "react-router-dom";
 import { format, isToday, isTomorrow, isThisWeek, differenceInMinutes } from "date-fns";
-import { CalendarCheck, CalendarClock, HelpCircle, GraduationCap, ArrowRight } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarClock,
+  HelpCircle,
+  GraduationCap,
+  ArrowRight,
+  BookOpen,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
-import { HomeSection, HomeSectionHeader, HomeErrorState } from "./StudentHomeShared";
+import {
+  HomeSection,
+  HomeSectionHeader,
+  HomeErrorState,
+  HomeEmptyState,
+  HOME_CARD,
+} from "./StudentHomeShared";
+import { cn } from "@/lib/utils";
 
 interface Props {
   items: HomeUpcomingItem[];
@@ -19,15 +34,16 @@ function dayLabel(iso: string): string {
   return format(d, "EEE d MMM");
 }
 
-function itemIcon(kind: HomeUpcomingItem["kind"]) {
-  if (kind === "class") return GraduationCap;
+function itemIcon(kind: HomeUpcomingItem["kind"]): LucideIcon {
+  if (kind === "class") return BookOpen;
   if (kind === "quiz_due") return HelpCircle;
   return CalendarClock;
 }
 
 /**
- * Coming Up — a mini agenda timeline grouped by day, mirroring the mobile
- * Timetable language. All entries come from the canonical enrolment-scoped feed.
+ * Coming Up — a premium timeline schedule module grouped by day, mirroring the
+ * mobile Timetable language. Every entry comes from the canonical
+ * enrolment-scoped timetable feed; nothing is simulated.
  */
 export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Props) {
   const visible = items.slice(0, 5);
@@ -36,7 +52,11 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
   const next = visible[0];
   const minutesToNext = next ? differenceInMinutes(new Date(next.at), new Date()) : null;
   const showNextUp =
-    !!next && next.kind === "class" && minutesToNext != null && minutesToNext >= 0 && minutesToNext <= 60;
+    !!next &&
+    next.kind === "class" &&
+    minutesToNext != null &&
+    minutesToNext >= 0 &&
+    minutesToNext <= 60;
 
   const groups = visible.reduce<{ label: string; items: HomeUpcomingItem[] }[]>((acc, item) => {
     const label = dayLabel(item.at);
@@ -54,6 +74,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
           icon={CalendarCheck}
           accentClassName="bg-home-schedule text-home-schedule-accent"
           action={{ label: "Calendar", to: "/timetable" }}
+          actionClassName="text-home-schedule-accent"
         />
       }
     >
@@ -62,16 +83,19 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
       ) : isError ? (
         <HomeErrorState message="Couldn’t load your schedule." onRetry={onRetry} />
       ) : visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-1 rounded-[20px] border border-slate-200/80 bg-white px-4 py-5 text-center">
-          <p className="text-[15px] font-semibold text-slate-900">You’re all caught up 🎉</p>
-          <p className="text-[13px] text-slate-500">Nothing scheduled for the next few days.</p>
-        </div>
+        <HomeEmptyState
+          icon={CalendarCheck}
+          title="You’re all caught up 🎉"
+          description="Nothing scheduled for the next few days."
+          action={{ label: "View full schedule", to: "/timetable" }}
+          accentClassName="bg-home-schedule text-home-schedule-accent"
+        />
       ) : (
         <div className="space-y-3">
           {showNextUp && next && (
             <Link
               to={upcomingRoute(next)}
-              className="flex items-center gap-3 rounded-[20px] border border-home-schedule-accent/25 bg-home-schedule px-4 py-3 active:scale-[0.99] motion-reduce:transition-none"
+              className="flex items-center gap-3 rounded-[22px] border border-home-schedule-accent/20 bg-home-schedule px-4 py-3 transition-transform active:scale-[0.99] motion-reduce:transition-none"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-home-schedule-accent">
@@ -89,13 +113,13 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
             </Link>
           )}
 
-          <div className="rounded-[20px] border border-slate-200/80 bg-white px-4 py-3.5">
-            {groups.map((group, gi) => (
-              <div key={group.label} className={gi > 0 ? "mt-4" : undefined}>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-home-schedule-accent">
+          <div className={cn(HOME_CARD, "px-4 pb-3 pt-4")}>
+            {groups.map((group) => (
+              <div key={group.label} className="mb-1">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-home-schedule-accent">
                   {group.label}
                 </p>
-                <ul className="mt-2">
+                <ul>
                   {group.items.map((item, i) => {
                     const Icon = itemIcon(item.kind);
                     const at = new Date(item.at);
@@ -104,33 +128,36 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                       <li key={`${item.kind}-${item.item_id}-${item.at}`}>
                         <Link
                           to={upcomingRoute(item)}
-                          className="flex min-h-[52px] items-stretch gap-3 rounded-[14px] active:bg-slate-50"
+                          className="flex min-h-[56px] items-stretch gap-3 rounded-[16px] transition-colors active:bg-slate-50"
                         >
-                          <span className="w-[58px] shrink-0 pt-0.5 text-right text-[12.5px] font-semibold tabular-nums text-slate-500">
+                          <span className="w-[58px] shrink-0 pt-0.5 text-right text-[12.5px] font-bold tabular-nums text-home-schedule-accent">
                             {format(at, "h:mm a")}
                           </span>
-                          {/* Timeline rail: marker + connector. */}
+                          {/* Timeline rail: node + connector. */}
                           <span
                             className="relative flex w-3 shrink-0 flex-col items-center"
                             aria-hidden="true"
                           >
-                            <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-home-schedule-accent" />
+                            <span className="mt-[6px] h-2.5 w-2.5 shrink-0 rounded-full border-2 border-white bg-home-schedule-accent shadow-[0_0_0_2px_hsl(var(--home-schedule))]" />
                             {!isLast && (
                               <span className="mt-1 w-[2px] flex-1 rounded-full bg-home-schedule" />
                             )}
                           </span>
-                          <span className="min-w-0 flex-1 pb-3">
-                            <span className="block truncate text-[15px] font-semibold text-slate-900">
+                          <span className="min-w-0 flex-1 pb-4">
+                            <span className="block truncate text-[15px] font-bold text-slate-900">
                               {item.title}
                             </span>
-                            <span className="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500">
-                              <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                              <span className="truncate">
-                                {item.class_name ?? item.subject_name
-                                  ? `${item.class_name ?? item.subject_name} · ${upcomingKindLabel(item.kind)}`
-                                  : upcomingKindLabel(item.kind)}
-                              </span>
+                            <span className="mt-0.5 block truncate text-[12.5px] text-slate-500">
+                              {item.class_name ?? item.subject_name
+                                ? `${item.class_name ?? item.subject_name} · ${upcomingKindLabel(item.kind)}`
+                                : upcomingKindLabel(item.kind)}
                             </span>
+                          </span>
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-home-schedule">
+                            <Icon
+                              className="h-[17px] w-[17px] text-home-schedule-accent"
+                              aria-hidden="true"
+                            />
                           </span>
                         </Link>
                       </li>
@@ -140,13 +167,15 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
               </div>
             ))}
 
-            <Link
-              to="/timetable"
-              className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-[13px] font-semibold text-home-schedule-accent active:opacity-70"
-            >
-              View full schedule
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+            <div className="border-t border-slate-100 pt-1">
+              <Link
+                to="/timetable"
+                className="inline-flex min-h-[44px] items-center gap-1 text-[13.5px] font-bold text-home-schedule-accent active:opacity-70"
+              >
+                View full schedule
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -156,18 +185,15 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
 
 function TimelineSkeleton() {
   return (
-    <div
-      className="space-y-3 rounded-[20px] border border-slate-200/80 bg-white px-4 py-4"
-      aria-hidden="true"
-    >
-      <div className="h-3 w-16 rounded-full bg-slate-100" />
+    <div className={cn(HOME_CARD, "space-y-3 px-4 py-4")} aria-hidden="true">
+      <div className="h-3 w-16 animate-pulse rounded-full bg-slate-100" />
       {[0, 1, 2].map((i) => (
         <div key={i} className="flex items-start gap-3">
-          <div className="h-3.5 w-[52px] rounded-full bg-slate-100" />
-          <div className="mt-[3px] h-2 w-2 rounded-full bg-slate-200" />
+          <div className="h-3.5 w-[52px] animate-pulse rounded-full bg-slate-100" />
+          <div className="mt-[3px] h-2.5 w-2.5 rounded-full bg-slate-200" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-3.5 w-2/3 rounded-full bg-slate-100" />
-            <div className="h-3 w-1/3 rounded-full bg-slate-100" />
+            <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-100" />
+            <div className="h-3 w-1/3 animate-pulse rounded-full bg-slate-100" />
           </div>
         </div>
       ))}

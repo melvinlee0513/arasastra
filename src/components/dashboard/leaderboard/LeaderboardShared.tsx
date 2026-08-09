@@ -116,8 +116,32 @@ export function LeaderboardPeriodSelector({
 
 /* ---------------------------------- Podium -------------------------------- */
 
+const PLINTH = {
+  1: { height: "h-[62px]", fill: "from-[hsl(44_96%_70%)] to-[hsl(40_88%_50%)]", order: "order-2" },
+  2: { height: "h-[42px]", fill: "from-[hsl(214_20%_86%)] to-[hsl(215_16%_66%)]", order: "order-1" },
+  3: { height: "h-[34px]", fill: "from-[hsl(28_60%_78%)] to-[hsl(25_58%_54%)]", order: "order-3" },
+} as const;
+
+/** Tiny confetti motif — celebratory but restrained. */
+function Confetti() {
+  const bits = [
+    "left-4 top-5 h-1.5 w-1.5 rounded-full bg-medal-gold/50",
+    "left-10 top-12 h-1 w-1 rounded-full bg-primary/40",
+    "right-6 top-4 h-1.5 w-1.5 rotate-45 bg-home-ranking-accent/40",
+    "right-12 top-14 h-1 w-1 rounded-full bg-medal-gold/40",
+    "left-1/2 top-2 h-1 w-1 rounded-full bg-primary/30",
+  ];
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+      {bits.map((b) => (
+        <span key={b} className={cn("absolute", b)} />
+      ))}
+    </span>
+  );
+}
+
 /**
- * Top 3 podium — identical on Home and the dedicated Leaderboard page.
+ * Top 3 stepped podium — identical on Home and the dedicated Leaderboard page.
  * Missing runners-up simply render nothing; there are no ghost slots.
  */
 export function LeaderboardPodium({
@@ -132,97 +156,102 @@ export function LeaderboardPodium({
   const first = entries.find((e) => e.position === 1) ?? entries[0];
   const second = entries.find((e) => e.position === 2);
   const third = entries.find((e) => e.position === 3);
+  const solo = !!first && !second && !third;
 
   return (
     <section
       aria-label="Top three students"
-      className="relative overflow-hidden rounded-[24px] border border-podium-border bg-podium px-4 pb-4 pt-4"
+      className="relative overflow-hidden rounded-[26px] border border-podium-border bg-gradient-to-b from-podium to-white px-3 pb-0 pt-5 shadow-[0_6px_22px_rgba(15,23,42,0.06)]"
     >
-      {/* Restrained Aras spark motif. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute right-5 top-4 h-1.5 w-1.5 rounded-full bg-medal-gold/40"
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute left-6 top-9 h-1 w-1 rounded-full bg-medal-gold/30"
-      />
+      <Confetti />
 
-      {first && (
-        <div className="flex flex-col items-center text-center motion-safe:animate-fade-up">
-          <Crown className="mb-1 h-4 w-4 text-medal-gold" aria-hidden="true" />
-          <div className="relative">
-            <UserAvatar
-              path={first.avatar_path}
-              name={first.name}
-              className="h-[68px] w-[68px] ring-2 ring-medal-gold/60 ring-offset-2 ring-offset-podium"
-              fallbackClassName="text-base"
-            />
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-medal-gold px-1.5 py-[1px] text-[10px] font-bold text-white shadow-sm">
-              1
-            </span>
-          </div>
-          <p className="mt-3 max-w-[190px] truncate text-[15px] font-bold text-slate-900">
-            {first.user_id === meId ? "You" : first.name}
-          </p>
-          {first.user_id === meId && <YouPill className="my-0.5" />}
-          <p className="text-[15px] font-bold tabular-nums text-medal-gold">
-            {formatXp(first.xp)}
-          </p>
-        </div>
-      )}
-
-      {(second || third) && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <PodiumSide entry={second} place={2} meId={meId} />
-          <PodiumSide entry={third} place={3} meId={meId} />
-        </div>
-      )}
+      <div
+        className={cn(
+          "relative flex items-end justify-center gap-2",
+          solo && "px-[26%]",
+        )}
+      >
+        {second && <PodiumColumn entry={second} place={2} meId={meId} />}
+        {first && <PodiumColumn entry={first} place={1} meId={meId} />}
+        {third && <PodiumColumn entry={third} place={3} meId={meId} />}
+      </div>
 
       {footer && (
-        <p className="mt-3 text-center text-[12.5px] font-medium text-slate-600">{footer}</p>
+        <p className="relative border-t border-slate-100 py-2.5 text-center text-[12.5px] font-semibold text-slate-600">
+          {footer}
+        </p>
       )}
+      {!footer && <div className="h-3" />}
     </section>
   );
 }
 
-function PodiumSide({
+function PodiumColumn({
   entry,
   place,
   meId,
 }: {
-  entry?: LeaderboardEntry;
-  place: 2 | 3;
+  entry: LeaderboardEntry;
+  place: 1 | 2 | 3;
   meId?: string;
 }) {
-  if (!entry) return <div aria-hidden="true" />;
   const medal = MEDALS[place];
+  const plinth = PLINTH[place];
+  const isMe = entry.user_id === meId;
+  const isFirst = place === 1;
 
   return (
-    <div className="flex flex-col items-center text-center motion-safe:animate-fade-up">
+    <div
+      className={cn(
+        "flex min-w-0 flex-1 flex-col items-center text-center motion-safe:animate-fade-up",
+        plinth.order,
+      )}
+    >
+      {isFirst && <Crown className="mb-1 h-5 w-5 text-medal-gold" aria-hidden="true" />}
       <div className="relative">
         <UserAvatar
           path={entry.avatar_path}
           name={entry.name}
-          className={cn("h-[54px] w-[54px] ring-2 ring-offset-2 ring-offset-podium", medal.ring)}
-          fallbackClassName="text-[13px]"
-        />
-        <span
           className={cn(
-            "absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-[1px] text-[10px] font-bold shadow-sm",
-            medal.badge,
+            "ring-2 ring-offset-2 ring-offset-white",
+            isFirst ? "h-[64px] w-[64px]" : "h-[50px] w-[50px]",
+            medal.ring,
           )}
-        >
-          {place}
-        </span>
+          fallbackClassName={isFirst ? "text-base" : "text-[13px]"}
+        />
+        {isMe && (
+          <YouPill className="absolute -right-2 -top-1 shadow-[0_2px_6px_rgba(15,23,42,0.18)]" />
+        )}
       </div>
-      <p className="mt-2.5 w-full truncate text-[13.5px] font-semibold text-slate-900">
-        {entry.user_id === meId ? "You" : entry.name}
+
+      <p
+        className={cn(
+          "mt-2 w-full truncate font-bold text-slate-900",
+          isFirst ? "text-[15px]" : "text-[13px]",
+        )}
+      >
+        {isMe ? "You" : entry.name}
       </p>
-      {entry.user_id === meId && <YouPill className="my-0.5" />}
-      <p className={cn("text-[13px] font-semibold tabular-nums", medal.xp)}>
+      <p
+        className={cn(
+          "font-bold tabular-nums",
+          isFirst ? "text-[14px]" : "text-[12.5px]",
+          medal.xp,
+        )}
+      >
         {formatXp(entry.xp)}
       </p>
+
+      {/* Stepped plinth block */}
+      <div
+        className={cn(
+          "mt-2 flex w-full items-start justify-center rounded-t-[12px] bg-gradient-to-b pt-1.5 shadow-[inset_0_2px_6px_rgba(255,255,255,0.45)]",
+          plinth.height,
+          plinth.fill,
+        )}
+      >
+        <span className="text-[17px] font-extrabold text-white/95 drop-shadow-sm">{place}</span>
+      </div>
     </div>
   );
 }
@@ -324,20 +353,20 @@ export function CurrentStudentRank({
 export function LeaderboardPodiumSkeleton() {
   return (
     <div
-      className="rounded-[24px] border border-podium-border bg-podium p-4"
+      className="rounded-[26px] border border-podium-border bg-gradient-to-b from-podium to-white px-3 pt-5"
       aria-hidden="true"
     >
-      <div className="flex flex-col items-center">
-        <div className="h-[68px] w-[68px] rounded-full bg-white/70" />
-        <div className="mt-3 h-4 w-24 rounded-full bg-white/70" />
-        <div className="mt-2 h-3.5 w-16 rounded-full bg-white/70" />
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        {[0, 1].map((i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="h-[54px] w-[54px] rounded-full bg-white/70" />
-            <div className="mt-2.5 h-3.5 w-20 rounded-full bg-white/70" />
-            <div className="mt-1.5 h-3 w-14 rounded-full bg-white/70" />
+      <div className="flex items-end justify-center gap-2">
+        {[
+          { a: "h-[50px] w-[50px]", p: "h-[42px]" },
+          { a: "h-[64px] w-[64px]", p: "h-[62px]" },
+          { a: "h-[50px] w-[50px]", p: "h-[34px]" },
+        ].map((s, i) => (
+          <div key={i} className="flex flex-1 flex-col items-center">
+            <div className={`animate-pulse rounded-full bg-white/80 ${s.a}`} />
+            <div className="mt-2 h-3.5 w-16 animate-pulse rounded-full bg-white/80" />
+            <div className="mt-1.5 h-3 w-12 animate-pulse rounded-full bg-white/80" />
+            <div className={`mt-2 w-full rounded-t-[12px] bg-white/70 ${s.p}`} />
           </div>
         ))}
       </div>

@@ -33,6 +33,7 @@ export function StudentHomeLeaderboard({ currentUserId }: Props) {
           accentClassName="bg-home-ranking text-home-ranking-accent"
           caption="This week"
           action={{ label: "View all", to: "/dashboard/leaderboard" }}
+          actionClassName="text-home-ranking-accent"
         />
       }
     >
@@ -43,8 +44,9 @@ export function StudentHomeLeaderboard({ currentUserId }: Props) {
       ) : top.length === 0 ? (
         <HomeEmptyState
           icon={Trophy}
-          title="No leaderboard activity yet this week."
-          description="Start earning XP to claim a spot."
+          title="No leaderboard activity yet"
+          description="Start earning XP this week to claim a spot."
+          accentClassName="bg-home-ranking text-home-ranking-accent"
         />
       ) : (
         <div className="space-y-2.5">
@@ -54,8 +56,8 @@ export function StudentHomeLeaderboard({ currentUserId }: Props) {
             footer={
               me && meInTop
                 ? me.position === 1
-                  ? "You're leading this week."
-                  : gap ?? `You're #${me.position} this week.`
+                  ? "You’re leading this week 🎉"
+                  : gap ?? `You’re #${me.position} this week.`
                 : undefined
             }
           />
