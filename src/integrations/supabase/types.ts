@@ -2010,6 +2010,61 @@ export type Database = {
           },
         ]
       }
+      student_resource_activity: {
+        Row: {
+          center_id: string
+          class_id: string
+          created_at: string
+          id: string
+          last_opened_at: string
+          open_count: number
+          resource_id: string
+          student_user_id: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string
+          open_count?: number
+          resource_id: string
+          student_user_id: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string
+          open_count?: number
+          resource_id?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_resource_activity_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_resource_activity_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_resource_activity_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "class_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_streaks: {
         Row: {
           center_id: string
@@ -2768,6 +2823,18 @@ export type Database = {
           subdomain_slug: string
         }[]
       }
+      get_student_home_feed: {
+        Args: {
+          _announcement_limit?: number
+          _continue_limit?: number
+          _upcoming_limit?: number
+        }
+        Returns: Json
+      }
+      get_student_xp_leaderboard: {
+        Args: { _limit?: number; _period?: string }
+        Returns: Json
+      }
       get_user_center: { Args: { _user_id?: string }; Returns: string }
       has_role: {
         Args: {
@@ -2913,6 +2980,10 @@ export type Database = {
           _xp_amount: number
         }
         Returns: Json
+      }
+      record_resource_activity: {
+        Args: { _resource_id: string }
+        Returns: undefined
       }
       regenerate_invitation_token: {
         Args: { _invitation_id: string; _ttl_hours?: number }
