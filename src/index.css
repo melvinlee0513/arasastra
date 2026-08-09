@@ -58,6 +58,18 @@
     --brand-midnight: #0F172A;
     --brand-surface: #F8FAFC;
 
+    /* Student mobile Home — Soft Modular Dashboard section tints.
+       Each module gets a pale surface plus a restrained accent. */
+    --home-updates: 42 100% 95%;
+    --home-updates-accent: 35 92% 42%;
+    --home-learning: 222 100% 97%;
+    --home-learning-accent: 223 79% 48%;
+    --home-schedule: 258 100% 97%;
+    --home-schedule-accent: 258 55% 52%;
+    --home-ranking: 355 100% 97%;
+    --home-ranking-accent: 353 65% 50%;
+
+
 
     /* Sidebar - Navy themed */
     --sidebar-background: 220 45% 18%;

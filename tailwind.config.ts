@@ -18,6 +18,16 @@ export default {
     },
     extend: {
       colors: {
+        home: {
+          updates: "hsl(var(--home-updates))",
+          "updates-accent": "hsl(var(--home-updates-accent))",
+          learning: "hsl(var(--home-learning))",
+          "learning-accent": "hsl(var(--home-learning-accent))",
+          schedule: "hsl(var(--home-schedule))",
+          "schedule-accent": "hsl(var(--home-schedule-accent))",
+          ranking: "hsl(var(--home-ranking))",
+          "ranking-accent": "hsl(var(--home-ranking-accent))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
