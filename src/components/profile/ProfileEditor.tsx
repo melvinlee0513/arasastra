@@ -161,7 +161,14 @@ export function ProfileEditor({
   });
 
   return (
-    <Card className="p-5 sm:p-6 bg-card border border-border space-y-5">
+    <Card
+      className={
+        embedded
+          ? "border-0 bg-transparent p-0 shadow-none space-y-5"
+          : "p-5 sm:p-6 bg-card border border-border space-y-5"
+      }
+    >
+
       <div className="flex items-start gap-4">
         <div className="relative">
           <UserAvatar
@@ -270,12 +277,18 @@ export function ProfileEditor({
           >
             Reset
           </Button>
+          {embedded && (
+            <Button variant="outline" onClick={() => onClose?.()} disabled={saveMut.isPending}>
+              Cancel
+            </Button>
+          )}
           <Button onClick={() => saveMut.mutate()} disabled={!dirty || saveMut.isPending || !!nameError || !!bioError}>
             <Save className="w-4 h-4 mr-1" /> Save changes
           </Button>
         </div>
       </div>
     </Card>
+
   );
 }
 
