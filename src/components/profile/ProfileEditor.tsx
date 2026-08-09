@@ -30,11 +30,19 @@ type ProfileExt = {
 };
 
 export function ProfileEditor({
-  profile, onSaved,
-}: { profile: ProfileExt; onSaved?: () => void }) {
+  profile, onSaved, embedded, onClose,
+}: {
+  profile: ProfileExt;
+  onSaved?: () => void;
+  /** Render without the outer Card (for use inside a modal/bottom sheet). */
+  embedded?: boolean;
+  /** Called after a successful save so the host sheet can close. */
+  onClose?: () => void;
+}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const uid = user?.id || profile.user_id;
+
 
   const [displayName, setDisplayName] = useState<string>(profile.display_name || "");
   const [bio, setBio] = useState<string>(profile.bio || "");
