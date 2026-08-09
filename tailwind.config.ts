@@ -38,6 +38,22 @@ export default {
           leaderboard: "hsl(var(--more-leaderboard))",
           "leaderboard-accent": "hsl(var(--more-leaderboard-accent))",
         },
+        subject: {
+          blue: "hsl(var(--subject-blue))",
+          "blue-accent": "hsl(var(--subject-blue-accent))",
+          violet: "hsl(var(--subject-violet))",
+          "violet-accent": "hsl(var(--subject-violet-accent))",
+          amber: "hsl(var(--subject-amber))",
+          "amber-accent": "hsl(var(--subject-amber-accent))",
+          green: "hsl(var(--subject-green))",
+          "green-accent": "hsl(var(--subject-green-accent))",
+          cyan: "hsl(var(--subject-cyan))",
+          "cyan-accent": "hsl(var(--subject-cyan-accent))",
+          slate: "hsl(var(--subject-slate))",
+          "slate-accent": "hsl(var(--subject-slate-accent))",
+        },
+
+
 
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

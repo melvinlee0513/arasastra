@@ -7,6 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileTimetable } from "@/components/dashboard/timetable/MobileTimetable";
+import { fetchStudentTimetable, type TimetableEntry } from "@/lib/studentTimetable";
 
 interface ScheduledClass {
   id: string;
@@ -36,6 +39,7 @@ function withTimeout<T>(p: PromiseLike<T>, ms = 12000): Promise<T> {
 
 export function TimetablePage() {
   const { user, profile, role, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const [viewMode, setViewMode] = useState<ViewMode>("today");
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
@@ -58,6 +62,26 @@ export function TimetablePage() {
     setState("loading");
     try {
       const weekEnd = addDays(currentWeekStart, 7);
+
+      // Students read the canonical, centre- and enrolment-scoped RPC.
+      if (role === "student") {
+        const entries = await withTimeout(
+          fetchStudentTimetable(currentWeekStart, weekEnd) as PromiseLike<TimetableEntry[]>,
+        );
+        const rows: ScheduledClass[] = entries.map((e) => ({
+          id: e.class_id,
+          title: e.title,
+          scheduled_at: e.starts_at,
+          duration_minutes: e.duration_minutes,
+          cohort_label: null,
+          subject: e.subject_name ? { name: e.subject_name, icon: null } : null,
+          tutor: e.tutor_name ? { name: e.tutor_name, avatar_url: null } : null,
+        }));
+        setClasses(rows);
+        setState(rows.length === 0 ? "empty" : "loaded");
+        return;
+      }
+
       const baseSelect =
         "id, title, scheduled_at, duration_minutes, cohort_label, subject:subjects(name, icon), tutor:tutors(name, avatar_url)";
 
@@ -69,20 +93,7 @@ export function TimetablePage() {
         .lt("scheduled_at", weekEnd.toISOString())
         .order("scheduled_at", { ascending: true });
 
-      // Role-aware scoping. Center Admins are further restricted by RLS to their center_id.
-      if (role === "student" && profile?.id) {
-        const { data: enr, error: enrErr } = await withTimeout(
-          supabase
-            .from("class_enrollments")
-            .select("class_id")
-            .eq("student_user_id", user.id)
-            .eq("status", "active")
-        );
-        if (enrErr) throw enrErr;
-        const ids = (enr || []).map((e: { class_id: string | null }) => e.class_id).filter(Boolean) as string[];
-        if (ids.length === 0) { setClasses([]); setState("empty"); return; }
-        query = query.in("id", ids);
-      } else if (role === "tutor") {
+      if (role === "tutor") {
         const { data: tutorRow, error: tErr } = await withTimeout(
           supabase.from("tutors").select("id").eq("user_id", user.id).maybeSingle()
         );
@@ -91,6 +102,7 @@ export function TimetablePage() {
         query = query.eq("tutor_id", tutorRow.id);
       }
       // admin / superadmin: rely on RLS (admin scoped to their center_id, superadmin sees all).
+
 
       const { data, error } = await withTimeout(query);
       if (error) throw error;
@@ -106,6 +118,18 @@ export function TimetablePage() {
   }, [authLoading, user, profile?.id, role, currentWeekStart]);
 
   useEffect(() => { fetchClasses(); }, [fetchClasses]);
+
+  // Refresh on focus/reconnect so a schedule change never needs a hard refresh.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const refresh = () => fetchClasses();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, [authLoading, user, fetchClasses]);
 
   const selectedDate = weekDates[selectedDay];
   const now = new Date();
@@ -243,6 +267,9 @@ export function TimetablePage() {
       </div>
     );
   };
+
+  // Mobile students get the dedicated weekly timeline; desktop keeps its layout.
+  if (isMobile && role === "student") return <MobileTimetable />;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">

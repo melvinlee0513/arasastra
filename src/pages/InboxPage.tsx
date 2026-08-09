@@ -1,93 +1,54 @@
-import { useState, useEffect } from "react";
-import { Bell, Megaphone, Clock, Check, Circle, Loader2, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, Megaphone, Clock, Check, Circle, AlertCircle, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  useMarkInboxRead,
+  useStudentInbox,
+  type InboxItem,
+  type InboxKind,
+} from "@/lib/studentInbox";
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string | null;
-  type: string | null;
-  is_read: boolean | null;
-  created_at: string | null;
-}
+type Filter = "all" | InboxKind;
+
+const EMPTY_COPY: Record<Filter, string> = {
+  all: "No notifications yet.",
+  announcement: "No new announcements.",
+  reminder: "No reminders right now.",
+};
 
 export function InboxPage() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isLoading, isError, refetch, isFetching } = useStudentInbox();
+  const markRead = useMarkInboxRead();
+  const [tab, setTab] = useState<Filter>("all");
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchNotifications();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user?.id]);
+  const items = data?.items ?? [];
+  const unreadCount = data?.unread_count ?? 0;
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("created_at", { ascending: false });
+  const filtered = useMemo(
+    () => (tab === "all" ? items : items.filter((i) => i.kind === tab)),
+    [items, tab],
+  );
 
-      if (error) throw error;
-      setNotifications(data || []);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const markAsRead = async (id: string) => {
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-
-    try {
-      await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("id", id);
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
-  };
-
-  const getNotificationType = (type: string | null): "announcement" | "reminder" => {
-    if (type === "reminder" || type === "class") return "reminder";
-    return "announcement";
-  };
-
-  const filterByType = (type: "announcement" | "reminder" | "all") => {
-    if (type === "all") return notifications;
-    return notifications.filter((n) => getNotificationType(n.type) === type);
-  };
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-  // Guest view
   if (!user) {
     return (
-      <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
-        <Card className="p-8 text-center bg-card border border-border">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
-            <UserPlus className="w-10 h-10 text-muted-foreground" />
+      <div
+        className="mx-auto max-w-3xl space-y-6 p-4 md:p-6"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      >
+        <Card className="border border-border bg-card p-8 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-secondary">
+            <UserPlus className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h1 className="text-xl font-bold text-foreground mb-2">Sign in to view your inbox</h1>
-          <p className="text-muted-foreground mb-6">
+          <h1 className="mb-2 text-xl font-bold text-foreground">Sign in to view your inbox</h1>
+          <p className="mb-6 text-muted-foreground">
             Your notifications and announcements will appear here.
           </p>
           <Link to="/auth">
@@ -99,11 +60,13 @@ export function InboxPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div
+      className="mx-auto max-w-3xl space-y-5 p-4 md:p-6"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+    >
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Inbox</h1>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Inbox</h1>
           <p className="text-muted-foreground">
             {unreadCount > 0 ? `${unreadCount} unread messages` : "All caught up!"}
           </p>
@@ -115,139 +78,152 @@ export function InboxPage() {
         )}
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="announcements" className="gap-2">
-              <Megaphone className="w-4 h-4" />
-              Announcements
-            </TabsTrigger>
-            <TabsTrigger value="reminders" className="gap-2">
-              <Bell className="w-4 h-4" />
-              Reminders
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Filter)} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 bg-secondary">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="announcement" className="gap-2">
+            <Megaphone className="h-4 w-4" />
+            Announcements
+          </TabsTrigger>
+          <TabsTrigger value="reminder" className="gap-2">
+            <Bell className="h-4 w-4" />
+            Reminders
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="all" className="space-y-3">
-            <NotificationList
-              notifications={filterByType("all")}
-              onMarkAsRead={markAsRead}
-            />
-          </TabsContent>
-
-          <TabsContent value="announcements" className="space-y-3">
-            <NotificationList
-              notifications={filterByType("announcement")}
-              onMarkAsRead={markAsRead}
-            />
-          </TabsContent>
-
-          <TabsContent value="reminders" className="space-y-3">
-            <NotificationList
-              notifications={filterByType("reminder")}
-              onMarkAsRead={markAsRead}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value={tab} className="space-y-3">
+          {isLoading ? (
+            <div className="space-y-3" aria-hidden="true">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-[86px] rounded-2xl bg-secondary/60" />
+              ))}
+            </div>
+          ) : isError ? (
+            <Card className="rounded-2xl border border-border bg-card p-4 text-center">
+              <AlertCircle className="mx-auto mb-2 h-6 w-6 text-destructive" aria-hidden="true" />
+              <p className="text-sm font-semibold text-foreground">Couldn't load your inbox.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3 h-9 rounded-full"
+                onClick={() => refetch()}
+                disabled={isFetching}
+              >
+                Retry
+              </Button>
+            </Card>
+          ) : filtered.length === 0 ? (
+            <Card className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-card px-4 py-6 text-center">
+              <Bell className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground">{EMPTY_COPY[tab]}</p>
+            </Card>
+          ) : (
+            filtered.map((item, index) => (
+              <InboxRow
+                key={`${item.source}-${item.id}`}
+                item={item}
+                index={index}
+                onOpen={() => {
+                  if (!item.is_read) markRead.mutate(item);
+                }}
+              />
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
-interface NotificationListProps {
-  notifications: Notification[];
-  onMarkAsRead: (id: string) => void;
-}
+function InboxRow({
+  item,
+  index,
+  onOpen,
+}: {
+  item: InboxItem;
+  index: number;
+  onOpen: () => void;
+}) {
+  const isAnnouncement = item.kind === "announcement";
+  const timeAgo = item.at ? formatDistanceToNow(new Date(item.at), { addSuffix: true }) : "";
+  const context = [item.class_name ?? item.subject_name, item.author_name]
+    .filter(Boolean)
+    .join(" · ");
 
-function NotificationList({ notifications, onMarkAsRead }: NotificationListProps) {
-  if (notifications.length === 0) {
-    return (
-      <Card className="p-8 text-center bg-card border border-border">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary flex items-center justify-center">
-          <Bell className="w-8 h-8 text-muted-foreground" />
+  const body = (
+    <div className="flex gap-4">
+      <div
+        className={cn(
+          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
+          isAnnouncement ? "bg-primary/10" : "bg-accent/10",
+        )}
+      >
+        {isAnnouncement ? (
+          <Megaphone className="h-5 w-5 text-primary" />
+        ) : (
+          <Bell className="h-5 w-5 text-accent" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              {isAnnouncement ? "Announcement" : "Reminder"}
+            </p>
+            <h3
+              className={cn(
+                "truncate font-semibold text-foreground",
+                !item.is_read && "text-accent",
+              )}
+            >
+              {item.title}
+            </h3>
+          </div>
+          {item.is_read ? (
+            <Check className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          ) : (
+            <Circle className="h-3 w-3 flex-shrink-0 fill-accent text-accent" />
+          )}
         </div>
-        <p className="text-muted-foreground">No notifications here</p>
-      </Card>
+        {item.body && (
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.body}</p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {context && <span className="truncate">{context}</span>}
+          {timeAgo && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {timeAgo}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const className = cn(
+    "block animate-fade-up cursor-pointer rounded-2xl border bg-card p-4 transition-all duration-200",
+    item.is_read ? "border-border" : "border-accent/30 bg-accent/5",
+  );
+  const style = { animationDelay: `${index * 50}ms` };
+
+  if (item.class_id) {
+    return (
+      <Link
+        to={`/dashboard/classes/${item.class_id}/announcements`}
+        onClick={onOpen}
+        className={className}
+        style={style}
+      >
+        {body}
+      </Link>
     );
   }
 
-  const getNotificationType = (type: string | null): "announcement" | "reminder" => {
-    if (type === "reminder" || type === "class") return "reminder";
-    return "announcement";
-  };
-
   return (
-    <div className="space-y-3">
-      {notifications.map((notification, index) => {
-        const isRead = notification.is_read;
-        const notifType = getNotificationType(notification.type);
-        const timeAgo = notification.created_at
-          ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
-          : "";
-
-        return (
-          <Card
-            key={notification.id}
-            onClick={() => !isRead && onMarkAsRead(notification.id)}
-            className={cn(
-              "p-4 bg-card border transition-all duration-200 cursor-pointer animate-fade-up",
-              isRead
-                ? "border-border hover:border-border"
-                : "border-accent/30 bg-accent/5 hover:bg-accent/10"
-            )}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div className="flex gap-4">
-              <div
-                className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                  notifType === "announcement" ? "bg-primary/10" : "bg-accent/10"
-                )}
-              >
-                {notifType === "announcement" ? (
-                  <Megaphone className="w-5 h-5 text-primary" />
-                ) : (
-                  <Bell className="w-5 h-5 text-accent" />
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3
-                    className={cn(
-                      "font-semibold text-foreground",
-                      !isRead && "text-accent"
-                    )}
-                  >
-                    {notification.title}
-                  </h3>
-                  {isRead ? (
-                    <Check className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  ) : (
-                    <Circle className="w-3 h-3 fill-accent text-accent flex-shrink-0" />
-                  )}
-                </div>
-                {notification.message && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {notification.message}
-                  </p>
-                )}
-                {timeAgo && (
-                  <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {timeAgo}
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        );
-      })}
-    </div>
+    <Card onClick={onOpen} className={className} style={style}>
+      {body}
+    </Card>
   );
 }

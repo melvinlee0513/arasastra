@@ -1,50 +1,42 @@
 /**
  * Contextual data for the student mobile "More" hub.
  *
- * Everything here reuses existing production sources:
- *  - next class  → `get_student_home_feed` (coming_up, kind = "class")
- *  - unread mail → `notifications` (RLS-scoped to the authenticated user)
+ * Everything here delegates to the canonical production sources so the hub can
+ * never contradict the full pages:
+ *  - next class  → `get_student_timetable` (same reader as /timetable)
+ *  - unread mail → `get_student_inbox` (same reader as /inbox)
  *  - leaderboard → `get_student_xp_leaderboard` via useStudentLeaderboard
- *
- * No new tables, no new ranking implementation, no fabricated values.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useTenant } from "@/contexts/TenantContext";
-import { useStudentHomeFeed, type HomeUpcomingItem } from "@/lib/studentHome";
+import { useNextTimetableClass } from "@/lib/studentTimetable";
+import { useInboxUnreadCount } from "@/lib/studentInbox";
 
-/** Next upcoming enrolled class, derived from the existing Home feed. */
-export function useNextClass() {
-  const feed = useStudentHomeFeed();
-  const now = Date.now();
-  const next: HomeUpcomingItem | null =
-    (feed.data?.coming_up ?? [])
-      .filter((i) => i.kind === "class" && new Date(i.at).getTime() >= now)
-      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())[0] ?? null;
-
-  return { next, isLoading: feed.isLoading, isError: feed.isError };
+export interface NextClassPreview {
+  class_id: string;
+  title: string;
+  class_name: string | null;
+  subject_name: string | null;
+  at: string;
 }
 
-/** Unread notification count for the signed-in student. */
-export function useUnreadInboxCount() {
-  const { user } = useAuth();
-  const { currentTenantId } = useTenant();
+/** Next upcoming enrolled class — identical dataset to the Timetable page. */
+export function useNextClass() {
+  const { next, isLoading, isError } = useNextTimetableClass();
+  const preview: NextClassPreview | null = next
+    ? {
+        class_id: next.class_id,
+        title: next.title,
+        class_name: next.title,
+        subject_name: next.subject_name,
+        at: next.starts_at,
+      }
+    : null;
 
-  return useQuery({
-    queryKey: ["student-more-unread", currentTenantId ?? null, user?.id ?? null],
-    enabled: !!user?.id,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
-    queryFn: async (): Promise<number> => {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .eq("is_read", false);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
+  return { next: preview, isLoading, isError };
+}
+
+/** Unread inbox count — reads the shared inbox cache entry, never a second counter. */
+export function useUnreadInboxCount() {
+  const { count, isLoading, isError } = useInboxUnreadCount();
+  return { data: count, isLoading, isError };
 }

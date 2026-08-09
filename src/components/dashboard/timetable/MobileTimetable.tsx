@@ -1,0 +1,487 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  addDays,
+  differenceInMinutes,
+  format,
+  isSameDay,
+  isToday,
+  isTomorrow,
+} from "date-fns";
+import { AlertCircle, CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  SUBJECT_ACCENT_BG,
+  SUBJECT_ACCENT_TEXT,
+  SUBJECT_SURFACE,
+  subjectTone,
+  useStudentTimetable,
+  weekStartOf,
+  type TimetableEntry,
+} from "@/lib/studentTimetable";
+
+type ViewMode = "day" | "upcoming";
+
+const HOUR_PX = 64;
+const DAY_LETTERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function classRoute(entry: TimetableEntry) {
+  return `/dashboard/classes/${entry.class_id}`;
+}
+
+function timeRange(entry: TimetableEntry) {
+  return `${format(new Date(entry.starts_at), "h:mm a")} – ${format(new Date(entry.ends_at), "h:mm a")}`;
+}
+
+/* ------------------------------------------------------------------ blocks */
+
+function SubjectLabel({ entry }: { entry: TimetableEntry }) {
+  const tone = subjectTone(entry.subject_name, entry.subject_id);
+  if (!entry.subject_name) return null;
+  return (
+    <p
+      className={cn(
+        "text-[10px] font-bold uppercase tracking-[0.08em]",
+        SUBJECT_ACCENT_TEXT[tone],
+      )}
+    >
+      {entry.subject_name}
+    </p>
+  );
+}
+
+function ClassBlock({
+  entry,
+  isNext,
+  style,
+}: {
+  entry: TimetableEntry;
+  isNext?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const tone = subjectTone(entry.subject_name, entry.subject_id);
+  return (
+    <Link
+      to={classRoute(entry)}
+      style={style}
+      className={cn(
+        "group flex flex-col justify-center gap-0.5 rounded-[18px] px-3 py-2.5",
+        "transition-transform duration-150 active:scale-[0.985] motion-reduce:transition-none",
+        SUBJECT_SURFACE[tone],
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <SubjectLabel entry={entry} />
+        {isNext && (
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-wide text-white",
+              SUBJECT_ACCENT_BG[tone],
+            )}
+          >
+            Next
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-slate-900">{entry.title}</p>
+          <p className="truncate text-[12px] text-slate-600">{timeRange(entry)}</p>
+          {entry.tutor_name && (
+            <p className="truncate text-[11px] text-slate-500">{entry.tutor_name}</p>
+          )}
+        </div>
+        <ChevronRight
+          className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-active:translate-x-0.5 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
+      </div>
+    </Link>
+  );
+}
+
+function CompactRow({ entry }: { entry: TimetableEntry }) {
+  const tone = subjectTone(entry.subject_name, entry.subject_id);
+  return (
+    <Link
+      to={classRoute(entry)}
+      className="group flex items-center gap-3 rounded-[18px] bg-white px-3 py-3 shadow-[0_4px_18px_rgb(0,0,0,0.04)] transition-transform duration-150 active:scale-[0.985] motion-reduce:transition-none"
+    >
+      <span className={cn("h-9 w-1.5 shrink-0 rounded-full", SUBJECT_ACCENT_BG[tone])} />
+      <div className="w-[70px] shrink-0">
+        <p className="text-[13px] font-bold text-slate-900">
+          {format(new Date(entry.starts_at), "h:mm a")}
+        </p>
+        <p className="text-[11px] text-slate-500">
+          {format(new Date(entry.ends_at), "h:mm a")}
+        </p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <SubjectLabel entry={entry} />
+        <p className="truncate text-[14px] font-semibold text-slate-900">{entry.title}</p>
+        {entry.tutor_name && (
+          <p className="truncate text-[11px] text-slate-500">{entry.tutor_name}</p>
+        )}
+      </div>
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-active:translate-x-0.5 motion-reduce:transition-none"
+        aria-hidden="true"
+      />
+    </Link>
+  );
+}
+
+/* ---------------------------------------------------------------- timeline */
+
+function DayTimeline({
+  entries,
+  showNow,
+  nextClassId,
+}: {
+  entries: TimetableEntry[];
+  showNow: boolean;
+  nextClassId: string | null;
+}) {
+  const now = new Date();
+  const bounds = useMemo(() => {
+    const starts = entries.map((e) => new Date(e.starts_at));
+    const ends = entries.map((e) => new Date(e.ends_at));
+    let first = Math.min(...starts.map((d) => d.getHours()));
+    let last = Math.max(...ends.map((d) => d.getHours() + (d.getMinutes() > 0 ? 1 : 0)));
+    if (showNow) {
+      first = Math.min(first, now.getHours());
+      last = Math.max(last, now.getHours() + 1);
+    }
+    return { first, last: Math.max(last, first + 1) };
+  }, [entries, showNow, now]);
+
+  const hours = Array.from({ length: bounds.last - bounds.first + 1 }, (_, i) => bounds.first + i);
+  const originMinutes = bounds.first * 60;
+  const height = (bounds.last - bounds.first) * HOUR_PX + 24;
+
+  const offsetOf = (iso: string) => {
+    const d = new Date(iso);
+    return ((d.getHours() * 60 + d.getMinutes() - originMinutes) / 60) * HOUR_PX;
+  };
+
+  const nowOffset = ((now.getHours() * 60 + now.getMinutes() - originMinutes) / 60) * HOUR_PX;
+
+  return (
+    <div className="relative flex" style={{ minHeight: height }}>
+      {/* time gutter */}
+      <div className="w-[54px] shrink-0">
+        {hours.map((h) => (
+          <div key={h} className="relative" style={{ height: HOUR_PX }}>
+            <span className="absolute -top-1.5 text-[11px] font-medium text-slate-400">
+              {format(new Date(2020, 0, 1, h), "h a")}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* guides + blocks */}
+      <div className="relative flex-1" style={{ height }}>
+        {hours.map((h, i) => (
+          <div
+            key={h}
+            className="absolute left-0 right-0 border-t border-slate-100"
+            style={{ top: i * HOUR_PX }}
+          />
+        ))}
+
+        {entries.map((entry) => {
+          const top = offsetOf(entry.starts_at);
+          const blockHeight = Math.max(
+            72,
+            (differenceInMinutes(new Date(entry.ends_at), new Date(entry.starts_at)) / 60) * HOUR_PX,
+          );
+          return (
+            <ClassBlock
+              key={`${entry.class_id}-${entry.starts_at}`}
+              entry={entry}
+              isNext={entry.class_id === nextClassId}
+              style={{
+                position: "absolute",
+                top,
+                left: 8,
+                right: 0,
+                minHeight: blockHeight,
+              }}
+            />
+          );
+        })}
+
+        {showNow && nowOffset >= -8 && nowOffset <= height && (
+          <div
+            className="pointer-events-none absolute left-0 right-0 flex items-center gap-1"
+            style={{ top: nowOffset }}
+            aria-hidden="true"
+          >
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            <span className="h-[1.5px] flex-1 bg-primary/50" />
+            <span className="rounded-full bg-primary px-1.5 py-[1px] text-[9px] font-bold uppercase text-primary-foreground">
+              Now
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------- skeletons */
+
+function TimetableSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-11 rounded-full bg-slate-100" />
+      <div className="h-20 rounded-[22px] bg-slate-100" />
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex gap-3">
+            <div className="h-4 w-10 rounded bg-slate-100" />
+            <div className="h-[76px] flex-1 rounded-[18px] bg-slate-100" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- page */
+
+export function MobileTimetable() {
+  const [view, setView] = useState<ViewMode>("day");
+  const [weekStart, setWeekStart] = useState(() => weekStartOf(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const { week, upcoming, nextClass, isLoading, isError, refetch, isFetching } =
+    useStudentTimetable(weekStart);
+
+  const weekDates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  );
+
+  const dayEntries = useMemo(
+    () =>
+      week
+        .filter((e) => isSameDay(new Date(e.starts_at), selectedDate))
+        .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
+    [week, selectedDate],
+  );
+
+  const shiftWeek = (direction: number) => {
+    const next = addDays(weekStart, direction * 7);
+    setWeekStart(next);
+    setSelectedDate((prev) => {
+      const offset = weekDates.findIndex((d) => isSameDay(d, prev));
+      return addDays(next, offset === -1 ? 0 : offset);
+    });
+  };
+
+  const groupedUpcoming = useMemo(() => {
+    const groups: Array<{ key: string; label: string; items: TimetableEntry[] }> = [];
+    upcoming.forEach((entry) => {
+      const date = new Date(entry.starts_at);
+      const key = format(date, "yyyy-MM-dd");
+      const label = isToday(date)
+        ? "Today"
+        : isTomorrow(date)
+          ? "Tomorrow"
+          : format(date, "EEEE · MMM d").toUpperCase();
+      const existing = groups.find((g) => g.key === key);
+      if (existing) existing.items.push(entry);
+      else groups.push({ key, label, items: [entry] });
+    });
+    return groups;
+  }, [upcoming]);
+
+  const selectedIsToday = isToday(selectedDate);
+  const dayHeading = selectedIsToday
+    ? "Today's classes"
+    : `${format(selectedDate, "EEEE")}'s classes`;
+  const countLabel =
+    dayEntries.length === 0
+      ? "No classes"
+      : dayEntries.length === 1
+        ? "1 class"
+        : `${dayEntries.length} classes`;
+
+  return (
+    <div
+      className="px-4 pb-6"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+    >
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-[26px] font-bold tracking-tight text-slate-900">Timetable</h1>
+        <div className="inline-flex rounded-full bg-slate-100 p-1">
+          {(["day", "upcoming"] as ViewMode[]).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setView(mode)}
+              aria-pressed={view === mode}
+              className={cn(
+                "h-9 rounded-full px-3 text-[13px] font-semibold transition-all duration-200 motion-reduce:transition-none",
+                view === mode
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500",
+              )}
+            >
+              {mode === "day" ? "By day" : "Upcoming"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <TimetableSkeleton />
+      ) : isError ? (
+        <div className="rounded-[22px] bg-slate-50 p-4 text-center">
+          <AlertCircle className="mx-auto mb-2 h-6 w-6 text-destructive" aria-hidden="true" />
+          <p className="text-[14px] font-semibold text-slate-900">
+            Couldn't load your timetable.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3 h-9 rounded-full"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : view === "day" ? (
+        <>
+          {/* Unified week calendar */}
+          <section className="mb-5 rounded-[22px] bg-white p-3 shadow-[0_4px_18px_rgb(0,0,0,0.04)]">
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                aria-label="Previous week"
+                onClick={() => shiftWeek(-1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <p className="text-[14px] font-semibold text-slate-900">
+                {format(weekDates[0], "MMM d")} – {format(weekDates[6], "MMM d, yyyy")}
+              </p>
+              <button
+                type="button"
+                aria-label="Next week"
+                onClick={() => shiftWeek(1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-0.5">
+              {weekDates.map((date, i) => {
+                const selected = isSameDay(date, selectedDate);
+                const hasClasses = week.some((e) => isSameDay(new Date(e.starts_at), date));
+                return (
+                  <button
+                    key={date.toISOString()}
+                    type="button"
+                    onClick={() => setSelectedDate(date)}
+                    aria-current={selected ? "date" : undefined}
+                    aria-label={format(date, "EEEE d MMMM")}
+                    className="flex flex-col items-center gap-1 py-1"
+                  >
+                    <span
+                      className={cn(
+                        "text-[10px] font-semibold uppercase tracking-wide",
+                        selected ? "text-primary" : "text-slate-400",
+                      )}
+                    >
+                      {DAY_LETTERS[i]}
+                    </span>
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-[14px] text-[15px] font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                        selected
+                          ? "bg-primary/10 text-primary ring-1 ring-primary/25"
+                          : "text-slate-700",
+                      )}
+                    >
+                      {date.getDate()}
+                    </span>
+                    <span className="flex h-1.5 items-center gap-0.5">
+                      {isToday(date) && !selected && (
+                        <span className="h-1 w-1 rounded-full bg-slate-400" />
+                      )}
+                      {hasClasses && <span className="h-1 w-1 rounded-full bg-primary" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Day heading */}
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-[17px] font-bold text-slate-900">{dayHeading}</h2>
+            <span className="text-[12px] font-medium text-slate-500">{countLabel}</span>
+          </div>
+
+          {dayEntries.length > 0 ? (
+            <DayTimeline
+              entries={dayEntries}
+              showNow={selectedIsToday}
+              nextClassId={selectedIsToday ? (nextClass?.class_id ?? null) : null}
+            />
+          ) : (
+            <div className="space-y-5">
+              <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
+                <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
+                <p className="text-[14px] font-semibold text-slate-900">
+                  {selectedIsToday ? "No classes today" : "No classes this day"}
+                </p>
+                <p className="text-[12px] text-slate-500">Your schedule is clear.</p>
+              </div>
+
+              {nextClass && (
+                <section>
+                  <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">
+                    Next class
+                  </h3>
+                  <ClassBlock entry={nextClass} isNext />
+                  <p className="mt-2 px-1 text-[12px] text-slate-500">
+                    {format(new Date(nextClass.starts_at), "EEEE · d MMM")}
+                  </p>
+                </section>
+              )}
+            </div>
+          )}
+        </>
+      ) : groupedUpcoming.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
+          <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
+          <p className="text-[14px] font-semibold text-slate-900">No upcoming classes</p>
+          <p className="text-[12px] text-slate-500">New classes appear here once scheduled.</p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {groupedUpcoming.map((group) => (
+            <section key={group.key}>
+              <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">
+                {group.label}
+              </h2>
+              <div className="space-y-2">
+                {group.items.map((entry) => (
+                  <CompactRow key={`${entry.class_id}-${entry.starts_at}`} entry={entry} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
