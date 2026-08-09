@@ -2593,6 +2593,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _about_path_class: { Args: { _name: string }; Returns: string }
       _admin_can_manage_center: {
         Args: { _center_id: string }
         Returns: boolean
