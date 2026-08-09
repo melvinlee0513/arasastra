@@ -2834,6 +2834,11 @@ export type Database = {
         }
         Returns: Json
       }
+      get_student_inbox: { Args: { _limit?: number }; Returns: Json }
+      get_student_timetable: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
       get_student_xp_leaderboard: {
         Args: { _limit?: number; _period?: string }
         Returns: Json
