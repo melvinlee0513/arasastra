@@ -195,7 +195,7 @@ export function StudentClassMaterials() {
           value={tab}
           onChange={setTab}
           items={[
-            { value: "all", label: "All", full: "All materials", icon: <Target className="w-4 h-4" />, count: allResources.length },
+            { value: "all", label: "All", full: "All materials", icon: <LayoutGrid className="w-4 h-4" />, count: allResources.length },
             ...(replaysOn
               ? [{ value: "replays", label: "Replays", full: "Replays", icon: <Video className="w-4 h-4" />, count: replays.length }]
               : []),
@@ -283,6 +283,68 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
     >
       {icon} {label}
     </TabsTrigger>
+  );
+}
+
+interface FilterItem {
+  value: string;
+  /** Short mobile label. */
+  label: string;
+  /** Full accessible name. */
+  full: string;
+  icon: React.ReactNode;
+  count?: number;
+}
+
+/**
+ * Mobile-only filter control: a compact non-scrolling icon grid so the material
+ * filters never overflow horizontally on narrow phones.
+ */
+function MobileFilterGrid({
+  value,
+  onChange,
+  items,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  items: FilterItem[];
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter materials"
+      className="md:hidden grid grid-cols-4 gap-1 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm"
+    >
+      {items.map((item) => {
+        const active = value === item.value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={item.full}
+            onClick={() => onChange(item.value)}
+            className="flex flex-col items-center justify-start gap-1 min-h-[44px] py-1 rounded-xl active:bg-slate-50"
+          >
+            <span
+              className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center border transition-colors",
+                active
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50 text-slate-500 border-slate-200",
+              )}
+            >
+              {item.icon}
+            </span>
+            <span className={cn("text-[11px] leading-tight", active ? "font-semibold text-slate-900" : "text-slate-500")}>
+              {item.label}
+              {typeof item.count === "number" && item.count > 0 ? ` (${item.count})` : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
