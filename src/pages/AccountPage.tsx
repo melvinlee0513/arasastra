@@ -22,6 +22,9 @@ import { OnboardingTour } from "@/components/account/OnboardingTour";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { bestDisplayName } from "@/lib/profile";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { StudentMobileProfile } from "@/pages/dashboard/StudentMobileProfile";
+
 
 export function AccountPage() {
   const navigate = useNavigate();
