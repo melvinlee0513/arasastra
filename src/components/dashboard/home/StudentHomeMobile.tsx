@@ -39,7 +39,7 @@ export function StudentHomeMobile() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))]">
+      <div className="mx-auto max-w-3xl space-y-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))]">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}
