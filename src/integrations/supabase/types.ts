@@ -277,6 +277,60 @@ export type Database = {
           },
         ]
       }
+      class_about_sections: {
+        Row: {
+          center_id: string
+          class_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          image_path: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          image_path?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          image_path?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_about_sections_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_about_sections_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_announcements: {
         Row: {
           author_user_id: string | null
@@ -2539,6 +2593,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _about_path_class: { Args: { _name: string }; Returns: string }
       _admin_can_manage_center: {
         Args: { _center_id: string }
         Returns: boolean
@@ -2632,6 +2687,10 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      delete_class_about_section: {
+        Args: { p_section_id: string }
+        Returns: boolean
+      }
       delete_class_content_folder_safe: {
         Args: { _folder_id: string; _strategy?: string }
         Returns: Json
@@ -2863,6 +2922,10 @@ export type Database = {
         }[]
       }
       release_quiz_results: { Args: { _quiz_id: string }; Returns: string }
+      reorder_class_about_sections: {
+        Args: { p_class_id: string; p_section_ids: string[] }
+        Returns: boolean
+      }
       reorder_class_content_folders: {
         Args: { _class_id: string; _ordered_ids: string[]; _parent_id?: string }
         Returns: undefined
@@ -2907,6 +2970,16 @@ export type Database = {
       same_center_as_current_user: {
         Args: { _center_id: string }
         Returns: boolean
+      }
+      save_class_about_section: {
+        Args: {
+          p_class_id: string
+          p_content?: string
+          p_image_path?: string
+          p_section_id?: string
+          p_title: string
+        }
+        Returns: string
       }
       save_class_content_folder: {
         Args: {

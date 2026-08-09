@@ -16,8 +16,10 @@ interface MobileTopBarProps {
 }
 
 /**
- * Native-style mobile app bar: `← Parent   Title   [right]`.
- * Mobile-only by default — desktop keeps breadcrumbs.
+ * Mobile-only floating pill navigation: `‹ Parent … Title [right]`.
+ *
+ * Sticky, inset from the viewport edges, safe-area aware. Desktop keeps
+ * breadcrumbs so this component is hidden from `md:` up.
  */
 export function MobileTopBar({
   backTo,
@@ -28,24 +30,22 @@ export function MobileTopBar({
 }: MobileTopBarProps) {
   return (
     <div
-      className={cn(
-        "md:hidden sticky top-0 z-40 -mx-4 px-2 bg-background/95 backdrop-blur-md border-b border-border",
-        className,
-      )}
+      className={cn("md:hidden sticky z-40 -mx-1", className)}
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
     >
-      <div className="h-14 flex items-center gap-1">
+      <div className="flex items-center gap-1 h-[50px] px-1.5 rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-[0_6px_24px_rgb(0,0,0,0.08)]">
         <Link
           to={backTo}
           aria-label={`Back to ${backLabel}`}
-          className="inline-flex items-center gap-0.5 min-h-[44px] min-w-[44px] px-2 rounded-full text-[15px] font-medium text-primary active:bg-primary/10"
+          className="inline-flex items-center gap-0.5 h-[44px] min-w-[44px] pl-1.5 pr-2 rounded-full text-[14px] font-medium text-primary active:bg-primary/10 shrink-0 max-w-[45%]"
         >
-          <ChevronLeft className="w-5 h-5 shrink-0" />
-          <span className="max-w-[30vw] truncate">{backLabel}</span>
+          <ChevronLeft className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <span className="truncate">{backLabel}</span>
         </Link>
-        <span className="flex-1 min-w-0 text-center text-[15px] font-semibold text-foreground truncate px-1">
+        <span className="flex-1 min-w-0 text-right text-[15px] font-semibold text-slate-900 truncate pr-2">
           {title}
         </span>
-        <div className="min-w-[44px] flex items-center justify-end pr-1">{right}</div>
+        {right && <div className="min-w-[44px] flex items-center justify-end pr-1">{right}</div>}
       </div>
     </div>
   );

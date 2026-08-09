@@ -228,12 +228,15 @@ export function ClassShell({
                         <Clock className="w-3 h-3 mr-1" /> {k.schedule_label}
                       </Badge>
                     )}
+                    {/* Next-session timestamp is desktop-only — the mobile
+                        header keeps title, schedule, subject and tutor. */}
                     {k.scheduled_at && (
-                      <Badge variant="secondary" className="rounded-full">
+                      <Badge variant="secondary" className="rounded-full hidden md:inline-flex">
                         <Calendar className="w-3 h-3 mr-1" /> Next:{" "}
                         {new Date(k.scheduled_at).toLocaleString()}
                       </Badge>
                     )}
+
                   </div>
                 </div>
                 {headerRight && <div className="shrink-0">{headerRight}</div>}

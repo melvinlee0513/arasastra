@@ -1,9 +1,11 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Video, FileText, HelpCircle, PlayCircle, ClipboardList, ExternalLink, Layers,
+  Video, FileText, HelpCircle, PlayCircle, ClipboardList, ExternalLink, Layers, LayoutGrid,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureEnabled } from "@/hooks/useFeature";
@@ -41,6 +43,8 @@ export function StudentClassMaterials() {
   const flashcardsOn = useFeatureEnabled("flashcards");
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get("folder");
+  const [tab, setTab] = useState<string>(replaysOn ? "replays" : "notes");
+
 
   const q = useQuery({
     queryKey: ["classroom-materials", currentTenantId, classId, user?.id],
@@ -134,6 +138,8 @@ export function StudentClassMaterials() {
   const notes = scoped.filter((r) => r.resource_type === "note");
   const worksheets = scoped.filter((r) => r.resource_type === "worksheet");
   const links = scoped.filter((r) => r.resource_type === "link");
+  const allResources = scoped;
+
 
   return shell(
     <div className="space-y-6">
@@ -165,8 +171,9 @@ export function StudentClassMaterials() {
         </FolderGrid>
       )}
 
-      <Tabs defaultValue={replaysOn ? "replays" : "notes"} className="w-full">
-        <div className="overflow-x-auto -mx-4 px-4 md:-mx-1 md:px-1 scrollbar-thin">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        {/* Desktop keeps the horizontal pill filters. */}
+        <div className="hidden md:block overflow-x-auto md:-mx-1 md:px-1 scrollbar-thin">
           <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
             {replaysOn && (
               <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
@@ -183,11 +190,38 @@ export function StudentClassMaterials() {
           </TabsList>
         </div>
 
+        {/* Mobile: compact non-scrolling icon grid. */}
+        <MobileFilterGrid
+          value={tab}
+          onChange={setTab}
+          items={[
+            { value: "all", label: "All", full: "All materials", icon: <LayoutGrid className="w-4 h-4" />, count: allResources.length },
+            ...(replaysOn
+              ? [{ value: "replays", label: "Replays", full: "Replays", icon: <Video className="w-4 h-4" />, count: replays.length }]
+              : []),
+            { value: "notes", label: "Notes", full: "Notes", icon: <FileText className="w-4 h-4" />, count: notes.length },
+            { value: "worksheets", label: "Work", full: "Worksheets", icon: <ClipboardList className="w-4 h-4" />, count: worksheets.length },
+            { value: "links", label: "Links", full: "Links", icon: <ExternalLink className="w-4 h-4" />, count: links.length },
+            { value: "quizzes", label: "Quiz", full: "Quizzes", icon: <HelpCircle className="w-4 h-4" />, count: quizzes.length },
+            ...(flashcardsOn
+              ? [{ value: "flashcards", label: "Cards", full: "Flashcards", icon: <Layers className="w-4 h-4" /> }]
+              : []),
+          ]}
+        />
+
+        <TabsContent value="all" className="mt-5">
+          {allResources.length === 0 ? (
+            <Empty icon={<Layers />} label="No materials here" />
+          ) : (
+            <Grid items={allResources} />
+          )}
+        </TabsContent>
         {replaysOn && (
           <TabsContent value="replays" className="mt-5">
             {replays.length === 0 ? <Empty icon={<Video />} label="No replays here" /> : <Grid items={replays} />}
           </TabsContent>
         )}
+
         <TabsContent value="notes" className="mt-5">
           {notes.length === 0 ? <Empty icon={<FileText />} label="No notes here" /> : <Grid items={notes} />}
         </TabsContent>
@@ -249,6 +283,68 @@ function Tab({ value, icon, label }: { value: string; icon: React.ReactNode; lab
     >
       {icon} {label}
     </TabsTrigger>
+  );
+}
+
+interface FilterItem {
+  value: string;
+  /** Short mobile label. */
+  label: string;
+  /** Full accessible name. */
+  full: string;
+  icon: React.ReactNode;
+  count?: number;
+}
+
+/**
+ * Mobile-only filter control: a compact non-scrolling icon grid so the material
+ * filters never overflow horizontally on narrow phones.
+ */
+function MobileFilterGrid({
+  value,
+  onChange,
+  items,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  items: FilterItem[];
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter materials"
+      className="md:hidden grid grid-cols-4 gap-1 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm"
+    >
+      {items.map((item) => {
+        const active = value === item.value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={item.full}
+            onClick={() => onChange(item.value)}
+            className="flex flex-col items-center justify-start gap-1 min-h-[44px] py-1 rounded-xl active:bg-slate-50"
+          >
+            <span
+              className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center border transition-colors",
+                active
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50 text-slate-500 border-slate-200",
+              )}
+            >
+              {item.icon}
+            </span>
+            <span className={cn("text-[11px] leading-tight", active ? "font-semibold text-slate-900" : "text-slate-500")}>
+              {item.label}
+              {typeof item.count === "number" && item.count > 0 ? ` (${item.count})` : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
