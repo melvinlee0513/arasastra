@@ -16,6 +16,8 @@ import { XPLevelChip } from "@/components/dashboard/XPLevelChip";
 import { RemedialPlaylist } from "@/components/dashboard/RemedialPlaylist";
 import { useUserProgress } from "@/hooks/useUserProgress";
 import { useGamification } from "@/hooks/useGamification";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { StudentHomeMobile } from "@/components/dashboard/home/StudentHomeMobile";
 
 interface LiveClass {
   id: string;
@@ -58,6 +60,7 @@ export function StudentDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const { progress: userProgress } = useUserProgress();
   const gamification = useGamification();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (profile?.id) {
@@ -150,6 +153,11 @@ export function StudentDashboard() {
       setIsLoading(false);
     }
   };
+
+  // Mobile students get the dedicated Home command centre (Phase 5C).
+  if (isMobile) {
+    return <StudentHomeMobile />;
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">

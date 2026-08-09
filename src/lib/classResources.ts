@@ -9,6 +9,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { recordResourceActivity } from "@/lib/studentHome";
 
 /** Max PDF size we accept from the tutor form (25 MB). */
 export const MAX_PDF_BYTES = 25 * 1024 * 1024;
@@ -71,6 +72,9 @@ export function useSignedThumbnailUrl(thumbnailPath: string | null | undefined) 
  * bucket (RLS enforces authorisation).
  */
 export async function openClassResource(r: ClassResourceLike): Promise<boolean> {
+  // Best-effort recent-activity tracking for the student Home page. The RPC
+  // itself re-checks publication + active enrolment, so tutors/admins are no-ops.
+  if (r.id) void recordResourceActivity(r.id);
   const direct = resolvePlayableUrl(r);
   if (direct) {
     window.open(direct, "_blank", "noopener,noreferrer");
@@ -88,6 +92,7 @@ export async function openClassResource(r: ClassResourceLike): Promise<boolean> 
 
 
 export type ClassResourceLike = {
+  id?: string | null;
   resource_type?: string | null;
   source_type?: string | null;
   file_url?: string | null;
