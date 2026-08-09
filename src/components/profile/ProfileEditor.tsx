@@ -131,8 +131,13 @@ export function ProfileEditor({
       setFile(null);
       if (preview) { URL.revokeObjectURL(preview); setPreview(null); }
       qc.invalidateQueries({ queryKey: ["avatar-url"] });
+      qc.invalidateQueries({ queryKey: ["student-profile"] });
       onSaved?.();
+      // Only closes after the write succeeded; failures keep the sheet open
+      // with the typed values intact.
+      onClose?.();
     },
+
     onError: (e) => toast.error(toSafeMessage(e, "Couldn't save your profile.")),
   });
 
