@@ -38,6 +38,18 @@ export default {
           leaderboard: "hsl(var(--more-leaderboard))",
           "leaderboard-accent": "hsl(var(--more-leaderboard-accent))",
         },
+        podium: {
+          DEFAULT: "hsl(var(--podium-surface))",
+          border: "hsl(var(--podium-border))",
+        },
+        medal: {
+          gold: "hsl(var(--medal-gold))",
+          "gold-soft": "hsl(var(--medal-gold-soft))",
+          silver: "hsl(var(--medal-silver))",
+          "silver-soft": "hsl(var(--medal-silver-soft))",
+          bronze: "hsl(var(--medal-bronze))",
+          "bronze-soft": "hsl(var(--medal-bronze-soft))",
+        },
         subject: {
           blue: "hsl(var(--subject-blue))",
           "blue-accent": "hsl(var(--subject-blue-accent))",

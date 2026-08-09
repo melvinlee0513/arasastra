@@ -1,11 +1,20 @@
 import { BarChart3 } from "lucide-react";
 import { XPLeaderboard } from "@/components/dashboard/XPLeaderboard";
+import { MobileLeaderboard } from "@/components/dashboard/leaderboard/MobileLeaderboard";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Standalone student leaderboard route, reached from the More hub.
  * Reuses the existing XPLeaderboard widget — no new data access.
  */
 export function LeaderboardPage() {
+  const isMobile = useIsMobile();
+  const { role } = useAuth();
+
+  // Mobile students get the dedicated podium experience; desktop is unchanged.
+  if (isMobile && role === "student") return <MobileLeaderboard />;
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-5 md:px-8 md:py-8 space-y-5">
