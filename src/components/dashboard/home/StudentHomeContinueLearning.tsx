@@ -41,7 +41,7 @@ function StudyCardArt() {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute right-3 top-1/2 hidden h-[86px] w-[96px] -translate-y-[62%] xs:block"
+      className="pointer-events-none absolute right-3 top-1/2 block h-[86px] w-[96px] -translate-y-[62%]"
     >
       <span className="absolute right-6 top-2 block h-[58px] w-[74px] rotate-[-8deg] rounded-[12px] border border-slate-200/80 bg-white shadow-[0_6px_14px_rgba(15,23,42,0.08)]" />
       <span className="absolute right-2 top-5 block h-[58px] w-[74px] rotate-[6deg] rounded-[12px] border border-home-learning-accent/20 bg-gradient-to-br from-white to-home-learning shadow-[0_8px_18px_rgba(37,74,168,0.14)]">

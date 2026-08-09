@@ -167,8 +167,8 @@ export function LeaderboardPodium({
 
       <div
         className={cn(
-          "relative flex items-end gap-2",
-          solo ? "justify-center" : "justify-center",
+          "relative flex items-end justify-center gap-2",
+          solo && "px-[26%]",
         )}
       >
         {second && <PodiumColumn entry={second} place={2} meId={meId} />}
@@ -353,20 +353,20 @@ export function CurrentStudentRank({
 export function LeaderboardPodiumSkeleton() {
   return (
     <div
-      className="rounded-[24px] border border-podium-border bg-podium p-4"
+      className="rounded-[26px] border border-podium-border bg-gradient-to-b from-podium to-white px-3 pt-5"
       aria-hidden="true"
     >
-      <div className="flex flex-col items-center">
-        <div className="h-[68px] w-[68px] rounded-full bg-white/70" />
-        <div className="mt-3 h-4 w-24 rounded-full bg-white/70" />
-        <div className="mt-2 h-3.5 w-16 rounded-full bg-white/70" />
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        {[0, 1].map((i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div className="h-[54px] w-[54px] rounded-full bg-white/70" />
-            <div className="mt-2.5 h-3.5 w-20 rounded-full bg-white/70" />
-            <div className="mt-1.5 h-3 w-14 rounded-full bg-white/70" />
+      <div className="flex items-end justify-center gap-2">
+        {[
+          { a: "h-[50px] w-[50px]", p: "h-[42px]" },
+          { a: "h-[64px] w-[64px]", p: "h-[62px]" },
+          { a: "h-[50px] w-[50px]", p: "h-[34px]" },
+        ].map((s, i) => (
+          <div key={i} className="flex flex-1 flex-col items-center">
+            <div className={`animate-pulse rounded-full bg-white/80 ${s.a}`} />
+            <div className="mt-2 h-3.5 w-16 animate-pulse rounded-full bg-white/80" />
+            <div className="mt-1.5 h-3 w-12 animate-pulse rounded-full bg-white/80" />
+            <div className={`mt-2 w-full rounded-t-[12px] bg-white/70 ${s.p}`} />
           </div>
         ))}
       </div>
