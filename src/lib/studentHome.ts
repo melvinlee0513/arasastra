@@ -66,14 +66,24 @@ export interface LeaderboardEntry {
   user_id: string;
   name: string;
   avatar_url: string | null;
+  /** Private-bucket avatar reference; rendered through <UserAvatar />. */
+  avatar_path: string | null;
   xp: number;
   position: number;
+}
+
+export interface LeaderboardMe extends LeaderboardEntry {
+  /** Rank held by the student directly above; null when leading. */
+  next_position: number | null;
+  next_xp: number | null;
 }
 
 export interface StudentLeaderboard {
   period: LeaderboardPeriod;
   top: LeaderboardEntry[];
-  me: { user_id: string; name: string; xp: number; position: number } | null;
+  me: LeaderboardMe | null;
+  /** Number of students with XP in this period (server-counted). */
+  total: number;
 }
 
 const EMPTY_FEED: StudentHomeFeed = {
@@ -104,10 +114,11 @@ export async function fetchStudentHomeFeed(): Promise<StudentHomeFeed> {
 
 export async function fetchStudentLeaderboard(
   period: LeaderboardPeriod,
+  limit = 3,
 ): Promise<StudentLeaderboard> {
   const { data, error } = await supabase.rpc("get_student_xp_leaderboard", {
     _period: period,
-    _limit: 3,
+    _limit: limit,
   });
   if (error) throw error;
   const payload = (data ?? {}) as Record<string, unknown>;
@@ -115,6 +126,7 @@ export async function fetchStudentLeaderboard(
     period,
     top: asArray<LeaderboardEntry>(payload.top),
     me: (payload.me as StudentLeaderboard["me"]) ?? null,
+    total: typeof payload.total === "number" ? payload.total : 0,
   };
 }
 
@@ -136,7 +148,9 @@ export const studentHomeKeys = {
     tenantId: string | null | undefined,
     userId: string | undefined,
     period: LeaderboardPeriod,
-  ) => ["student-home-leaderboard", tenantId ?? null, userId ?? null, period] as const,
+    limit = 3,
+  ) =>
+    ["student-home-leaderboard", tenantId ?? null, userId ?? null, period, limit] as const,
 };
 
 export function useStudentHomeFeed() {
@@ -152,17 +166,28 @@ export function useStudentHomeFeed() {
   });
 }
 
-export function useStudentLeaderboard(period: LeaderboardPeriod, enabled: boolean) {
+export function useStudentLeaderboard(
+  period: LeaderboardPeriod,
+  enabled: boolean,
+  limit = 3,
+) {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
 
   return useQuery({
-    queryKey: studentHomeKeys.leaderboard(currentTenantId, user?.id, period),
+    queryKey: studentHomeKeys.leaderboard(currentTenantId, user?.id, period, limit),
     enabled: enabled && !!user?.id,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
-    queryFn: () => fetchStudentLeaderboard(period),
+    // Keeps the shell + selector stable while a new period loads.
+    placeholderData: (prev) => prev,
+    queryFn: () => fetchStudentLeaderboard(period, limit),
   });
+}
+
+/** Formats XP the same way everywhere: integer, thousands separated. */
+export function formatXp(xp: number): string {
+  return `${Math.round(xp).toLocaleString("en-US")} XP`;
 }
 
 /** Priority derived from the canonical announcement model (pinned = important). */
