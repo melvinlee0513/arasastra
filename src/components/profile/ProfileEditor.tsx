@@ -29,8 +29,16 @@ type ProfileExt = {
   email?: string | null;
 };
 
+/** Live editor state published to a host sheet that renders its own footer. */
+export interface ProfileEditorState {
+  dirty: boolean;
+  isSaving: boolean;
+  canSave: boolean;
+  save: () => void;
+}
+
 export function ProfileEditor({
-  profile, onSaved, embedded, onClose,
+  profile, onSaved, embedded, onClose, hideActions, onStateChange,
 }: {
   profile: ProfileExt;
   onSaved?: () => void;
@@ -38,10 +46,15 @@ export function ProfileEditor({
   embedded?: boolean;
   /** Called after a successful save so the host sheet can close. */
   onClose?: () => void;
+  /** Hide the inline action row when the host renders a sticky footer. */
+  hideActions?: boolean;
+  /** Publishes dirty/saving state and a save trigger to the host. */
+  onStateChange?: (state: ProfileEditorState) => void;
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const uid = user?.id || profile.user_id;
+
 
 
   const [displayName, setDisplayName] = useState<string>(profile.display_name || "");
