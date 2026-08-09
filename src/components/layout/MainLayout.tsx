@@ -9,7 +9,7 @@ import { StreakWidget } from "@/components/dashboard/StreakWidget";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { usePWAAnalytics } from "@/hooks/usePWAAnalytics";
-import { showsMobileTabBar } from "@/lib/studentNav";
+import { hidesMobileTopChrome, showsMobileTabBar } from "@/lib/studentNav";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const showTabBar = isMobile && !!user && showsMobileTabBar(pathname);
+  // Timetable/Inbox own their mobile header — no global streak pill or bell.
+  const showTopChrome = !!user && !(isMobile && hidesMobileTopChrome(pathname));
   usePWAAnalytics();
 
 
@@ -38,7 +40,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
       
       {/* Top Bar with Notification Bell & Search */}
-      {user && (
+      {showTopChrome && (
         <div 
           className={`fixed top-0 right-0 z-30 flex items-center gap-2 p-3 ${
             isMobile ? 'left-0 justify-end' : sidebarCollapsed ? 'left-16' : 'left-64'
@@ -69,7 +71,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         className={`
           transition-all duration-300 ease-in-out
           ${isMobile ? (showTabBar ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))]' : '') : sidebarCollapsed ? 'ml-16' : 'ml-64'}
-          ${user ? 'pt-14' : ''}
+          ${showTopChrome ? 'pt-14' : ''}
         `}
       >
         <div className="min-h-screen">
