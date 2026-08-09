@@ -32,6 +32,8 @@ export function AccountPage() {
   const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
 
   // Extended profile fields (display_name, bio, avatar_path) not yet on the
   // shared auth Profile type — fetched separately so saves can refetch cleanly.
