@@ -2,19 +2,18 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { useFeatureEnabled } from "@/hooks/useFeature";
+import { useStudentProfile } from "@/lib/studentProfile";
 import {
   useStudentHomeFeed,
   useStudentLeaderboard,
   type LeaderboardPeriod,
 } from "@/lib/studentHome";
-import {
-  StudentHomeWelcome,
-  StudentHomeGamification,
-} from "./StudentHomeWelcome";
+import { StudentHomeHero } from "./StudentHomeHero";
 import { StudentHomeAnnouncements } from "./StudentHomeAnnouncements";
 import { StudentHomeContinueLearning } from "./StudentHomeContinueLearning";
 import { StudentHomeComingUp } from "./StudentHomeComingUp";
 import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
+
 
 /**
  * Student mobile Home — a personalised command centre.
@@ -24,7 +23,7 @@ import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
  * duplicate class browser (that lives under the Study tab).
  */
 export function StudentHomeMobile() {
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const gamification = useGamification();
   const gamificationOn = useFeatureEnabled("gamification");
   const leaderboardsOn = useFeatureEnabled("leaderboards");
@@ -36,22 +35,22 @@ export function StudentHomeMobile() {
   // Shares the leaderboard query cache, so the rank chip costs no extra request
   // when the leaderboard is also showing "This Week".
   const weekly = useStudentLeaderboard("week", showLeaderboard);
-
-  const firstName = (profile?.full_name || "").split(" ")[0] ?? "";
+  const profileQuery = useStudentProfile();
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 pt-6">
-        <StudentHomeWelcome firstName={firstName} isLoading={authLoading && !profile} />
-
-        <StudentHomeGamification
-          show={gamificationOn && gamification.enabled}
+      <div className="mx-auto max-w-3xl space-y-6 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))]">
+        <StudentHomeHero
+          profile={profileQuery.data}
+          isLoading={profileQuery.isLoading || !profileQuery.data}
+          showGamification={gamificationOn && gamification.enabled}
           showRank={showLeaderboard}
-          isLoading={gamification.isLoading}
+          statsLoading={gamification.isLoading}
           streak={gamification.currentStreak}
           totalXp={gamification.totalXp}
           rank={weekly.data?.me?.position ?? null}
         />
+
 
         <StudentHomeAnnouncements
           items={feed.data?.announcements ?? []}

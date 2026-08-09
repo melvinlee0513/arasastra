@@ -30,11 +30,19 @@ type ProfileExt = {
 };
 
 export function ProfileEditor({
-  profile, onSaved,
-}: { profile: ProfileExt; onSaved?: () => void }) {
+  profile, onSaved, embedded, onClose,
+}: {
+  profile: ProfileExt;
+  onSaved?: () => void;
+  /** Render without the outer Card (for use inside a modal/bottom sheet). */
+  embedded?: boolean;
+  /** Called after a successful save so the host sheet can close. */
+  onClose?: () => void;
+}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const uid = user?.id || profile.user_id;
+
 
   const [displayName, setDisplayName] = useState<string>(profile.display_name || "");
   const [bio, setBio] = useState<string>(profile.bio || "");
@@ -123,8 +131,13 @@ export function ProfileEditor({
       setFile(null);
       if (preview) { URL.revokeObjectURL(preview); setPreview(null); }
       qc.invalidateQueries({ queryKey: ["avatar-url"] });
+      qc.invalidateQueries({ queryKey: ["student-profile"] });
       onSaved?.();
+      // Only closes after the write succeeded; failures keep the sheet open
+      // with the typed values intact.
+      onClose?.();
     },
+
     onError: (e) => toast.error(toSafeMessage(e, "Couldn't save your profile.")),
   });
 
@@ -148,7 +161,14 @@ export function ProfileEditor({
   });
 
   return (
-    <Card className="p-5 sm:p-6 bg-card border border-border space-y-5">
+    <Card
+      className={
+        embedded
+          ? "border-0 bg-transparent p-0 shadow-none space-y-5"
+          : "p-5 sm:p-6 bg-card border border-border space-y-5"
+      }
+    >
+
       <div className="flex items-start gap-4">
         <div className="relative">
           <UserAvatar
@@ -257,12 +277,18 @@ export function ProfileEditor({
           >
             Reset
           </Button>
+          {embedded && (
+            <Button variant="outline" onClick={() => onClose?.()} disabled={saveMut.isPending}>
+              Cancel
+            </Button>
+          )}
           <Button onClick={() => saveMut.mutate()} disabled={!dirty || saveMut.isPending || !!nameError || !!bioError}>
             <Save className="w-4 h-4 mr-1" /> Save changes
           </Button>
         </div>
       </div>
     </Card>
+
   );
 }
 

@@ -22,6 +22,9 @@ import { OnboardingTour } from "@/components/account/OnboardingTour";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { bestDisplayName } from "@/lib/profile";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { StudentMobileProfile } from "@/pages/dashboard/StudentMobileProfile";
+
 
 export function AccountPage() {
   const navigate = useNavigate();
@@ -29,6 +32,8 @@ export function AccountPage() {
   const { subscription, isLoading: subLoading, isActive, isExpired, getDaysRemaining, refetch: refetchSubscription } = useSubscription();
   const { latestPending, refetch: refetchPayments } = usePaymentSubmissions();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
 
   // Extended profile fields (display_name, bio, avatar_path) not yet on the
   // shared auth Profile type — fetched separately so saves can refetch cleanly.
@@ -224,6 +229,13 @@ export function AccountPage() {
   if (shouldRedirectToTutor) {
     return <Navigate to="/tutor/account" replace />;
   }
+
+  // Mobile students get the simplified profile (summary + Edit sheet +
+  // personalisation). Desktop, tutors and admins keep the existing page.
+  if (isMobile && !isAdmin && !hasRole("tutor")) {
+    return <StudentMobileProfile />;
+  }
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
