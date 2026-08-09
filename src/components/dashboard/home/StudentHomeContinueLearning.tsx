@@ -1,12 +1,16 @@
 import { Link } from "react-router-dom";
-import { FileText, Video, Link2, HelpCircle, Layers, ArrowRight, BookOpen } from "lucide-react";
-import { formatRelative } from "@/lib/quizzes";
 import {
-  continueKindLabel,
-  continueRoute,
-  type HomeContinueItem,
-} from "@/lib/studentHome";
-import { SectionHeader, HomeErrorState } from "./StudentHomeShared";
+  FileText,
+  Video,
+  Link2,
+  HelpCircle,
+  Layers,
+  ArrowRight,
+  BookOpen,
+} from "lucide-react";
+import { formatRelative } from "@/lib/quizzes";
+import { continueKindLabel, continueRoute, type HomeContinueItem } from "@/lib/studentHome";
+import { HomeModule, HomeErrorState } from "./StudentHomeShared";
 
 interface Props {
   items: HomeContinueItem[];
@@ -25,70 +29,73 @@ function itemIcon(item: HomeContinueItem) {
 }
 
 /**
- * Recently accessed learning content. Access history only — never a progress
- * or completion claim.
+ * Pale-blue action module for recently accessed learning content. Access
+ * history only — never a progress or completion claim.
  */
 export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry }: Props) {
   return (
-    <section className="space-y-3">
-      <SectionHeader title="Continue Learning" />
-
+    <HomeModule tone="learning" title="Continue Learning" icon={BookOpen}>
       {isLoading ? (
-        <div className="flex gap-3 overflow-hidden" aria-hidden="true">
+        <div className="space-y-2.5" aria-hidden="true">
           {[0, 1].map((i) => (
-            <div key={i} className="h-[132px] w-[82%] shrink-0 rounded-2xl bg-slate-200/70 animate-pulse" />
+            <div key={i} className="h-[132px] rounded-[20px] bg-white/70 animate-pulse" />
           ))}
         </div>
       ) : isError ? (
         <HomeErrorState message="Couldn’t load your recent learning." onRetry={onRetry} />
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4">
-          <p className="text-[13px] text-slate-500">
+        <div className="rounded-[20px] bg-white/90 px-4 py-4">
+          <p className="text-[14px] text-slate-600">
             Start exploring your classes and your recent learning will appear here.
           </p>
           <Link
             to="/dashboard/classes"
-            className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-primary min-h-[44px] active:opacity-70"
+            className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold text-home-learning-accent active:opacity-70"
           >
-            <BookOpen className="w-4 h-4" aria-hidden="true" />
+            <BookOpen className="h-4 w-4" aria-hidden="true" />
             Go to Study
           </Link>
         </div>
       ) : (
-        <ul
-          data-scroll-reset
-          className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
+        <ul className="space-y-2.5">
           {items.slice(0, 3).map((item) => {
             const Icon = itemIcon(item);
             return (
-              <li
-                key={`${item.category}-${item.item_id}`}
-                className="w-[82%] max-w-[320px] shrink-0 snap-start sm:w-[60%]"
-              >
+              <li key={`${item.category}-${item.item_id}`}>
                 <Link
                   to={continueRoute(item)}
-                  className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_12px_rgba(15,23,42,0.05)] transition-transform active:scale-[0.99] active:bg-slate-50"
+                  className="group flex flex-col rounded-[20px] bg-white p-4 shadow-[0_1px_6px_rgba(15,23,42,0.04)] transition-transform active:scale-[0.99] active:bg-slate-50"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                      <Icon className="w-[18px] h-[18px] text-primary" aria-hidden="true" />
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-home-learning">
+                      <Icon
+                        className="h-[18px] w-[18px] text-home-learning-accent"
+                        aria-hidden="true"
+                      />
                     </span>
-                    <span className="text-[12px] text-slate-500 truncate">
-                      {item.class_name ?? item.subject_name ?? "Class"}
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-medium text-slate-700">
+                        {item.class_name ?? item.subject_name ?? "Class"}
+                      </span>
+                      <span className="block text-[12px] text-slate-400">
+                        {continueKindLabel(item)}
+                      </span>
                     </span>
                   </div>
 
-                  <h3 className="mt-2.5 text-[15px] font-semibold text-slate-900 line-clamp-2">
+                  <h3 className="mt-3 text-[16px] font-semibold text-slate-900 line-clamp-2">
                     {item.title}
                   </h3>
                   <p className="mt-1 text-[12px] text-slate-500">
-                    {continueKindLabel(item)} · {formatRelative(item.at)}
+                    Last opened {formatRelative(item.at)}
                   </p>
 
-                  <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-primary">
+                  <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-home-learning-accent">
                     {item.in_progress ? "Resume" : "Continue"}
-                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition-transform group-active:translate-x-0.5 motion-reduce:transition-none"
+                      aria-hidden="true"
+                    />
                   </span>
                 </Link>
               </li>
@@ -96,6 +103,6 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
           })}
         </ul>
       )}
-    </section>
+    </HomeModule>
   );
 }

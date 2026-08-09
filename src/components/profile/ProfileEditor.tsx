@@ -29,8 +29,16 @@ type ProfileExt = {
   email?: string | null;
 };
 
+/** Live editor state published to a host sheet that renders its own footer. */
+export interface ProfileEditorState {
+  dirty: boolean;
+  isSaving: boolean;
+  canSave: boolean;
+  save: () => void;
+}
+
 export function ProfileEditor({
-  profile, onSaved, embedded, onClose,
+  profile, onSaved, embedded, onClose, hideActions, onStateChange,
 }: {
   profile: ProfileExt;
   onSaved?: () => void;
@@ -38,10 +46,15 @@ export function ProfileEditor({
   embedded?: boolean;
   /** Called after a successful save so the host sheet can close. */
   onClose?: () => void;
+  /** Hide the inline action row when the host renders a sticky footer. */
+  hideActions?: boolean;
+  /** Publishes dirty/saving state and a save trigger to the host. */
+  onStateChange?: (state: ProfileEditorState) => void;
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const uid = user?.id || profile.user_id;
+
 
 
   const [displayName, setDisplayName] = useState<string>(profile.display_name || "");
@@ -160,6 +173,21 @@ export function ProfileEditor({
     onError: (e) => toast.error(toSafeMessage(e, "Couldn't remove your picture.")),
   });
 
+  const canSave = dirty && !saveMut.isPending && !nameError && !bioError;
+
+  // Publish state so a host sheet can render a sticky, always-reachable footer.
+  useEffect(() => {
+    onStateChange?.({
+      dirty,
+      isSaving: saveMut.isPending,
+      canSave,
+      save: () => saveMut.mutate(),
+    });
+    // onStateChange is treated as a stable callback by the host.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, canSave, saveMut.isPending]);
+
+
   return (
     <Card
       className={
@@ -256,6 +284,7 @@ export function ProfileEditor({
         </div>
       </div>
 
+      {!hideActions && (
       <div className="flex items-center justify-between flex-wrap gap-2">
         {dirty ? (
           <p className="text-xs text-amber-700 inline-flex items-center gap-1">
@@ -282,11 +311,13 @@ export function ProfileEditor({
               Cancel
             </Button>
           )}
-          <Button onClick={() => saveMut.mutate()} disabled={!dirty || saveMut.isPending || !!nameError || !!bioError}>
+          <Button onClick={() => saveMut.mutate()} disabled={!canSave}>
             <Save className="w-4 h-4 mr-1" /> Save changes
           </Button>
         </div>
       </div>
+      )}
+
     </Card>
 
   );

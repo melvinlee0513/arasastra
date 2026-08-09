@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, LayoutGrid, GraduationCap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBottomNavHidden } from "@/lib/uiChrome";
 
 interface TabItem {
   path: string;
@@ -37,11 +38,17 @@ const tabs: TabItem[] = [
  */
 export function MobileBottomNav() {
   const { pathname } = useLocation();
+  const hidden = useBottomNavHidden();
 
   const isActive = (tab: TabItem) => {
     if (pathname === tab.path) return true;
     return (tab.matches ?? []).some((m) => pathname === m || pathname.startsWith(`${m}/`));
   };
+
+  // Mobile overlays (Edit Profile sheet) suppress the pill so it can never
+  // cover their action footer.
+  if (hidden) return null;
+
 
   return (
     <nav
