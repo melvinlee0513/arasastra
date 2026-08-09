@@ -60,19 +60,15 @@ export function StudentClassHome() {
     },
   });
 
+  // Canonical flexible About model — the first ordered block acts as the
+  // Class Home teaser. No fixed headings are assumed.
   const aboutQ = useQuery({
-    queryKey: ["class-about", classId],
+    queryKey: aboutKeys.sections(classId),
     enabled: !!classId && !!ctx.data?.canView,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("class_about")
-        .select("overview,preparation_requirements")
-        .eq("class_id", classId!)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => listClassAboutSections(classId!),
   });
+  const aboutPreview = aboutQ.data?.[0] ?? null;
+
 
   const latestAnnQ = useLatestClassAnnouncement(classId, !!ctx.data?.canView);
 
