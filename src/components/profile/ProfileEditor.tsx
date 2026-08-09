@@ -284,6 +284,7 @@ export function ProfileEditor({
         </div>
       </div>
 
+      {!hideActions && (
       <div className="flex items-center justify-between flex-wrap gap-2">
         {dirty ? (
           <p className="text-xs text-amber-700 inline-flex items-center gap-1">
@@ -310,11 +311,13 @@ export function ProfileEditor({
               Cancel
             </Button>
           )}
-          <Button onClick={() => saveMut.mutate()} disabled={!dirty || saveMut.isPending || !!nameError || !!bioError}>
+          <Button onClick={() => saveMut.mutate()} disabled={!canSave}>
             <Save className="w-4 h-4 mr-1" /> Save changes
           </Button>
         </div>
       </div>
+      )}
+
     </Card>
 
   );
