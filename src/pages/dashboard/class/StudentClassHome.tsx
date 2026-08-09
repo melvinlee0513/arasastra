@@ -20,6 +20,8 @@ import { Megaphone, Pin } from "lucide-react";
 import { toast } from "sonner";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { listStudentClassQuizzes, quizStudentKeys, formatDateTime, type StudentQuizListRow } from "@/lib/quizzes";
+import { aboutKeys, listClassAboutSections } from "@/lib/classAbout";
+
 
 type ResourceRow = {
   id: string;
@@ -231,8 +233,10 @@ export function StudentClassHome() {
         {flashcardsOn && <FlashcardsWidget basePath={basePath} />}
 
 
+        {/* Next class is desktop-only — the mobile class header already shows
+            the schedule, so this standalone card would be redundant. */}
         {ctx.data?.klass?.scheduled_at && (
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+          <section className="hidden md:block bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
             <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" /> Next class
             </h3>
@@ -244,6 +248,7 @@ export function StudentClassHome() {
             )}
           </section>
         )}
+
 
         {ctx.data && ctx.data.tutors.length > 0 && (
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
@@ -263,14 +268,16 @@ export function StudentClassHome() {
           </section>
         )}
 
+        {/* Subject is desktop-only for the same reason. */}
         {ctx.data?.klass?.subject?.name && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+          <div className="hidden md:block bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
             <p className="text-xs uppercase tracking-wide font-semibold text-slate-500">Subject</p>
             <p className="text-sm mt-1 text-slate-900 inline-flex items-center gap-1.5">
               <BookOpen className="w-4 h-4 text-primary" /> {ctx.data.klass.subject.name}
             </p>
           </div>
         )}
+
       </aside>
     </div>
   );
