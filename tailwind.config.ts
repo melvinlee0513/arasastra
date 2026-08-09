@@ -28,6 +28,17 @@ export default {
           ranking: "hsl(var(--home-ranking))",
           "ranking-accent": "hsl(var(--home-ranking-accent))",
         },
+        more: {
+          timetable: "hsl(var(--more-timetable))",
+          "timetable-accent": "hsl(var(--more-timetable-accent))",
+          inbox: "hsl(var(--more-inbox))",
+          "inbox-accent": "hsl(var(--more-inbox-accent))",
+          achievements: "hsl(var(--more-achievements))",
+          "achievements-accent": "hsl(var(--more-achievements-accent))",
+          leaderboard: "hsl(var(--more-leaderboard))",
+          "leaderboard-accent": "hsl(var(--more-leaderboard-accent))",
+        },
+
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
