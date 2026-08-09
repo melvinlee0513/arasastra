@@ -83,3 +83,16 @@ export function studentParentRoute(pathname: string): string {
   if (/\/flashcards\/[^/]+\/study$/.test(p)) return `${base}/flashcards`;
   return base;
 }
+
+/**
+ * Root-level student pages that own their own mobile header.
+ *
+ * Timetable and Inbox drop the global streak pill + notification bell on mobile:
+ * streak already lives on Home and the Inbox *is* the notification destination.
+ * Desktop keeps the global chrome untouched.
+ */
+const MOBILE_BARE_HEADER = new Set<string>(["/timetable", "/inbox"]);
+
+export function hidesMobileTopChrome(pathname: string): boolean {
+  return MOBILE_BARE_HEADER.has(normalise(pathname));
+}
