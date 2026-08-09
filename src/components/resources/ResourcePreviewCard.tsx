@@ -116,10 +116,12 @@ export function ResourcePreviewCard({
   const cover = (
     <div
       className={cn(
-        "relative w-full aspect-video overflow-hidden rounded-t-2xl bg-slate-100",
+        // Compact 4:3 thumbnail on phones, 16:9 from tablet up.
+        "relative w-full aspect-[4/3] md:aspect-video overflow-hidden rounded-t-2xl bg-slate-100",
         meta.cover,
       )}
     >
+
       {/* Pre-generated preview image from private storage */}
       {hasStoredThumb && (
         <img
