@@ -1,9 +1,11 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Video, FileText, HelpCircle, PlayCircle, ClipboardList, ExternalLink, Layers,
+  Video, FileText, HelpCircle, PlayCircle, ClipboardList, ExternalLink, Layers, LayoutGrid,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureEnabled } from "@/hooks/useFeature";
@@ -41,6 +43,8 @@ export function StudentClassMaterials() {
   const flashcardsOn = useFeatureEnabled("flashcards");
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get("folder");
+  const [tab, setTab] = useState<string>(replaysOn ? "replays" : "notes");
+
 
   const q = useQuery({
     queryKey: ["classroom-materials", currentTenantId, classId, user?.id],
@@ -134,6 +138,8 @@ export function StudentClassMaterials() {
   const notes = scoped.filter((r) => r.resource_type === "note");
   const worksheets = scoped.filter((r) => r.resource_type === "worksheet");
   const links = scoped.filter((r) => r.resource_type === "link");
+  const allResources = scoped;
+
 
   return shell(
     <div className="space-y-6">
