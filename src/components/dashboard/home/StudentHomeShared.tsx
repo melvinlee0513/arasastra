@@ -7,10 +7,37 @@ import { cn } from "@/lib/utils";
 /**
  * Student mobile Home primitives.
  *
- * The Home page is a "daily learning feed": a neutral page background with a
- * consistent section header, while each section's content adopts the visual
- * structure of the information it carries (carousel, deck, timeline, podium).
+ * The Home page is a playful-premium "daily learning feed": a soft off-white
+ * page, white/pastel cards with large radii and low-contrast depth, and one
+ * consistent section header. Each section's content adopts the visual structure
+ * of the information it carries (carousel, deck, timeline, podium).
  */
+
+/** Soft rounded icon bubble used by every section header and card. */
+export function IconBubble({
+  icon: Icon,
+  className,
+  size = "md",
+}: {
+  icon: LucideIcon;
+  className?: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const dims =
+    size === "lg" ? "h-11 w-11 rounded-[16px]" : size === "sm" ? "h-8 w-8 rounded-[11px]" : "h-9 w-9 rounded-[14px]";
+  const icon = size === "lg" ? "h-5 w-5" : size === "sm" ? "h-4 w-4" : "h-[18px] w-[18px]";
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center shadow-[0_2px_8px_rgba(15,23,42,0.06)]",
+        dims,
+        className,
+      )}
+    >
+      <Icon className={icon} aria-hidden="true" />
+    </span>
+  );
+}
 
 interface HomeSectionHeaderProps {
   title: string;
@@ -18,6 +45,8 @@ interface HomeSectionHeaderProps {
   /** Icon bubble + accent colour classes, e.g. "bg-home-updates text-home-updates-accent". */
   accentClassName?: string;
   action?: { label: string; to: string };
+  /** Accent colour class for the action link, e.g. "text-home-ranking-accent". */
+  actionClassName?: string;
   /** Small caption rendered under the title (e.g. "This week"). */
   caption?: string;
 }
@@ -25,23 +54,17 @@ interface HomeSectionHeaderProps {
 /** Unified section header: icon bubble, title, optional caption and action. */
 export function HomeSectionHeader({
   title,
-  icon: Icon,
+  icon,
   accentClassName = "bg-primary/10 text-primary",
   action,
+  actionClassName,
   caption,
 }: HomeSectionHeaderProps) {
   return (
     <div className="flex items-center gap-2.5 px-0.5">
-      <span
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px]",
-          accentClassName,
-        )}
-      >
-        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-      </span>
+      <IconBubble icon={icon} className={cn("bg-white", accentClassName)} />
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-[18px] font-bold leading-tight text-slate-900">
+        <h2 className="truncate text-[18px] font-bold leading-tight tracking-[-0.01em] text-slate-900">
           {title}
         </h2>
         {caption && (
@@ -53,7 +76,10 @@ export function HomeSectionHeader({
       {action && (
         <Link
           to={action.to}
-          className="-my-2 inline-flex min-h-[44px] items-center gap-0.5 whitespace-nowrap px-1 text-[13px] font-semibold text-slate-500 active:opacity-70"
+          className={cn(
+            "-my-2 inline-flex min-h-[44px] items-center gap-0.5 whitespace-nowrap px-1 text-[13px] font-semibold active:opacity-70",
+            actionClassName ?? "text-slate-500",
+          )}
         >
           {action.label}
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -81,29 +107,36 @@ export function HomeSection({
   );
 }
 
-/** Compact neutral empty state used across Home sections. */
+/** Shared soft-card surface used by every Home module. */
+export const HOME_CARD =
+  "rounded-[24px] border border-slate-200/70 bg-white shadow-[0_6px_22px_rgba(15,23,42,0.06)]";
+
+/**
+ * Compact but polished empty state — keeps the module's visual footprint so the
+ * page composition never collapses when data is absent.
+ */
 export function HomeEmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
+  accentClassName = "bg-slate-100 text-slate-400",
 }: {
   icon: LucideIcon;
   title: string;
   description?: string;
   action?: { label: string; to: string };
+  accentClassName?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-[20px] border border-slate-200/80 bg-white px-4 py-6 text-center">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-        <Icon className="h-[18px] w-[18px] text-slate-400" aria-hidden="true" />
-      </span>
-      <p className="text-[14.5px] font-semibold text-slate-900">{title}</p>
-      {description && <p className="text-[13px] text-slate-500">{description}</p>}
+    <div className={cn(HOME_CARD, "flex flex-col items-center gap-2 px-4 py-7 text-center")}>
+      <IconBubble icon={icon} size="lg" className={accentClassName} />
+      <p className="mt-0.5 text-[15px] font-bold text-slate-900">{title}</p>
+      {description && <p className="max-w-[260px] text-[13px] text-slate-500">{description}</p>}
       {action && (
         <Link
           to={action.to}
-          className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-[13px] font-semibold text-primary active:opacity-70"
+          className="mt-0.5 inline-flex min-h-[44px] items-center gap-1 text-[13px] font-semibold text-primary active:opacity-70"
         >
           {action.label}
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -122,7 +155,7 @@ export function HomeErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200/80 bg-white px-4 py-3">
+    <div className={cn(HOME_CARD, "flex items-center justify-between gap-3 px-4 py-3")}>
       <p className="text-[13px] text-slate-600">{message}</p>
       <button
         type="button"
@@ -133,5 +166,21 @@ export function HomeErrorState({
         Retry
       </button>
     </div>
+  );
+}
+
+/** Small floating decorative accents (sparks/dots) used around the hero. */
+export function HomeSparkAccents({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn("pointer-events-none absolute", className)}>
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" className="text-primary">
+        <path
+          d="M13 1.5l2.1 6.4a3 3 0 001.9 1.9l6.5 2.2-6.5 2.2a3 3 0 00-1.9 1.9L13 22.5l-2.1-6.4a3 3 0 00-1.9-1.9L2.5 12l6.5-2.2a3 3 0 001.9-1.9L13 1.5z"
+          fill="currentColor"
+        />
+      </svg>
+      <span className="absolute -right-3 top-6 block h-1.5 w-1.5 rounded-full bg-primary/50" />
+      <span className="absolute -left-3 top-9 block h-1 w-1 rounded-full bg-home-ranking-accent/50" />
+    </span>
   );
 }
