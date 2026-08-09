@@ -149,3 +149,11 @@ export function greetingFor(date: Date = new Date()): string {
   if (h < 18) return "Good afternoon";
   return "Good evening";
 }
+
+/** Best label for the student: display_name > full_name > "Student". */
+export function bestStudentName(p?: {
+  display_name?: string | null;
+  full_name?: string | null;
+} | null): string {
+  return p?.display_name?.trim() || p?.full_name?.trim() || "Student";
+}
