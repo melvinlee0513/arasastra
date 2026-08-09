@@ -1,26 +1,20 @@
-import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useStudentProfile } from "@/lib/studentProfile";
-import {
-  useStudentHomeFeed,
-  useStudentLeaderboard,
-  type LeaderboardPeriod,
-} from "@/lib/studentHome";
+import { useStudentHomeFeed, useStudentLeaderboard } from "@/lib/studentHome";
 import { StudentHomeHero } from "./StudentHomeHero";
 import { StudentHomeAnnouncements } from "./StudentHomeAnnouncements";
 import { StudentHomeContinueLearning } from "./StudentHomeContinueLearning";
 import { StudentHomeComingUp } from "./StudentHomeComingUp";
 import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
 
-
 /**
- * Student mobile Home — a personalised command centre.
+ * Student mobile Home — a daily learning feed.
  *
- * Information areas, in order: Welcome + gamification, Important Updates,
- * Continue Learning, Coming Up, XP Leaderboard. No course-progress UX and no
- * duplicate class browser (that lives under the Study tab).
+ * Rhythm: personalised header → Important Updates carousel → Continue Learning
+ * deck → Coming Up timeline → Top 3 XP podium. Each section adopts the shape of
+ * its information; no course-progress UX and no duplicate class browser.
  */
 export function StudentHomeMobile() {
   const { user } = useAuth();
@@ -29,17 +23,15 @@ export function StudentHomeMobile() {
   const leaderboardsOn = useFeatureEnabled("leaderboards");
   const showLeaderboard = gamificationOn && gamification.enabled && leaderboardsOn;
 
-  const [period, setPeriod] = useState<LeaderboardPeriod>("week");
-
   const feed = useStudentHomeFeed();
-  // Shares the leaderboard query cache, so the rank chip costs no extra request
-  // when the leaderboard is also showing "This Week".
-  const weekly = useStudentLeaderboard("week", showLeaderboard);
+  // Shares the "This Week" leaderboard query cache with the podium preview, so
+  // the hero rank chip costs no extra request.
+  const weekly = useStudentLeaderboard("week", showLeaderboard, 3);
   const profileQuery = useStudentProfile();
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-3xl space-y-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))]">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(96px+env(safe-area-inset-bottom))]">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}
@@ -50,7 +42,6 @@ export function StudentHomeMobile() {
           totalXp={gamification.totalXp}
           rank={weekly.data?.me?.position ?? null}
         />
-
 
         <StudentHomeAnnouncements
           items={feed.data?.announcements ?? []}
@@ -78,13 +69,7 @@ export function StudentHomeMobile() {
           onRetry={() => feed.refetch()}
         />
 
-        {showLeaderboard && (
-          <StudentHomeLeaderboard
-            currentUserId={user?.id}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
-        )}
+        {showLeaderboard && <StudentHomeLeaderboard currentUserId={user?.id} />}
       </div>
     </div>
   );
