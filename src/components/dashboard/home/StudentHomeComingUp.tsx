@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { format, isToday, isTomorrow, isThisWeek } from "date-fns";
-import { CalendarCheck, CalendarClock, HelpCircle, GraduationCap } from "lucide-react";
+import { format, isToday, isTomorrow, isThisWeek, differenceInMinutes } from "date-fns";
+import { CalendarCheck, CalendarClock, HelpCircle, GraduationCap, ArrowRight } from "lucide-react";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
-import { HomeModule, HomeErrorState } from "./StudentHomeShared";
+import { HomeSection, HomeSectionHeader, HomeErrorState } from "./StudentHomeShared";
 
 interface Props {
   items: HomeUpcomingItem[];
@@ -25,71 +25,152 @@ function itemIcon(kind: HomeUpcomingItem["kind"]) {
   return CalendarClock;
 }
 
-/** Pale-lavender academic agenda: compact rows, compact empty state. */
+/**
+ * Coming Up — a mini agenda timeline grouped by day, mirroring the mobile
+ * Timetable language. All entries come from the canonical enrolment-scoped feed.
+ */
 export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Props) {
+  const visible = items.slice(0, 5);
+
+  // "Next up" only when the real schedule says a class starts within the hour.
+  const next = visible[0];
+  const minutesToNext = next ? differenceInMinutes(new Date(next.at), new Date()) : null;
+  const showNextUp =
+    !!next && next.kind === "class" && minutesToNext != null && minutesToNext >= 0 && minutesToNext <= 60;
+
+  const groups = visible.reduce<{ label: string; items: HomeUpcomingItem[] }[]>((acc, item) => {
+    const label = dayLabel(item.at);
+    const last = acc[acc.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else acc.push({ label, items: [item] });
+    return acc;
+  }, []);
+
   return (
-    <HomeModule
-      tone="schedule"
-      title="Coming Up"
-      icon={CalendarCheck}
-      action={{ label: "Calendar", to: "/timetable" }}
+    <HomeSection
+      header={
+        <HomeSectionHeader
+          title="Coming Up"
+          icon={CalendarCheck}
+          accentClassName="bg-home-schedule text-home-schedule-accent"
+          action={{ label: "Calendar", to: "/timetable" }}
+        />
+      }
     >
       {isLoading ? (
-        <div className="space-y-2" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-[58px] rounded-[20px] bg-white/70 animate-pulse" />
-          ))}
-        </div>
+        <TimelineSkeleton />
       ) : isError ? (
         <HomeErrorState message="Couldn’t load your schedule." onRetry={onRetry} />
-      ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-[20px] bg-white/90 px-4 py-7 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-home-schedule">
-            <CalendarCheck
-              className="h-5 w-5 text-home-schedule-accent"
-              aria-hidden="true"
-            />
-          </span>
+      ) : visible.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-[20px] border border-slate-200/80 bg-white px-4 py-5 text-center">
           <p className="text-[15px] font-semibold text-slate-900">You’re all caught up 🎉</p>
           <p className="text-[13px] text-slate-500">Nothing scheduled for the next few days.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-[20px] bg-white">
-          {items.slice(0, 5).map((item) => {
-            const Icon = itemIcon(item.kind);
-            const at = new Date(item.at);
-            return (
-              <li key={`${item.kind}-${item.item_id}-${item.at}`}>
-                <Link
-                  to={upcomingRoute(item)}
-                  className="flex min-h-[44px] items-center gap-3 px-3 py-3 active:bg-slate-50"
-                >
-                  <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-2xl bg-home-schedule leading-none">
-                    <span className="text-[10px] font-semibold uppercase text-home-schedule-accent">
-                      {format(at, "MMM")}
-                    </span>
-                    <span className="text-[15px] font-bold text-slate-900">
-                      {format(at, "d")}
-                    </span>
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-slate-900">
-                      {item.title}
-                    </span>
-                    <span className="flex items-center gap-1 text-[12px] text-slate-500">
-                      <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                      <span className="truncate">
-                        {dayLabel(item.at)} · {format(at, "h:mm a")} ·{" "}
-                        {upcomingKindLabel(item.kind)}
-                      </span>
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-3">
+          {showNextUp && next && (
+            <Link
+              to={upcomingRoute(next)}
+              className="flex items-center gap-3 rounded-[20px] border border-home-schedule-accent/25 bg-home-schedule px-4 py-3 active:scale-[0.99] motion-reduce:transition-none"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-home-schedule-accent">
+                  Next up
+                </p>
+                <p className="truncate text-[15.5px] font-bold text-slate-900">{next.title}</p>
+                <p className="text-[12.5px] text-slate-600">
+                  {minutesToNext === 0 ? "Starting now" : `Starts in ${minutesToNext} min`}
+                </p>
+              </div>
+              <ArrowRight
+                className="h-4 w-4 shrink-0 text-home-schedule-accent"
+                aria-hidden="true"
+              />
+            </Link>
+          )}
+
+          <div className="rounded-[20px] border border-slate-200/80 bg-white px-4 py-3.5">
+            {groups.map((group, gi) => (
+              <div key={group.label} className={gi > 0 ? "mt-4" : undefined}>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-home-schedule-accent">
+                  {group.label}
+                </p>
+                <ul className="mt-2">
+                  {group.items.map((item, i) => {
+                    const Icon = itemIcon(item.kind);
+                    const at = new Date(item.at);
+                    const isLast = i === group.items.length - 1;
+                    return (
+                      <li key={`${item.kind}-${item.item_id}-${item.at}`}>
+                        <Link
+                          to={upcomingRoute(item)}
+                          className="flex min-h-[52px] items-stretch gap-3 rounded-[14px] active:bg-slate-50"
+                        >
+                          <span className="w-[58px] shrink-0 pt-0.5 text-right text-[12.5px] font-semibold tabular-nums text-slate-500">
+                            {format(at, "h:mm a")}
+                          </span>
+                          {/* Timeline rail: marker + connector. */}
+                          <span
+                            className="relative flex w-3 shrink-0 flex-col items-center"
+                            aria-hidden="true"
+                          >
+                            <span className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-home-schedule-accent" />
+                            {!isLast && (
+                              <span className="mt-1 w-[2px] flex-1 rounded-full bg-home-schedule" />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1 pb-3">
+                            <span className="block truncate text-[15px] font-semibold text-slate-900">
+                              {item.title}
+                            </span>
+                            <span className="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500">
+                              <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                              <span className="truncate">
+                                {item.class_name ?? item.subject_name
+                                  ? `${item.class_name ?? item.subject_name} · ${upcomingKindLabel(item.kind)}`
+                                  : upcomingKindLabel(item.kind)}
+                              </span>
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+
+            <Link
+              to="/timetable"
+              className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-[13px] font-semibold text-home-schedule-accent active:opacity-70"
+            >
+              View full schedule
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
       )}
-    </HomeModule>
+    </HomeSection>
+  );
+}
+
+function TimelineSkeleton() {
+  return (
+    <div
+      className="space-y-3 rounded-[20px] border border-slate-200/80 bg-white px-4 py-4"
+      aria-hidden="true"
+    >
+      <div className="h-3 w-16 rounded-full bg-slate-100" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex items-start gap-3">
+          <div className="h-3.5 w-[52px] rounded-full bg-slate-100" />
+          <div className="mt-[3px] h-2 w-2 rounded-full bg-slate-200" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 w-2/3 rounded-full bg-slate-100" />
+            <div className="h-3 w-1/3 rounded-full bg-slate-100" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
