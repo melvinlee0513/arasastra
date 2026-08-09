@@ -37,7 +37,7 @@ export function StudentHomeMobile() {
   // when the leaderboard is also showing "This Week".
   const weekly = useStudentLeaderboard("week", showLeaderboard);
 
-  const firstName = (profile?.display_name || profile?.full_name || "").split(" ")[0] ?? "";
+  const firstName = (profile?.full_name || "").split(" ")[0] ?? "";
 
   return (
     <div className="min-h-screen bg-slate-50">
