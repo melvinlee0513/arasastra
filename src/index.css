@@ -69,6 +69,19 @@
     --home-ranking: 355 100% 97%;
     --home-ranking-accent: 353 65% 50%;
 
+    /* Student mobile "More" utility hub — restrained per-service accents.
+       Card surfaces stay white; only icon bubbles and tints use these. */
+    --more-timetable: 214 100% 96%;
+    --more-timetable-accent: 220 85% 50%;
+    --more-inbox: 232 100% 97%;
+    --more-inbox-accent: 240 65% 55%;
+    --more-achievements: 42 100% 94%;
+    --more-achievements-accent: 35 92% 42%;
+    --more-leaderboard: 258 100% 97%;
+    --more-leaderboard-accent: 258 60% 52%;
+
+
+
 
 
     /* Sidebar - Navy themed */
