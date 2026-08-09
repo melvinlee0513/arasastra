@@ -7,6 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileTimetable } from "@/components/dashboard/timetable/MobileTimetable";
+import { fetchStudentTimetable, type TimetableEntry } from "@/lib/studentTimetable";
 
 interface ScheduledClass {
   id: string;
@@ -36,6 +39,7 @@ function withTimeout<T>(p: PromiseLike<T>, ms = 12000): Promise<T> {
 
 export function TimetablePage() {
   const { user, profile, role, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const [viewMode, setViewMode] = useState<ViewMode>("today");
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
@@ -114,6 +118,18 @@ export function TimetablePage() {
   }, [authLoading, user, profile?.id, role, currentWeekStart]);
 
   useEffect(() => { fetchClasses(); }, [fetchClasses]);
+
+  // Refresh on focus/reconnect so a schedule change never needs a hard refresh.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const refresh = () => fetchClasses();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, [authLoading, user, fetchClasses]);
 
   const selectedDate = weekDates[selectedDay];
   const now = new Date();
