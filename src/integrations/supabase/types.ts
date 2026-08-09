@@ -1473,6 +1473,7 @@ export type Database = {
           email: string | null
           form_year: string | null
           full_name: string
+          home_header_color: string
           id: string
           is_registered: boolean
           last_contacted_at: string | null
@@ -1498,6 +1499,7 @@ export type Database = {
           email?: string | null
           form_year?: string | null
           full_name: string
+          home_header_color?: string
           id?: string
           is_registered?: boolean
           last_contacted_at?: string | null
@@ -1523,6 +1525,7 @@ export type Database = {
           email?: string | null
           form_year?: string | null
           full_name?: string
+          home_header_color?: string
           id?: string
           is_registered?: boolean
           last_contacted_at?: string | null
