@@ -2,19 +2,18 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGamification } from "@/hooks/useGamification";
 import { useFeatureEnabled } from "@/hooks/useFeature";
+import { useStudentProfile } from "@/lib/studentProfile";
 import {
   useStudentHomeFeed,
   useStudentLeaderboard,
   type LeaderboardPeriod,
 } from "@/lib/studentHome";
-import {
-  StudentHomeWelcome,
-  StudentHomeGamification,
-} from "./StudentHomeWelcome";
+import { StudentHomeHero } from "./StudentHomeHero";
 import { StudentHomeAnnouncements } from "./StudentHomeAnnouncements";
 import { StudentHomeContinueLearning } from "./StudentHomeContinueLearning";
 import { StudentHomeComingUp } from "./StudentHomeComingUp";
 import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
+
 
 /**
  * Student mobile Home — a personalised command centre.
