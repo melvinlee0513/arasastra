@@ -159,10 +159,10 @@ export function StudentClassHome() {
             )}
           </section>
         )}
-        <section className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-900">Recent materials</h2>
-            <Button asChild variant="ghost" size="sm" className="text-primary">
+        <section className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+            <h2 className="font-semibold text-slate-900 text-[15px] md:text-base">Recent materials</h2>
+            <Button asChild variant="ghost" size="sm" className="text-primary h-8 px-2 text-[13px]">
               <Link to={materialsPath}>View all <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
             </Button>
           </div>
@@ -177,52 +177,43 @@ export function StudentClassHome() {
               <p className="text-sm text-slate-500">Check back once your tutor publishes new material.</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            /* Mobile: compact 2×2 tap-anywhere tiles. Desktop keeps two wider columns. */
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
               {recent.map((r) => (
                 <ResourcePreviewCard
                   key={r.id}
                   resource={r}
                   role="student"
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="rounded-full h-9 px-3 text-primary min-h-[44px] sm:min-h-0"
-                      onClick={async () => {
-                        const ok = await openClassResource(r);
-                        if (!ok) toast.error("This file isn't available right now.");
-                      }}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
-                    </Button>
-                  }
+                  compact
+                  onOpen={async () => {
+                    const ok = await openClassResource(r);
+                    if (!ok) toast.error("This file isn't available right now.");
+                  }}
                 />
               ))}
             </div>
           )}
         </section>
 
-        {(aboutQ.data?.overview || aboutQ.data?.preparation_requirements) && (
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+        {aboutPreview && (
+          <section className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="font-semibold text-slate-900 flex items-center gap-2 text-[15px] md:text-base">
                 <Info className="w-4 h-4 text-primary" /> About this class
               </h2>
-              <Button asChild variant="ghost" size="sm" className="text-primary">
+              <Button asChild variant="ghost" size="sm" className="text-primary h-8 px-2 text-[13px]">
                 <Link to={`${basePath}/about`}>Read more <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
               </Button>
             </div>
-            {aboutQ.data?.overview && (
-              <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-4">{aboutQ.data.overview}</p>
-            )}
-            {aboutQ.data?.preparation_requirements && (
-              <div className="mt-4 p-3 rounded-2xl bg-amber-50 border border-amber-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">Prepare for class</p>
-                <p className="text-sm text-amber-900 whitespace-pre-wrap line-clamp-3">{aboutQ.data.preparation_requirements}</p>
-              </div>
+            <p className="text-[13px] font-semibold text-slate-800">{aboutPreview.title}</p>
+            {aboutPreview.content && (
+              <p className="text-sm text-slate-600 whitespace-pre-wrap line-clamp-4 mt-1">
+                {aboutPreview.content}
+              </p>
             )}
           </section>
         )}
+
       </div>
 
       <aside className="space-y-5">
