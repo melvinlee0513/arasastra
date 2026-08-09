@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   BarChart3,
@@ -23,6 +23,7 @@ import {
   formatXp,
   useStudentLeaderboard,
   type LeaderboardEntry,
+  type LeaderboardMe,
   type LeaderboardPeriod,
 } from "@/lib/studentHome";
 
@@ -422,18 +423,19 @@ function MyPosition({
   inPodium,
   period,
 }: {
-  me: NonNullable<ReturnType<typeof useStudentLeaderboard>["data"]>["me"];
+  me: LeaderboardMe | null;
   inPodium: boolean;
   period: LeaderboardPeriod;
 }) {
   if (!me) return null;
 
   // Gap is derived only from server-returned XP of the rank directly above.
-  const gap = useMemo(() => {
-    if (me.next_xp == null || me.next_position == null) return null;
-    const diff = me.next_xp - me.xp;
-    return diff > 0 ? `${diff.toLocaleString("en-US")} XP to #${me.next_position}` : null;
-  }, [me.next_xp, me.next_position, me.xp]);
+  const diff =
+    me.next_xp != null && me.next_position != null ? me.next_xp - me.xp : null;
+  const gap =
+    diff != null && diff > 0
+      ? `${diff.toLocaleString("en-US")} XP to #${me.next_position}`
+      : null;
 
   if (inPodium) {
     return (

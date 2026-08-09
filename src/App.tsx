@@ -172,7 +172,7 @@ const App = () => (
 
             {/* Student "More" hub + root-level services reached from it */}
             <Route path="/dashboard/more" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><MorePage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/leaderboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LeaderboardPage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/leaderboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="leaderboards" label="Leaderboard"><DashboardLayout><LeaderboardPage /></DashboardLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/profile" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><AccountPage /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
             <Route path="/dashboard/resources" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ResourceHub /></DashboardLayout></TenantGuard></ProtectedRoute>} />
