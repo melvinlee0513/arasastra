@@ -165,8 +165,9 @@ export function StudentClassMaterials() {
         </FolderGrid>
       )}
 
-      <Tabs defaultValue={replaysOn ? "replays" : "notes"} className="w-full">
-        <div className="overflow-x-auto -mx-4 px-4 md:-mx-1 md:px-1 scrollbar-thin">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        {/* Desktop keeps the horizontal pill filters. */}
+        <div className="hidden md:block overflow-x-auto md:-mx-1 md:px-1 scrollbar-thin">
           <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
             {replaysOn && (
               <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
@@ -183,11 +184,38 @@ export function StudentClassMaterials() {
           </TabsList>
         </div>
 
+        {/* Mobile: compact non-scrolling icon grid. */}
+        <MobileFilterGrid
+          value={tab}
+          onChange={setTab}
+          items={[
+            { value: "all", label: "All", full: "All materials", icon: <Target className="w-4 h-4" />, count: allResources.length },
+            ...(replaysOn
+              ? [{ value: "replays", label: "Replays", full: "Replays", icon: <Video className="w-4 h-4" />, count: replays.length }]
+              : []),
+            { value: "notes", label: "Notes", full: "Notes", icon: <FileText className="w-4 h-4" />, count: notes.length },
+            { value: "worksheets", label: "Work", full: "Worksheets", icon: <ClipboardList className="w-4 h-4" />, count: worksheets.length },
+            { value: "links", label: "Links", full: "Links", icon: <ExternalLink className="w-4 h-4" />, count: links.length },
+            { value: "quizzes", label: "Quiz", full: "Quizzes", icon: <HelpCircle className="w-4 h-4" />, count: quizzes.length },
+            ...(flashcardsOn
+              ? [{ value: "flashcards", label: "Cards", full: "Flashcards", icon: <Layers className="w-4 h-4" /> }]
+              : []),
+          ]}
+        />
+
+        <TabsContent value="all" className="mt-5">
+          {allResources.length === 0 ? (
+            <Empty icon={<Layers />} label="No materials here" />
+          ) : (
+            <Grid items={allResources} />
+          )}
+        </TabsContent>
         {replaysOn && (
           <TabsContent value="replays" className="mt-5">
             {replays.length === 0 ? <Empty icon={<Video />} label="No replays here" /> : <Grid items={replays} />}
           </TabsContent>
         )}
+
         <TabsContent value="notes" className="mt-5">
           {notes.length === 0 ? <Empty icon={<FileText />} label="No notes here" /> : <Grid items={notes} />}
         </TabsContent>
