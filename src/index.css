@@ -80,6 +80,23 @@
     --more-leaderboard: 258 100% 97%;
     --more-leaderboard-accent: 258 60% 52%;
 
+    /* Student mobile Timetable — pale subject tints (surface + accent).
+       Assigned deterministically from the subject name; never persisted. */
+    --subject-blue: 214 100% 96%;
+    --subject-blue-accent: 220 85% 48%;
+    --subject-violet: 258 100% 97%;
+    --subject-violet-accent: 258 60% 52%;
+    --subject-amber: 42 100% 94%;
+    --subject-amber-accent: 33 90% 42%;
+    --subject-green: 150 65% 95%;
+    --subject-green-accent: 158 65% 33%;
+    --subject-cyan: 190 90% 95%;
+    --subject-cyan-accent: 194 75% 34%;
+    --subject-slate: 215 30% 96%;
+    --subject-slate-accent: 215 25% 38%;
+
+
+
 
 
 
