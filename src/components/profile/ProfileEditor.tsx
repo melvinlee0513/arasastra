@@ -173,6 +173,21 @@ export function ProfileEditor({
     onError: (e) => toast.error(toSafeMessage(e, "Couldn't remove your picture.")),
   });
 
+  const canSave = dirty && !saveMut.isPending && !nameError && !bioError;
+
+  // Publish state so a host sheet can render a sticky, always-reachable footer.
+  useEffect(() => {
+    onStateChange?.({
+      dirty,
+      isSaving: saveMut.isPending,
+      canSave,
+      save: () => saveMut.mutate(),
+    });
+    // onStateChange is treated as a stable callback by the host.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, canSave, saveMut.isPending]);
+
+
   return (
     <Card
       className={
