@@ -148,7 +148,10 @@ const App = () => (
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             {/* Public/Student Pages with MainLayout */}
-            <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
+            {/* Canonical app entry (also the PWA start_url) — role-aware. */}
+            <Route path="/" element={<RootLanding />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
+            <Route path="/student" element={<Navigate to="/dashboard" replace />} />
             <Route path="/timetable" element={<MainLayout><TimetablePage /></MainLayout>} />
             <Route path="/classes" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/inbox" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><InboxPage /></MainLayout></ProtectedRoute>} />
