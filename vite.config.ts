@@ -36,6 +36,7 @@ export default defineConfig(({ mode }) => ({
         background_color: "#FFFFFF",
         display: "standalone",
         orientation: "portrait",
+        id: "/",
         start_url: "/",
         scope: "/",
         icons: [
@@ -52,7 +53,7 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        navigateFallback: "index.html",
+        navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
         runtimeCaching: [
           {
