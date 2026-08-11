@@ -23,7 +23,6 @@ import { GuardianLayout } from "@/components/guardian/GuardianLayout";
 
 // ── Lazy-loaded pages ────────────────────────────────────────────
 // Public
-const HomePage = lazy(() => import("@/pages/HomePage").then(m => ({ default: m.HomePage })));
 const AuthPage = lazy(() => import("@/pages/AuthPage").then(m => ({ default: m.AuthPage })));
 const TimetablePage = lazy(() => import("@/pages/TimetablePage").then(m => ({ default: m.TimetablePage })));
 const ClassesPage = lazy(() => import("@/pages/ClassesPage").then(m => ({ default: m.ClassesPage })));
@@ -36,6 +35,7 @@ const TenantDashboard = lazy(() => import("@/pages/tenant/TenantDashboard").then
 const InvitePage = lazy(() => import("@/pages/InvitePage"));
 const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 import { TenantGuard } from "@/components/tenant/TenantGuard";
+import { RootLanding } from "@/components/auth/RootLanding";
 
 // Student Dashboard
 const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
