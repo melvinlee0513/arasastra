@@ -12,8 +12,14 @@ interface MobileTopBarProps {
   title: string;
   /** Optional trailing slot (progress, timer, overflow menu). */
   right?: ReactNode;
+  /**
+   * `pill` renders the current title as a tinted chip (Class Hub sections);
+   * `plain` keeps the default right-aligned label.
+   */
+  titleVariant?: "plain" | "pill";
   className?: string;
 }
+
 
 /**
  * Mobile-only floating pill navigation: `‹ Parent … Title [right]`.
