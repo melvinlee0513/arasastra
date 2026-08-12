@@ -72,11 +72,24 @@ export function ClassCover({
           decoding="async"
           className="absolute inset-0 h-full w-full object-cover"
         />
+      ) : fallbackArt ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img
+            src={fallbackArt}
+            alt=""
+            aria-hidden
+            draggable={false}
+            loading={priority ? "eager" : "lazy"}
+            decoding="async"
+            className="h-[62%] max-h-28 w-auto select-none object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.18)]"
+          />
+        </div>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
           <GraduationCap className="w-14 h-14 text-slate-400/60" strokeWidth={1.25} />
         </div>
       )}
+
       {overlay}
     </div>
   );
