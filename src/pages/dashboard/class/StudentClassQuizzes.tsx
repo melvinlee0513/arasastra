@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClassShell } from "@/components/class/ClassShell";
+import { ClassHubEmptyState, Illustration } from "@/components/class/ClassHubChrome";
+import { STATE_ART } from "@/lib/classIllustrations";
+
 import { useClassContext } from "@/hooks/useClassContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,40 +113,48 @@ export function StudentClassQuizzes() {
       breadcrumbs={breadcrumbs}
     >
       {!routeValid ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Quizzes unavailable</h2>
-          <p className="text-sm text-slate-500">This page isn't available right now.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.lock}
+          title="Quizzes unavailable"
+          description="This page isn't available right now."
+        />
       ) : notEnrolled ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Enrollment required</h2>
-          <p className="text-sm text-slate-500">You need to be enrolled in this class to take its quizzes.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.lock}
+          title="Enrollment required"
+          description="You need to be enrolled in this class to take its quizzes."
+        />
       ) : listQ.isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-3xl" />)}
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
         </div>
       ) : listQ.isError ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Couldn't load quizzes</h2>
-          <p className="text-sm text-slate-500 mb-4">Please try again in a moment.</p>
-          <Button onClick={() => listQ.refetch()} className="rounded-full">Retry</Button>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.worksheet}
+          title="Couldn't load quizzes"
+          description="Something interrupted the connection. Please try again in a moment."
+          action={
+            <Button onClick={() => listQ.refetch()} className="rounded-full min-h-[44px] px-6">
+              Retry
+            </Button>
+          }
+        />
       ) : (listQ.data ?? []).length === 0 ? (
-        <Card className="p-10 text-center rounded-3xl">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <HelpCircle className="w-7 h-7 text-primary" />
-          </div>
-          <h2 className="font-semibold text-slate-900 mb-1">No quizzes yet</h2>
-          <p className="text-sm text-slate-500">Your tutor will publish quizzes here.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.quiz}
+          title="No quizzes yet"
+          description="Your tutor will publish quizzes here. You'll see them the moment they go live."
+        />
       ) : (
         <div className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <p className="text-[13px] font-medium text-slate-500 pl-1">
+              {(listQ.data ?? []).length} quiz{(listQ.data ?? []).length === 1 ? "" : "zes"}
+            </p>
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-full text-slate-500"
+              className="rounded-full text-slate-500 min-h-[40px]"
               onClick={() => listQ.refetch()}
               disabled={listQ.isFetching}
             >
@@ -157,6 +168,7 @@ export function StudentClassQuizzes() {
           </div>
         </div>
       )}
+
     </ClassShell>
   );
 }
@@ -181,12 +193,18 @@ function QuizCard({ row, onStart, isStarting }: { row: StudentQuizListRow; onSta
   const remaining = Math.max(0, (row.attempt_limit ?? 1) - row.attempts_used);
 
   return (
-    <Card className="p-4 sm:p-5 rounded-3xl border-slate-200">
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-          <HelpCircle className="w-6 h-6 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
+    <Card className="p-4 sm:p-5 rounded-3xl border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3.5">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/[0.07] ring-1 ring-inset ring-primary/10">
+            <Illustration
+              src={STATE_ART.quiz}
+              className="h-9 w-9 drop-shadow-[0_6px_12px_rgba(15,23,42,0.14)]"
+            />
+          </span>
+          <div className="min-w-0 flex-1">
+
+
           <h3 className="font-semibold text-slate-900 break-words">{row.title}</h3>
           {row.description && (
             <p className="text-sm text-slate-500 mt-0.5 line-clamp-2 break-words">{row.description}</p>
@@ -221,9 +239,11 @@ function QuizCard({ row, onStart, isStarting }: { row: StudentQuizListRow; onSta
             )}
           </div>
         </div>
+        </div>
         <div className="shrink-0 flex sm:justify-end">
           <QuizAction row={row} state={s} onStart={onStart} isStarting={isStarting} />
         </div>
+
       </div>
 
       {row.attempts_used > 0 && (
