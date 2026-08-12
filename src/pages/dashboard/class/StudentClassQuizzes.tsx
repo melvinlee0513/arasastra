@@ -239,9 +239,11 @@ function QuizCard({ row, onStart, isStarting }: { row: StudentQuizListRow; onSta
             )}
           </div>
         </div>
+        </div>
         <div className="shrink-0 flex sm:justify-end">
           <QuizAction row={row} state={s} onStart={onStart} isStarting={isStarting} />
         </div>
+
       </div>
 
       {row.attempts_used > 0 && (
