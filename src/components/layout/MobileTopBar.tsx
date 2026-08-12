@@ -32,6 +32,7 @@ export function MobileTopBar({
   backLabel,
   title,
   right,
+  titleVariant = "plain",
   className,
 }: MobileTopBarProps) {
   return (
@@ -48,11 +49,20 @@ export function MobileTopBar({
           <ChevronLeft className="w-5 h-5 shrink-0" aria-hidden="true" />
           <span className="truncate">{backLabel}</span>
         </Link>
-        <span className="flex-1 min-w-0 text-right text-[15px] font-semibold text-slate-900 truncate pr-2">
-          {title}
-        </span>
+        {titleVariant === "pill" ? (
+          <span className="flex-1 min-w-0 flex justify-end pr-1">
+            <span className="max-w-full truncate rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-semibold text-primary">
+              {title}
+            </span>
+          </span>
+        ) : (
+          <span className="flex-1 min-w-0 text-right text-[15px] font-semibold text-slate-900 truncate pr-2">
+            {title}
+          </span>
+        )}
         {right && <div className="min-w-[44px] flex items-center justify-end pr-1">{right}</div>}
       </div>
     </div>
+
   );
 }
