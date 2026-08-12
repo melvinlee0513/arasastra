@@ -18,8 +18,14 @@ interface ClassCoverProps {
   priority?: boolean;
   /** Optional subject/status overlay children. */
   overlay?: React.ReactNode;
+  /**
+   * Branded soft-3D artwork shown instead of the generic icon when the class
+   * has no tutor-uploaded cover. Never replaces a real cover image.
+   */
+  fallbackArt?: string;
   alt?: string;
 }
+
 
 /**
  * Responsive class cover with a branded gradient fallback and cached signed URL.
