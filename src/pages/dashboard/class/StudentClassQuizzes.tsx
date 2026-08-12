@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClassShell } from "@/components/class/ClassShell";
+import { ClassHubEmptyState, Illustration } from "@/components/class/ClassHubChrome";
+import { STATE_ART } from "@/lib/classIllustrations";
+
 import { useClassContext } from "@/hooks/useClassContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
