@@ -40,8 +40,10 @@ export function ClassCover({
   sizeClassName,
   priority,
   overlay,
+  fallbackArt,
   alt = "Class cover",
 }: ClassCoverProps) {
+
   const cover = useQuery({
     queryKey: ["class-cover-signed", coverPath, version],
     enabled: !!coverPath,
