@@ -110,40 +110,48 @@ export function StudentClassQuizzes() {
       breadcrumbs={breadcrumbs}
     >
       {!routeValid ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Quizzes unavailable</h2>
-          <p className="text-sm text-slate-500">This page isn't available right now.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.lock}
+          title="Quizzes unavailable"
+          description="This page isn't available right now."
+        />
       ) : notEnrolled ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Enrollment required</h2>
-          <p className="text-sm text-slate-500">You need to be enrolled in this class to take its quizzes.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.lock}
+          title="Enrollment required"
+          description="You need to be enrolled in this class to take its quizzes."
+        />
       ) : listQ.isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-3xl" />)}
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-3xl" />)}
         </div>
       ) : listQ.isError ? (
-        <Card className="p-8 text-center rounded-3xl">
-          <h2 className="font-semibold text-slate-900 mb-1">Couldn't load quizzes</h2>
-          <p className="text-sm text-slate-500 mb-4">Please try again in a moment.</p>
-          <Button onClick={() => listQ.refetch()} className="rounded-full">Retry</Button>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.worksheet}
+          title="Couldn't load quizzes"
+          description="Something interrupted the connection. Please try again in a moment."
+          action={
+            <Button onClick={() => listQ.refetch()} className="rounded-full min-h-[44px] px-6">
+              Retry
+            </Button>
+          }
+        />
       ) : (listQ.data ?? []).length === 0 ? (
-        <Card className="p-10 text-center rounded-3xl">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <HelpCircle className="w-7 h-7 text-primary" />
-          </div>
-          <h2 className="font-semibold text-slate-900 mb-1">No quizzes yet</h2>
-          <p className="text-sm text-slate-500">Your tutor will publish quizzes here.</p>
-        </Card>
+        <ClassHubEmptyState
+          art={STATE_ART.quiz}
+          title="No quizzes yet"
+          description="Your tutor will publish quizzes here. You'll see them the moment they go live."
+        />
       ) : (
         <div className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <p className="text-[13px] font-medium text-slate-500 pl-1">
+              {(listQ.data ?? []).length} quiz{(listQ.data ?? []).length === 1 ? "" : "zes"}
+            </p>
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-full text-slate-500"
+              className="rounded-full text-slate-500 min-h-[40px]"
               onClick={() => listQ.refetch()}
               disabled={listQ.isFetching}
             >
@@ -157,6 +165,7 @@ export function StudentClassQuizzes() {
           </div>
         </div>
       )}
+
     </ClassShell>
   );
 }
