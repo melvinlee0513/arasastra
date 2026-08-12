@@ -194,16 +194,16 @@ function QuizCard({ row, onStart, isStarting }: { row: StudentQuizListRow; onSta
 
   return (
     <Card className="p-4 sm:p-5 rounded-3xl border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-        <div className="flex items-start gap-3 sm:gap-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3.5">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/[0.07] ring-1 ring-inset ring-primary/10">
             <Illustration
               src={STATE_ART.quiz}
               className="h-9 w-9 drop-shadow-[0_6px_12px_rgba(15,23,42,0.14)]"
             />
           </span>
-        </div>
-        <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
+
 
           <h3 className="font-semibold text-slate-900 break-words">{row.title}</h3>
           {row.description && (
