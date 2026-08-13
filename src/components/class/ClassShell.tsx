@@ -194,8 +194,11 @@ export function ClassShell({
               }
               overlay={
                 <>
-                  {/* Subtle gradient for legibility of any overlay text/actions */}
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
+                  {/* Legibility scrim only over a real photographic cover —
+                      it would grey out the pastel subject fallback. */}
+                  {k.cover_image_path && (
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
+                  )}
                   {canManageCover && (
                     <div className="absolute top-3 right-3 z-10">
                       <ClassCoverManager

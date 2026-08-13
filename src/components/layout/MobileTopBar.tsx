@@ -44,14 +44,14 @@ export function MobileTopBar({
         <Link
           to={backTo}
           aria-label={`Back to ${backLabel}`}
-          className="inline-flex items-center gap-0.5 h-[44px] min-w-[44px] pl-1.5 pr-2 rounded-full text-[14px] font-medium text-primary active:bg-primary/10 shrink-0 max-w-[45%]"
+          className="inline-flex items-center gap-0.5 h-[44px] min-w-[44px] pl-1.5 pr-2 rounded-full text-[14px] font-medium text-hub-accent active:bg-hub-tint shrink-0 max-w-[45%]"
         >
           <ChevronLeft className="w-5 h-5 shrink-0" aria-hidden="true" />
           <span className="truncate">{backLabel}</span>
         </Link>
         {titleVariant === "pill" ? (
           <span className="flex-1 min-w-0 flex justify-end pr-1">
-            <span className="max-w-full truncate rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-semibold text-primary">
+            <span className="max-w-full truncate rounded-full bg-hub-tint px-3 py-1.5 text-[13px] font-semibold text-hub-accent">
               {title}
             </span>
           </span>
