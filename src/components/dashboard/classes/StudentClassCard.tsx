@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, BadgeCheck, Calendar, CalendarDays, ChevronRight, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { subjectArtSet, STUDY_ART } from "@/lib/classIllustrations";
-import { bestDisplayName, type TutorIdentity } from "@/lib/classCovers";
+import { type TutorIdentity } from "@/lib/classCovers";
+import { bestDisplayName } from "@/lib/profile";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
