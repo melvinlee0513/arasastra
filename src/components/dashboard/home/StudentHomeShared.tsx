@@ -267,3 +267,49 @@ export function HomeSparkAccents({ className }: { className?: string }) {
     </span>
   );
 }
+
+/**
+ * Soft-3D artwork used by the Home feed, mapped onto the shared illustration
+ * library. Keeps every Home module pulling from one verified asset map.
+ */
+export const HOME_ART = {
+  megaphone: "/assets/illustrations/ui/glossy_3d_megaphone_icon.webp",
+  bell: "/assets/illustrations/decorative/glossy_golden_notification_bell.webp",
+  notebook: "/assets/illustrations/ui/glossy_pastel_notebook_stack_icon.webp",
+  books: "/assets/illustrations/learning/glossy_pastel_stack_of_books.webp",
+  flashcards: "/assets/illustrations/learning/learning-flashcards.webp",
+  calendar: "/assets/illustrations/learning/glossy_pastel_calendar_with_checkmark.webp",
+  trophy: "/assets/illustrations/decorative/glossy_golden_star_trophy_icon.webp",
+  flame: "/assets/illustrations/gamification/glossy_3d_flame_icon.webp",
+  bolt: "/assets/illustrations/gamification/lightning-bolt.webp",
+  goldBolt: "/assets/illustrations/gamification/glossy_golden_lightning_bolt.webp",
+  star: "/assets/illustrations/ui/sparkle-yellow.webp",
+  orbs: "/assets/illustrations/decorative/orbs-blue-purple.webp",
+  achievementStar: "/assets/illustrations/gamification/achievement-star.webp",
+  quiz: "/assets/illustrations/ui/glossy_3d_quiz_card_icon.webp",
+  replay: "/assets/illustrations/ui/glossy_purple_replay_camera_icon.webp",
+  worksheet: "/assets/illustrations/ui/glossy_3d_clipboard_and_pencil_worksheet.webp",
+  link: "/assets/illustrations/learning/global-learning.webp",
+  cap: "/assets/illustrations/ui/glossy_blue_graduation_cap_with_gold_tassel.webp",
+} as const;
+
+/**
+ * Page-level decorative layer: a few very soft floating accents behind the feed.
+ * Purely presentational, never interactive, and low enough in contrast that it
+ * cannot compete with content.
+ */
+export function HomePageDecor() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <HomeDecorArt src={HOME_ART.orbs} className="absolute -right-8 top-[430px] h-28 w-28 opacity-[0.16]" />
+      <HomeDecorArt src={HOME_ART.star} className="absolute left-[-14px] top-[720px] h-12 w-12 opacity-[0.18]" />
+      <HomeDecorArt
+        src={HOME_ART.achievementStar}
+        className="absolute right-6 top-[1080px] h-14 w-14 opacity-[0.14]"
+      />
+      <span className="absolute left-10 top-[240px] block h-2 w-2 rounded-full bg-primary/25" />
+      <span className="absolute right-14 top-[620px] block h-1.5 w-1.5 rounded-full bg-home-schedule-accent/30" />
+      <span className="absolute left-6 top-[980px] block h-2.5 w-2.5 rounded-full bg-home-updates-accent/20" />
+    </div>
+  );
+}
