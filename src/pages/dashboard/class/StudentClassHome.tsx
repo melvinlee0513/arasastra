@@ -14,7 +14,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toSafeMessage } from "@/components/common/TenantGate";
 import { ClassShell } from "@/components/class/ClassShell";
 import { Decor, Illustration } from "@/components/class/ClassHubChrome";
-import { STATE_ART } from "@/lib/classIllustrations";
+import { DECOR_ART, STATE_ART } from "@/lib/classIllustrations";
+import { ClassAnnouncementCard, ClassGlanceCard } from "@/components/class/ClassHomeCards";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { hasValidSource, openClassResource } from "@/lib/classResources";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
@@ -133,55 +134,20 @@ export function StudentClassHome() {
     <div className="grid gap-5 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-5">
         {latestAnnQ.data && (
-          <section
-            className={`relative overflow-hidden rounded-3xl border p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${
-              latestAnnQ.data.is_pinned
-                ? "bg-amber-50/80 border-amber-200"
-                : "bg-white border-slate-200"
-            }`}
-          >
-            <Decor art="star" className="right-24 top-3 w-6 opacity-70" />
-            <Decor art="orbs" className="right-16 bottom-3 w-12 opacity-25" />
-            {/* Soft-3D megaphone anchors the card, like the reference. */}
-            <Illustration
-              src={STATE_ART.megaphone}
-              className="pointer-events-none absolute -right-3 top-1/2 w-24 -translate-y-1/2 opacity-95 drop-shadow-[0_12px_22px_rgba(15,23,42,0.16)] sm:w-28"
-            />
-            <div className="relative pr-20 sm:pr-28">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="inline-flex items-center gap-2 text-[15px] font-semibold text-slate-900 md:text-base">
-                  Latest announcement
-                </h2>
-                <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-[13px] text-hub-accent">
-                  <Link to={`${basePath}/announcements`}>
-                    View all <ArrowRight className="ml-1 w-3.5 h-3.5" />
-                  </Link>
-                </Button>
-              </div>
-              {latestAnnQ.data.is_pinned && (
-                <Badge className="mt-2 rounded-full bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  <Pin className="mr-1 w-3 h-3" /> Pinned
-                </Badge>
-              )}
-              <h3 className="mt-2 break-words text-[15px] font-bold text-slate-900">
-                {latestAnnQ.data.title}
-              </h3>
-              <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500">
-                <Calendar className="w-3.5 h-3.5 text-hub-accent" aria-hidden="true" />
-                {new Date(latestAnnQ.data.published_at || latestAnnQ.data.created_at).toLocaleString()}
-                {latestAnnQ.data.edited_at && " · edited"}
-              </p>
-              {latestAnnQ.data.body && (
-                <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-700 line-clamp-4">
-                  {latestAnnQ.data.body}
-                </p>
-              )}
-            </div>
-          </section>
+          <ClassAnnouncementCard
+            announcement={latestAnnQ.data}
+            allHref={`${basePath}/announcements`}
+          />
         )}
         <section className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6">
           <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
-            <h2 className="font-semibold text-slate-900 text-[15px] md:text-base">Recent materials</h2>
+            <h2 className="flex items-center gap-2.5 text-[15px] font-bold text-slate-900 md:text-base">
+              <Illustration
+                src={DECOR_ART.books}
+                className="h-9 w-9 drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)]"
+              />
+              Recent materials
+            </h2>
             <Button asChild variant="ghost" size="sm" className="text-primary h-8 px-2 text-[13px]">
               <Link to={materialsPath}>View all <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
             </Button>
@@ -242,28 +208,7 @@ export function StudentClassHome() {
       </div>
 
       <aside className="space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-5">
-          <Decor art="star" className="right-3 top-3 w-7 opacity-75" />
-          <Decor art="orbs" className="-right-4 bottom-16 w-14 opacity-20" />
-          <div className="relative mb-3 flex items-center gap-2.5">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-hub-tint">
-              <Illustration
-                src={STATE_ART.glance}
-                className="h-7 w-7 drop-shadow-[0_4px_8px_rgba(15,23,42,0.16)]"
-              />
-            </span>
-            <h3 className="text-[16px] font-bold text-slate-900">At a glance</h3>
-          </div>
-          <ul className="relative divide-y divide-slate-100 text-sm">
-            <Stat art={STATE_ART.replay} label="Replays" value={counts.replays} />
-            <Stat art={STATE_ART.notes} label="Notes" value={counts.notes} />
-            <Stat art={STATE_ART.worksheet} label="Worksheets" value={counts.worksheets} />
-            <Stat art={STATE_ART.link} label="Links" value={counts.links} />
-          </ul>
-          <Button asChild className="relative mt-4 h-12 w-full rounded-full text-[15px]">
-            <Link to={materialsPath}><Layers className="mr-2 w-4 h-4" /> Browse materials</Link>
-          </Button>
-        </section>
+        <ClassGlanceCard counts={counts} materialsPath={materialsPath} />
 
         <QuizWidget classId={classId!} basePath={basePath} loading={quizzesQ.isLoading} quiz={priorityQuiz} />
 
@@ -415,23 +360,6 @@ function QuizWidget({
   );
 }
 
-
-function Stat({ art, label, value }: { art: string; label: string; value: number }) {
-  return (
-    <li className="flex items-center justify-between gap-3 py-2.5">
-      <span className="inline-flex min-w-0 items-center gap-2.5 font-medium text-slate-700">
-        <Illustration
-          src={art}
-          className="h-7 w-7 shrink-0 drop-shadow-[0_3px_6px_rgba(15,23,42,0.14)]"
-        />
-        <span className="truncate">{label}</span>
-      </span>
-      <span className="min-w-[44px] shrink-0 rounded-full bg-slate-50 px-3 py-1 text-center text-[13px] font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">
-        {value}
-      </span>
-    </li>
-  );
-}
 
 function AccessCard({ title, body }: { title: string; body: string }) {
   return (
