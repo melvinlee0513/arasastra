@@ -1,11 +1,19 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, Inbox, Trophy, BarChart3, LayoutGrid } from "lucide-react";
+import { CalendarDays, Inbox, Trophy, BarChart3 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNextClass, useUnreadInboxCount } from "@/lib/studentMore";
 import { useStudentLeaderboard } from "@/lib/studentHome";
 import { MoreServiceCard } from "@/components/dashboard/more/MoreServiceCard";
+import {
+  ServiceFooterDecor,
+  ServiceHeader,
+  ServicePage,
+  ServiceReveal,
+  ServiceSectionHeading,
+} from "@/components/dashboard/services/StudentServiceChrome";
+import { STUDENT_SERVICE_ART } from "@/lib/studentIllustrations";
 import { cn } from "@/lib/utils";
 
 interface ServiceTile {
@@ -19,9 +27,9 @@ interface ServiceTile {
 /**
  * Student "More" hub.
  *
- * Mobile: a compact 2×2 Bento grid of contextual service cards, each showing a
+ * Mobile: a 2-column grid of large illustrated service cards, each showing a
  * single real, tenant-scoped status line (or a graceful CTA when preview data
- * is unavailable). Desktop keeps the existing compact icon grid untouched.
+ * is unavailable). Desktop keeps the compact icon grid.
  */
 export function MorePage() {
   const isMobile = useIsMobile();
@@ -54,53 +62,62 @@ export function MorePage() {
   const visible = studentServices.filter((s) => s.enabled);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-5 md:px-8 md:py-8 space-y-5 md:space-y-6">
-        <header className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <LayoutGrid className="w-5 h-5 text-primary" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-[22px] md:text-3xl font-bold text-slate-900 leading-tight">More</h1>
-            <p className="text-[13px] md:text-sm text-slate-500">
-              Everything else in your learning account.
-            </p>
-          </div>
-        </header>
+    <ServicePage>
+      <ServiceReveal>
+        <ServiceHeader
+          art={STUDENT_SERVICE_ART.hub}
+          title="More"
+          subtitle="Everything else in your learning account."
+        />
+      </ServiceReveal>
 
-        {isMobile ? (
-          <section className="space-y-3 pb-2">
-            <h2 className="px-0.5 text-[18px] font-semibold text-slate-900">Student services</h2>
-            {visible.length === 0 ? (
-              <p className="px-1 py-6 text-sm text-slate-500">
-                No extra services are enabled for your centre yet.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
+      {isMobile ? (
+        <section className="pb-2">
+          <ServiceSectionHeading title="Student services" />
+          {visible.length === 0 ? (
+            <p className="px-1 py-6 text-sm text-slate-500">
+              No extra services are enabled for your centre yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3.5">
+              <ServiceReveal delay={40}>
                 <TimetableCard />
-                {inboxOn && <InboxCard />}
-                {achievementsOn && <AchievementsCard />}
-                {leaderboardOn && <LeaderboardCard />}
-              </div>
-            )}
-          </section>
-        ) : (
-          <Section title="Student services">
-            {visible.length === 0 ? (
-              <p className="text-sm text-slate-500 px-1 py-6">
-                No extra services are enabled for your centre yet.
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                {visible.map((s) => (
-                  <Tile key={s.to} tile={s} />
-                ))}
-              </div>
-            )}
-          </Section>
-        )}
-      </div>
-    </div>
+              </ServiceReveal>
+              {inboxOn && (
+                <ServiceReveal delay={80}>
+                  <InboxCard />
+                </ServiceReveal>
+              )}
+              {achievementsOn && (
+                <ServiceReveal delay={120}>
+                  <AchievementsCard />
+                </ServiceReveal>
+              )}
+              {leaderboardOn && (
+                <ServiceReveal delay={160}>
+                  <LeaderboardCard />
+                </ServiceReveal>
+              )}
+            </div>
+          )}
+          <ServiceFooterDecor />
+        </section>
+      ) : (
+        <Section title="Student services">
+          {visible.length === 0 ? (
+            <p className="px-1 py-6 text-sm text-slate-500">
+              No extra services are enabled for your centre yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {visible.map((s) => (
+                <Tile key={s.to} tile={s} />
+              ))}
+            </div>
+          )}
+        </Section>
+      )}
+    </ServicePage>
   );
 }
 
@@ -128,7 +145,7 @@ function TimetableCard() {
     <MoreServiceCard
       to="/timetable"
       title="Timetable"
-      icon={CalendarDays}
+      art={STUDENT_SERVICE_ART.timetable}
       tone="timetable"
       loading={isLoading}
       contextLabel={contextLabel}
@@ -151,7 +168,7 @@ function InboxCard() {
     <MoreServiceCard
       to="/inbox"
       title="Inbox"
-      icon={Inbox}
+      art={STUDENT_SERVICE_ART.inbox}
       tone="inbox"
       loading={isLoading}
       contextValue={contextValue}
@@ -170,7 +187,7 @@ function AchievementsCard() {
     <MoreServiceCard
       to="/dashboard/achievements"
       title="Achievements"
-      icon={Trophy}
+      art={STUDENT_SERVICE_ART.achievements}
       tone="achievements"
       contextValue="View achievements"
       accessibleContext="View achievements"
@@ -196,7 +213,7 @@ function LeaderboardCard() {
     <MoreServiceCard
       to="/dashboard/leaderboard"
       title="Leaderboard"
-      icon={BarChart3}
+      art={STUDENT_SERVICE_ART.leaderboard}
       tone="leaderboard"
       loading={isLoading}
       contextValue={contextValue}
@@ -210,8 +227,8 @@ function LeaderboardCard() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[15px] md:text-lg font-semibold text-slate-900 px-1">{title}</h2>
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3 sm:p-4">
+      <h2 className="px-1 text-[15px] font-semibold text-slate-900 md:text-lg">{title}</h2>
+      <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-4">
         {children}
       </div>
     </section>
@@ -224,18 +241,18 @@ function Tile({ tile }: { tile: ServiceTile }) {
     <Link
       to={tile.to}
       className={cn(
-        "flex flex-col items-center justify-start gap-2 rounded-2xl px-2 py-3 min-h-[92px]",
-        "text-center active:bg-slate-100 hover:bg-slate-50 transition-colors",
+        "flex min-h-[92px] flex-col items-center justify-start gap-2 rounded-2xl px-2 py-3",
+        "text-center transition-colors hover:bg-slate-50 active:bg-slate-100",
       )}
     >
-      <span className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-        <Icon className="w-[22px] h-[22px] text-primary" aria-hidden="true" />
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+        <Icon className="h-[22px] w-[22px] text-primary" aria-hidden="true" />
       </span>
-      <span className="text-[13px] font-medium text-slate-900 leading-tight break-words">
+      <span className="break-words text-[13px] font-medium leading-tight text-slate-900">
         {tile.label}
       </span>
       {tile.hint && (
-        <span className="text-[11px] text-slate-500 leading-tight hidden sm:block">{tile.hint}</span>
+        <span className="hidden text-[11px] leading-tight text-slate-500 sm:block">{tile.hint}</span>
       )}
     </Link>
   );

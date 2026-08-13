@@ -1,149 +1,205 @@
-import { useState } from "react";
-import { Award, Trophy, Star, Sparkles, CheckCircle, Lock } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { CertificateModal } from "@/components/dashboard/CertificateModal";
-import { useAuth } from "@/hooks/useAuth";
+import { Star, Lock, Sparkles } from "lucide-react";
+import { useGamification } from "@/hooks/useGamification";
 import { cn } from "@/lib/utils";
+import {
+  DecorArt,
+  ServiceArtBubble,
+  ServiceFooterDecor,
+  ServiceHeader,
+  ServicePage,
+  ServiceReveal,
+  ServiceSectionHeading,
+} from "@/components/dashboard/services/StudentServiceChrome";
+import { ACHIEVEMENT_ART, DECOR_ART } from "@/lib/studentIllustrations";
 
-interface SubjectAchievement {
+interface MilestoneBadge {
   id: string;
-  name: string;
-  icon: string;
-  progress: number; // 0–100
-  completed: boolean;
+  label: string;
+  art: string;
+  earned: boolean;
+  /** Progress hint shown on locked badges, derived from real state. */
+  hint: string;
 }
 
-// Mock achievements — one subject at 100% for demo
-const MOCK_ACHIEVEMENTS: SubjectAchievement[] = [
-  { id: "1", name: "SPM Physics", icon: "⚛️", progress: 100, completed: true },
-  { id: "2", name: "SPM Mathematics", icon: "📐", progress: 72, completed: false },
-  { id: "3", name: "SPM Chemistry", icon: "🧪", progress: 45, completed: false },
-  { id: "4", name: "SPM Biology", icon: "🧬", progress: 18, completed: false },
-];
-
-const MILESTONE_BADGES = [
-  { label: "First Quiz", icon: Star, earned: true },
-  { label: "7-Day Streak", icon: Sparkles, earned: true },
-  { label: "50 Flashcards", icon: CheckCircle, earned: false },
-  { label: "All Subjects", icon: Trophy, earned: false },
-];
-
+/**
+ * Student achievements.
+ *
+ * Milestone badges are derived entirely from the student's real gamification
+ * state (XP total, level, streaks). No subject-completion or certificate
+ * catalogue exists in production, so none is rendered here.
+ */
 export function Achievements() {
-  const { profile } = useAuth();
-  const [certOpen, setCertOpen] = useState(false);
-  const [certSubject, setCertSubject] = useState("");
+  const { totalXp, level, currentStreak, longestStreak, isLoading, enabled } = useGamification();
 
-  const handleClaim = (subject: SubjectAchievement) => {
-    setCertSubject(subject.name);
-    setCertOpen(true);
-  };
+  const bestStreak = Math.max(currentStreak, longestStreak);
+
+  const badges: MilestoneBadge[] = [
+    {
+      id: "first-xp",
+      label: "First Steps",
+      art: ACHIEVEMENT_ART.firstStep,
+      earned: totalXp > 0,
+      hint: "Earn your first XP",
+    },
+    {
+      id: "streak-3",
+      label: "3-Day Streak",
+      art: ACHIEVEMENT_ART.streak,
+      earned: bestStreak >= 3,
+      hint: `${bestStreak}/3 day streak`,
+    },
+    {
+      id: "streak-7",
+      label: "7-Day Streak",
+      art: ACHIEVEMENT_ART.streakLong,
+      earned: bestStreak >= 7,
+      hint: `${bestStreak}/7 day streak`,
+    },
+    {
+      id: "xp-1000",
+      label: "1,000 XP",
+      art: ACHIEVEMENT_ART.xp,
+      earned: totalXp >= 1000,
+      hint: `${totalXp.toLocaleString()}/1,000 XP`,
+    },
+    {
+      id: "level-3",
+      label: "Level 3",
+      art: ACHIEVEMENT_ART.level,
+      earned: level >= 3,
+      hint: `Level ${level} of 3`,
+    },
+    {
+      id: "xp-5000",
+      label: "5,000 XP",
+      art: ACHIEVEMENT_ART.certificate,
+      earned: totalXp >= 5000,
+      hint: `${totalXp.toLocaleString()}/5,000 XP`,
+    },
+  ];
+
+  const earnedCount = badges.filter((b) => b.earned).length;
 
   return (
-    <div className="p-4 md:p-6 space-y-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-accent/10 flex items-center justify-center">
-          <Trophy className="w-5 h-5 text-accent" strokeWidth={1.5} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Achievements</h1>
-          <p className="text-sm text-muted-foreground">Track your progress and earn certificates</p>
-        </div>
-      </div>
+    <ServicePage>
+      <ServiceReveal>
+        <ServiceHeader
+          art={ACHIEVEMENT_ART.trophy}
+          title="Achievements"
+          subtitle="Track your progress and earn badges"
+          bubbleClassName="bg-amber-50"
+        />
+      </ServiceReveal>
 
-      {/* Milestone Badges */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Milestone Badges</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {MILESTONE_BADGES.map((badge) => (
-            <Card
-              key={badge.label}
-              className={cn(
-                "p-4 text-center rounded-2xl transition-all",
-                badge.earned
-                  ? "bg-card border-accent/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-                  : "bg-muted/30 border-border/30 opacity-60"
-              )}
+      <section>
+        <ServiceSectionHeading
+          title="Milestone badges"
+          icon={
+            <span
+              aria-hidden="true"
+              className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-amber-100"
             >
-              <div className={cn(
-                "w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center",
-                badge.earned ? "bg-accent/10" : "bg-muted"
-              )}>
-                {badge.earned ? (
-                  <badge.icon className="w-6 h-6 text-accent" strokeWidth={1.5} />
-                ) : (
-                  <Lock className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
-                )}
-              </div>
-              <p className="text-sm font-medium text-foreground">{badge.label}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {badge.earned ? "Earned" : "Locked"}
-              </p>
-            </Card>
-          ))}
-        </div>
+              <Star className="h-4 w-4 text-amber-600" />
+            </span>
+          }
+          action={
+            !isLoading && enabled ? (
+              <span className="shrink-0 pb-1 text-[12px] font-semibold text-slate-500">
+                {earnedCount} of {badges.length} earned
+              </span>
+            ) : undefined
+          }
+        />
+
+        {!enabled ? (
+          <p className="rounded-[24px] border border-slate-200/70 bg-white px-4 py-6 text-center text-[13px] text-slate-500">
+            Badges aren't enabled for your centre yet.
+          </p>
+        ) : isLoading ? (
+          <div className="grid grid-cols-2 gap-3.5" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-[168px] animate-pulse rounded-[26px] bg-white/70" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+            {badges.map((badge, i) => (
+              <ServiceReveal key={badge.id} delay={i * 40}>
+                <BadgeCard badge={badge} />
+              </ServiceReveal>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Subject Completion */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Subject Completion</h2>
-        <div className="space-y-3">
-          {MOCK_ACHIEVEMENTS.map((subject) => (
-            <Card
-              key={subject.id}
-              className={cn(
-                "p-4 rounded-2xl transition-all",
-                subject.completed
-                  ? "bg-card border-accent/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-                  : "bg-card border-border/40"
-              )}
-            >
-              <div className="flex items-center gap-4">
-                <div className="text-2xl w-10 h-10 flex items-center justify-center">{subject.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium text-foreground">{subject.name}</h3>
-                    {subject.completed && (
-                      <Badge className="bg-accent/15 text-accent border-0 text-[10px] gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        Complete
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Progress value={subject.progress} className="h-2 flex-1" />
-                    <span className="text-sm font-medium text-foreground tabular-nums w-10 text-right">
-                      {subject.progress}%
-                    </span>
-                  </div>
-                </div>
-                {subject.completed && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleClaim(subject)}
-                    className="rounded-full gap-1.5 shadow-[0_0_16px_hsl(var(--accent)/0.2)] shrink-0"
-                  >
-                    <Award className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    <span className="hidden sm:inline">Claim Certificate</span>
-                    <span className="sm:hidden">Claim</span>
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <ServiceFooterDecor />
+    </ServicePage>
+  );
+}
 
-      {/* Certificate Modal */}
-      <CertificateModal
-        open={certOpen}
-        onClose={() => setCertOpen(false)}
-        studentName={profile?.full_name || "Student"}
-        subjectName={certSubject}
+function BadgeCard({ badge }: { badge: MilestoneBadge }) {
+  const { earned } = badge;
+
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col items-center overflow-hidden rounded-[26px] border px-3 pb-3.5 pt-4 text-center",
+        "transition-transform duration-200 ease-out active:scale-[0.975] motion-reduce:transition-none",
+        earned
+          ? "border-amber-200/90 bg-[linear-gradient(170deg,#fffdf5_0%,#fff5e2_100%)] shadow-[0_8px_26px_rgba(245,158,11,0.16)]"
+          : "border-slate-200/70 bg-[linear-gradient(170deg,#fbfcfe_0%,#f4f5fa_100%)] shadow-[0_4px_16px_rgba(15,23,42,0.04)]",
+      )}
+    >
+      {earned && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <span className="absolute left-1/2 top-0 h-20 w-32 -translate-x-1/2 rounded-full bg-amber-200/40 blur-2xl" />
+          <DecorArt src={DECOR_ART.star} className="absolute right-2.5 top-2.5 h-4 w-4 opacity-70" />
+          <DecorArt src={DECOR_ART.sparkleStar} className="absolute left-2 top-8 h-3.5 w-3.5 opacity-45" />
+        </div>
+      )}
+
+      <ServiceArtBubble
+        src={earned ? badge.art : ACHIEVEMENT_ART.locked}
+        size="xl"
+        className={cn(
+          "relative",
+          earned ? "bg-white/80 ring-1 ring-inset ring-amber-100" : "bg-white/70 grayscale-[0.35] opacity-80",
+        )}
       />
+
+      <p
+        className={cn(
+          "relative mt-2.5 text-[13.5px] font-bold leading-tight tracking-[-0.01em]",
+          earned ? "text-slate-900" : "text-slate-600",
+        )}
+      >
+        {badge.label}
+      </p>
+
+      <span
+        className={cn(
+          "relative mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide",
+          earned ? "bg-amber-500/15 text-amber-700" : "bg-slate-200/70 text-slate-500",
+        )}
+      >
+        {earned ? (
+          <>
+            <Sparkles className="h-3 w-3" aria-hidden="true" />
+            Earned
+          </>
+        ) : (
+          <>
+            <Lock className="h-3 w-3" aria-hidden="true" />
+            Locked
+          </>
+        )}
+      </span>
+
+      {!earned && (
+        <p className="relative mt-1.5 text-[11px] font-medium text-slate-400">{badge.hint}</p>
+      )}
     </div>
   );
 }
+
+export default Achievements;

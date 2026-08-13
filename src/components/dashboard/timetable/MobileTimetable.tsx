@@ -8,9 +8,15 @@ import {
   isToday,
   isTomorrow,
 } from "date-fns";
-import { AlertCircle, CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  DecorArt,
+  ServiceArtBubble,
+} from "@/components/dashboard/services/StudentServiceChrome";
+import { DECOR_ART, TIMETABLE_ART } from "@/lib/studentIllustrations";
+import { subjectArt } from "@/lib/classIllustrations";
 import {
   SUBJECT_ACCENT_BG,
   SUBJECT_ACCENT_TEXT,
@@ -230,6 +236,86 @@ function DayTimeline({
   );
 }
 
+/* ------------------------------------------------------------ empty states */
+
+/** Large illustrated empty state used when a day (or the feed) has no classes. */
+function EmptyDayCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="relative flex flex-col items-center overflow-hidden rounded-[28px] border border-slate-200/70 bg-[linear-gradient(170deg,#ffffff_0%,#f6f9ff_100%)] px-5 py-8 text-center shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <DecorArt src={DECOR_ART.cloudSoft} className="absolute left-4 top-6 h-10 w-10 opacity-40" />
+        <DecorArt src={DECOR_ART.cloud} className="absolute right-5 top-10 h-9 w-9 opacity-35" />
+        <DecorArt src={DECOR_ART.paperPlane} className="absolute right-8 top-2 h-8 w-8 opacity-60" />
+        <DecorArt src={DECOR_ART.star} className="absolute left-10 top-2 h-5 w-5 opacity-50" />
+        <DecorArt src={DECOR_ART.orb} className="absolute -bottom-8 -left-6 h-24 w-24 opacity-[0.12]" />
+      </div>
+      <div className="relative flex items-end gap-2">
+        <img
+          src={TIMETABLE_ART.empty}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width={96}
+          height={96}
+          className="h-[88px] w-[88px] object-contain drop-shadow-[0_8px_14px_rgba(15,23,42,0.16)]"
+        />
+        <img
+          src={TIMETABLE_ART.clock}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width={48}
+          height={48}
+          className="mb-1 h-11 w-11 object-contain drop-shadow-[0_6px_10px_rgba(15,23,42,0.14)]"
+        />
+      </div>
+      <p className="relative mt-3 text-[16px] font-bold tracking-[-0.01em] text-slate-900">{title}</p>
+      <p className="relative mt-0.5 text-[13px] text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+/** Compact "next class" footer card shown beneath an empty day. */
+function NextClassCard({ entry }: { entry: TimetableEntry }) {
+  const start = new Date(entry.starts_at);
+  return (
+    <Link
+      to={classRoute(entry)}
+      className={cn(
+        "flex items-center gap-3 rounded-[24px] border border-slate-200/70 bg-white p-3.5",
+        "shadow-[0_6px_22px_rgba(15,23,42,0.06)]",
+        "transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.985] motion-reduce:transition-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+      )}
+      aria-label={`Next class — ${entry.title}, ${format(start, "EEEE h:mm a")}`}
+    >
+      <ServiceArtBubble
+        src={subjectArt(entry.subject_name)}
+        size="lg"
+        className="bg-slate-50"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+          Next class
+        </p>
+        <p className="truncate text-[15px] font-bold tracking-[-0.01em] text-slate-900">
+          {entry.title}
+        </p>
+        {entry.tutor_name && (
+          <p className="truncate text-[12px] text-slate-500">{entry.tutor_name}</p>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+        <CalendarDays className="h-4 w-4 text-slate-300" aria-hidden="true" />
+        <p className="text-[12.5px] font-semibold text-slate-700">{format(start, "EEEE")}</p>
+        <p className="text-[12px] text-slate-500">{format(start, "h:mm a")}</p>
+      </div>
+    </Link>
+  );
+}
+
 /* --------------------------------------------------------------- skeletons */
 
 function TimetableSkeleton() {
@@ -310,14 +396,23 @@ export function MobileTimetable() {
         : `${dayEntries.length} classes`;
 
   return (
-    <div
-      className="px-4 pb-6"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
-    >
+    <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f7faff_0%,#f9fbff_45%,#f6f8fd_100%)]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-[radial-gradient(120%_100%_at_50%_0%,rgba(99,102,241,0.10),transparent_70%)]"
+      />
+      <div
+        className="relative px-4 pb-8"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      >
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-[26px] font-bold tracking-tight text-slate-900">Timetable</h1>
-        <div className="inline-flex rounded-full bg-slate-100 p-1">
+      <div className="relative mb-4 flex items-center justify-between gap-3">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <DecorArt src={DECOR_ART.star} className="absolute left-[104px] -top-1 h-5 w-5 opacity-50" />
+          <DecorArt src={DECOR_ART.cloudSoft} className="absolute left-[132px] top-6 h-6 w-6 opacity-35" />
+        </div>
+        <h1 className="relative text-[26px] font-bold tracking-[-0.02em] text-slate-900">Timetable</h1>
+        <div className="relative inline-flex rounded-full border border-slate-200/70 bg-white/80 p-1 shadow-[0_4px_16px_rgba(15,23,42,0.05)] backdrop-blur-sm">
           {(["day", "upcoming"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
@@ -325,10 +420,11 @@ export function MobileTimetable() {
               onClick={() => setView(mode)}
               aria-pressed={view === mode}
               className={cn(
-                "h-9 rounded-full px-3 text-[13px] font-semibold transition-all duration-200 motion-reduce:transition-none",
+                "h-9 rounded-full px-3.5 text-[13px] font-semibold transition-all duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 view === mode
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500",
+                  ? "bg-[linear-gradient(135deg,#4f7dfb_0%,#7c5cf5_100%)] text-white shadow-[0_4px_14px_rgba(79,125,251,0.35)]"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {mode === "day" ? "By day" : "Upcoming"}
@@ -336,6 +432,7 @@ export function MobileTimetable() {
           ))}
         </div>
       </div>
+
 
       {isLoading ? (
         <TimetableSkeleton />
@@ -358,24 +455,24 @@ export function MobileTimetable() {
       ) : view === "day" ? (
         <>
           {/* Unified week calendar */}
-          <section className="mb-5 rounded-[22px] bg-white p-3 shadow-[0_4px_18px_rgb(0,0,0,0.04)]">
-            <div className="mb-2 flex items-center justify-between">
+          <section className="mb-5 rounded-[26px] border border-slate-200/70 bg-white p-3.5 shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
+            <div className="mb-2.5 flex items-center justify-between">
               <button
                 type="button"
                 aria-label="Previous week"
                 onClick={() => shiftWeek(-1)}
-                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition-transform duration-150 active:scale-95 active:bg-slate-100 motion-reduce:transition-none"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
-              <p className="text-[14px] font-semibold text-slate-900">
+              <p className="text-[14.5px] font-bold tracking-[-0.01em] text-slate-900">
                 {format(weekDates[0], "MMM d")} – {format(weekDates[6], "MMM d, yyyy")}
               </p>
               <button
                 type="button"
                 aria-label="Next week"
                 onClick={() => shiftWeek(1)}
-                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition-transform duration-150 active:scale-95 active:bg-slate-100 motion-reduce:transition-none"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -384,6 +481,7 @@ export function MobileTimetable() {
             <div className="grid grid-cols-7 gap-0.5">
               {weekDates.map((date, i) => {
                 const selected = isSameDay(date, selectedDate);
+                const today = isToday(date);
                 const hasClasses = week.some((e) => isSameDay(new Date(e.starts_at), date));
                 return (
                   <button
@@ -391,32 +489,40 @@ export function MobileTimetable() {
                     type="button"
                     onClick={() => setSelectedDate(date)}
                     aria-current={selected ? "date" : undefined}
-                    aria-label={format(date, "EEEE d MMMM")}
-                    className="flex flex-col items-center gap-1 py-1"
+                    aria-label={`${format(date, "EEEE d MMMM")}${today ? " (today)" : ""}${
+                      hasClasses ? " — has classes" : ""
+                    }`}
+                    className="flex flex-col items-center gap-1 rounded-2xl py-1 transition-transform duration-150 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <span
                       className={cn(
                         "text-[10px] font-semibold uppercase tracking-wide",
-                        selected ? "text-primary" : "text-slate-400",
+                        selected ? "text-primary" : today ? "text-slate-600" : "text-slate-400",
                       )}
                     >
                       {DAY_LETTERS[i]}
                     </span>
                     <span
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-[14px] text-[15px] font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                        "flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-bold transition-all duration-200 motion-reduce:transition-none",
                         selected
-                          ? "bg-primary/10 text-primary ring-1 ring-primary/25"
-                          : "text-slate-700",
+                          ? "-translate-y-[1px] bg-[linear-gradient(135deg,#4f7dfb_0%,#7c5cf5_100%)] text-white shadow-[0_6px_16px_rgba(79,125,251,0.40)]"
+                          : today
+                            ? "bg-slate-100 text-slate-900 ring-1 ring-inset ring-slate-300"
+                            : "text-slate-700",
                       )}
                     >
                       {date.getDate()}
                     </span>
                     <span className="flex h-1.5 items-center gap-0.5">
-                      {isToday(date) && !selected && (
-                        <span className="h-1 w-1 rounded-full bg-slate-400" />
+                      {hasClasses && (
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            selected ? "bg-primary" : "bg-violet-400",
+                          )}
+                        />
                       )}
-                      {hasClasses && <span className="h-1 w-1 rounded-full bg-primary" />}
                     </span>
                   </button>
                 );
@@ -426,8 +532,8 @@ export function MobileTimetable() {
 
           {/* Day heading */}
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[17px] font-bold text-slate-900">{dayHeading}</h2>
-            <span className="text-[12px] font-medium text-slate-500">{countLabel}</span>
+            <h2 className="text-[17.5px] font-bold tracking-[-0.01em] text-slate-900">{dayHeading}</h2>
+            <span className="text-[12px] font-semibold text-slate-500">{countLabel}</span>
           </div>
 
           {dayEntries.length > 0 ? (
@@ -437,43 +543,36 @@ export function MobileTimetable() {
               nextClassId={selectedIsToday ? (nextClass?.class_id ?? null) : null}
             />
           ) : (
-            <div className="space-y-5">
-              <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
-                <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
-                <p className="text-[14px] font-semibold text-slate-900">
-                  {selectedIsToday ? "No classes today" : "No classes this day"}
-                </p>
-                <p className="text-[12px] text-slate-500">Your schedule is clear.</p>
-              </div>
+            <div className="space-y-4">
+              <EmptyDayCard
+                title={selectedIsToday ? "No classes today" : "No classes this day"}
+                description="Your schedule is clear."
+              />
 
               {nextClass && (
                 <section>
-                  <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">
+                  <h3 className="mb-2 px-0.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">
                     Next class
                   </h3>
-                  <ClassBlock entry={nextClass} isNext />
-                  <p className="mt-2 px-1 text-[12px] text-slate-500">
-                    {format(new Date(nextClass.starts_at), "EEEE · d MMM")}
-                  </p>
+                  <NextClassCard entry={nextClass} />
                 </section>
               )}
             </div>
           )}
         </>
       ) : groupedUpcoming.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
-          <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
-          <p className="text-[14px] font-semibold text-slate-900">No upcoming classes</p>
-          <p className="text-[12px] text-slate-500">New classes appear here once scheduled.</p>
-        </div>
+        <EmptyDayCard
+          title="No upcoming classes"
+          description="New classes appear here once scheduled."
+        />
       ) : (
         <div className="space-y-5">
           {groupedUpcoming.map((group) => (
             <section key={group.key}>
-              <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">
+              <h2 className="mb-2 px-0.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">
                 {group.label}
               </h2>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {group.items.map((entry) => (
                   <CompactRow key={`${entry.class_id}-${entry.starts_at}`} entry={entry} />
                 ))}
@@ -482,6 +581,7 @@ export function MobileTimetable() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
