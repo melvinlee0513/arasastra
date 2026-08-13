@@ -9,6 +9,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { subjectArt } from "@/lib/classIllustrations";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
 import {
   HomeSection,
