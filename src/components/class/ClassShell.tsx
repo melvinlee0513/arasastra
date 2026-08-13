@@ -348,7 +348,7 @@ export function ClassShell({
             className="md:hidden relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white px-2.5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
             {/* Decor kept to the extreme corner so it never sits behind a tile label. */}
-            <Decor art="orbs" className="-right-8 -top-6 w-14 opacity-20" />
+            <Decor art="orbs" className="right-1.5 top-1.5 w-9 opacity-20" />
             <ul className="relative grid grid-cols-4 gap-x-1 gap-y-2">
               {visibleNav.map((item) => {
                 const isActive = item.key === section;

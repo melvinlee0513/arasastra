@@ -90,8 +90,8 @@ export function ClassHubEmptyState({
   return (
     <ClassHubPanel className={cn("px-6 py-9 sm:py-12 text-center", className)}>
       {/* Decor stays in the corners, well clear of the text column. */}
-      <Decor art="cloud" className="-left-5 -top-3 w-16 opacity-45" />
-      <Decor art="orbs" className="-right-6 -top-2 w-16 opacity-30" />
+      <Decor art="cloud" className="left-2 top-3 w-12 opacity-40" />
+      <Decor art="orbs" className="right-2 top-2 w-11 opacity-25" />
       <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center">
         <span
           aria-hidden
