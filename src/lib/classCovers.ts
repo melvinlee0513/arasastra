@@ -122,6 +122,10 @@ async function readBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
 // ------------------------------------------------------------------
 
 export type TutorIdentity = {
+  /** Auth user id — present for rows resolved through `get_public_profiles`. */
+  user_id?: string | null;
+  /** Private-bucket avatar object path (never a public URL). */
+  avatar_path?: string | null;
   full_name: string | null;
   display_name: string | null;
 };
