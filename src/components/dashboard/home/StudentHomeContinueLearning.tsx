@@ -17,6 +17,8 @@ import {
   HomeErrorState,
   HomeEmptyState,
   HOME_CARD,
+  HOME_ART,
+  HomeDecorArt,
 } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
@@ -36,18 +38,27 @@ function itemIcon(item: HomeContinueItem): LucideIcon {
   return FileText;
 }
 
-/** Soft-3D stacked study-card art on the card's right edge. */
-function StudyCardArt() {
+/** Contextual soft-3D artwork for a recent-learning item. */
+function itemArt(item: HomeContinueItem): string {
+  if (item.category === "quiz") return HOME_ART.quiz;
+  if (item.category === "flashcards") return HOME_ART.flashcards;
+  const kind = (item.kind ?? "").toLowerCase();
+  if (kind === "video" || kind === "replay") return HOME_ART.replay;
+  if (kind === "link") return HOME_ART.link;
+  return HOME_ART.notebook;
+}
+
+/** Soft-3D flashcard artwork on the card's right edge. */
+function StudyCardArt({ src }: { src: string }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute right-3 top-1/2 block h-[86px] w-[96px] -translate-y-[62%]"
+      className="pointer-events-none absolute right-1 top-1/2 block h-[100px] w-[112px] -translate-y-[58%]"
     >
-      <span className="absolute right-6 top-2 block h-[58px] w-[74px] rotate-[-8deg] rounded-[12px] border border-slate-200/80 bg-white shadow-[0_6px_14px_rgba(15,23,42,0.08)]" />
-      <span className="absolute right-2 top-5 block h-[58px] w-[74px] rotate-[6deg] rounded-[12px] border border-home-learning-accent/20 bg-gradient-to-br from-white to-home-learning shadow-[0_8px_18px_rgba(37,74,168,0.14)]">
-        <span className="absolute left-3 top-4 block h-[3px] w-10 rounded-full bg-home-learning-accent/25" />
-        <span className="absolute left-3 top-8 block h-[3px] w-7 rounded-full bg-home-learning-accent/20" />
-      </span>
+      <HomeDecorArt
+        src={src}
+        className="absolute inset-0 h-full w-full drop-shadow-[0_10px_20px_rgba(37,74,168,0.18)]"
+      />
     </span>
   );
 }
@@ -66,6 +77,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
         <HomeSectionHeader
           title="Continue Learning"
           icon={BookOpen}
+          art={HOME_ART.books}
           accentClassName="bg-home-learning text-home-learning-accent"
           action={items.length > 0 ? { label: "View all", to: "/dashboard/classes" } : undefined}
           actionClassName="text-home-learning-accent"
@@ -79,6 +91,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
       ) : visible.length === 0 ? (
         <HomeEmptyState
           icon={BookOpen}
+          art={HOME_ART.books}
           title="Nothing recent yet"
           description="Open a class and your recent learning appears here."
           action={{ label: "Go to Study", to: "/dashboard/classes" }}
@@ -119,7 +132,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
                     "group relative flex flex-col overflow-hidden p-4 transition-transform duration-200 active:scale-[0.985] motion-reduce:transition-none",
                   )}
                 >
-                  <StudyCardArt />
+                  <StudyCardArt src={itemArt(item)} />
 
                   <div className="relative flex items-center gap-2.5">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-home-learning shadow-[0_2px_8px_rgba(37,74,168,0.10)]">
@@ -135,7 +148,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
                     </span>
                   </div>
 
-                  <h3 className="relative mt-4 max-w-[62%] text-[18px] font-bold tracking-[-0.01em] text-slate-900 line-clamp-2">
+                  <h3 className="relative mt-4 max-w-[58%] text-[18px] font-bold tracking-[-0.01em] text-slate-900 line-clamp-2">
                     {item.title}
                   </h3>
                   <p className="relative mt-1 text-[12.5px] text-slate-500">

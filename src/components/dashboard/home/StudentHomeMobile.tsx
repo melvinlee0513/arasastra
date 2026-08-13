@@ -10,6 +10,7 @@ import { StudentHomeContinueLearning } from "./StudentHomeContinueLearning";
 import { StudentHomeQuickPractice } from "./StudentHomeQuickPractice";
 import { StudentHomeComingUp } from "./StudentHomeComingUp";
 import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
+import { HomePageDecor } from "./StudentHomeShared";
 
 /**
  * Student mobile Home — a playful-premium daily learning feed.
@@ -35,8 +36,9 @@ export function StudentHomeMobile() {
   const unread = useInboxUnreadCount();
 
   return (
-    <div className="min-h-screen bg-[hsl(220_20%_98%)]">
-      <div className="mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))]">
+    <div className="relative min-h-screen bg-[hsl(220_20%_98%)]">
+      <HomePageDecor />
+      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))]">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}

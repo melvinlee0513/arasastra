@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
-import { Flame, Zap, Trophy, Bell } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Bell } from "lucide-react";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import {
   firstNameFrom,
   type StudentProfileRecord,
 } from "@/lib/studentProfile";
-import { HomeSparkAccents } from "./StudentHomeShared";
+import { HomeSparkAccents, HomeDecorArt, HOME_ART } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
 interface StudentHomeHeroProps {
@@ -23,7 +22,8 @@ interface StudentHomeHeroProps {
 }
 
 interface Stat {
-  icon: LucideIcon;
+  /** Soft-3D artwork from the shared illustration library. */
+  art: string;
   value: string;
   caption: string;
   iconClass: string;
@@ -50,7 +50,7 @@ export function StudentHomeHero({
   const stats: Stat[] = [];
   if (showGamification) {
     stats.push({
-      icon: Flame,
+      art: HOME_ART.flame,
       value: `${streak} day${streak === 1 ? "" : "s"}`,
       caption: "streak",
       iconClass: "bg-home-updates text-home-updates-accent",
@@ -58,7 +58,7 @@ export function StudentHomeHero({
       srLabel: `${streak} day${streak === 1 ? "" : "s"} learning streak`,
     });
     stats.push({
-      icon: Zap,
+      art: HOME_ART.bolt,
       value: `${totalXp.toLocaleString("en-US")} XP`,
       caption: "earned",
       iconClass: "bg-home-learning text-home-learning-accent",
@@ -67,7 +67,7 @@ export function StudentHomeHero({
     });
     if (showRank && rank !== null) {
       stats.push({
-        icon: Trophy,
+        art: HOME_ART.trophy,
         value: `#${rank}`,
         caption: "this week",
         iconClass: "bg-medal-gold-soft text-medal-gold",
@@ -79,7 +79,16 @@ export function StudentHomeHero({
 
   return (
     <section className="relative">
-      <HomeSparkAccents className="right-8 top-[86px]" />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-x-4 -top-5 bottom-0 overflow-hidden"
+      >
+        <HomeSparkAccents className="right-[4px] top-[108px]" />
+        <HomeDecorArt
+          src={HOME_ART.orbs}
+          className="absolute right-0 top-0 h-20 w-20 opacity-[0.22]"
+        />
+      </span>
 
       <div className="relative flex items-start gap-3">
         {isLoading ? (
@@ -148,15 +157,22 @@ export function StudentHomeHero({
             {stats.map((s) => (
               <li
                 key={s.caption + s.value}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-slate-200/70 bg-white px-2.5 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.06)]"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white bg-white px-2.5 py-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]"
               >
                 <span
                   className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px]",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px]",
                     s.iconClass,
                   )}
                 >
-                  <s.icon className="h-4 w-4" aria-hidden="true" />
+                  <img
+                    src={s.art}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    decoding="async"
+                    className="h-[26px] w-[26px] object-contain drop-shadow-[0_2px_4px_rgba(15,23,42,0.16)]"
+                  />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-bold leading-tight text-slate-900">

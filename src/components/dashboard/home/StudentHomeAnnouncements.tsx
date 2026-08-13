@@ -12,6 +12,8 @@ import {
   HomeErrorState,
   HomeEmptyState,
   HOME_CARD,
+  HOME_ART,
+  HomeDecorArt,
 } from "./StudentHomeShared";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import { cn } from "@/lib/utils";
@@ -24,36 +26,24 @@ interface Props {
   viewAllTo?: string;
 }
 
-/** Soft-3D note sheet + bell art, pure CSS/SVG so it costs no network weight. */
+/**
+ * Soft-3D notice artwork: the shared library's pinned note sheet with the golden
+ * notification bell layered on top, matching the reference composition.
+ */
 function NoticeArt({ tone }: { tone: "important" | "normal" }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute -right-1 top-6 h-[104px] w-[104px] opacity-95"
+      className="pointer-events-none absolute right-0 top-7 h-[112px] w-[118px]"
     >
-      {/* Paper sheet */}
-      <span className="absolute right-3 top-4 block h-[74px] w-[62px] rotate-[4deg] rounded-[12px] bg-gradient-to-br from-[hsl(38_60%_97%)] to-[hsl(34_45%_90%)] shadow-[0_8px_18px_rgba(15,23,42,0.10)]">
-        <span className="absolute left-3 top-4 block h-[3px] w-8 rounded-full bg-black/10" />
-        <span className="absolute left-3 top-8 block h-[3px] w-10 rounded-full bg-black/10" />
-        <span className="absolute left-3 top-12 block h-[3px] w-6 rounded-full bg-black/10" />
-      </span>
-      {/* Bell */}
-      <span
-        className={cn(
-          "absolute right-[46px] top-0 flex h-11 w-11 items-center justify-center rounded-full shadow-[0_8px_16px_rgba(217,119,6,0.28)]",
-          tone === "important"
-            ? "bg-gradient-to-br from-[hsl(45_98%_66%)] to-[hsl(36_92%_50%)]"
-            : "bg-gradient-to-br from-[hsl(150_60%_70%)] to-[hsl(160_55%_45%)]",
-        )}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-white">
-          <path
-            d="M12 3a5.5 5.5 0 00-5.5 5.5v3.2L5 15h14l-1.5-3.3V8.5A5.5 5.5 0 0012 3z"
-            fill="currentColor"
-          />
-          <path d="M10 17a2 2 0 004 0h-4z" fill="currentColor" />
-        </svg>
-      </span>
+      <HomeDecorArt
+        src={HOME_ART.notebook}
+        className="absolute right-4 top-4 h-[76px] w-[76px] rotate-[6deg] drop-shadow-[0_8px_16px_rgba(15,23,42,0.14)]"
+      />
+      <HomeDecorArt
+        src={tone === "important" ? HOME_ART.bell : HOME_ART.link}
+        className="absolute right-[52px] top-0 h-[54px] w-[54px] drop-shadow-[0_8px_16px_rgba(217,119,6,0.24)]"
+      />
     </span>
   );
 }
@@ -77,6 +67,7 @@ export function StudentHomeAnnouncements({
         <HomeSectionHeader
           title="Important Updates"
           icon={Megaphone}
+          art={HOME_ART.megaphone}
           accentClassName="bg-home-updates text-home-updates-accent"
           action={viewAllTo && items.length > 0 ? { label: "View all", to: viewAllTo } : undefined}
         />
@@ -100,6 +91,7 @@ export function StudentHomeAnnouncements({
       ) : visible.length === 0 ? (
         <HomeEmptyState
           icon={Megaphone}
+          art={HOME_ART.megaphone}
           title="No new updates"
           description="Announcements from your classes will appear here."
           accentClassName="bg-home-updates text-home-updates-accent"
@@ -154,11 +146,11 @@ export function StudentHomeAnnouncements({
                     </span>
                   </div>
 
-                  <h3 className="relative mt-3 max-w-[62%] text-[17px] font-bold leading-snug tracking-[-0.01em] text-slate-900 line-clamp-2">
+                  <h3 className="relative mt-3 max-w-[60%] text-[17px] font-bold leading-snug tracking-[-0.01em] text-slate-900 line-clamp-2">
                     {a.title}
                   </h3>
                   {a.preview && (
-                    <p className="relative mt-1.5 max-w-[62%] text-[13.5px] leading-relaxed text-slate-600 line-clamp-2">
+                    <p className="relative mt-1.5 max-w-[60%] text-[13.5px] leading-relaxed text-slate-600 line-clamp-2">
                       {a.preview}
                     </p>
                   )}

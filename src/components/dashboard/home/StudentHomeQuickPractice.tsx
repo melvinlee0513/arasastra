@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { continueRoute, type HomeContinueItem } from "@/lib/studentHome";
-import { HOME_CARD } from "./StudentHomeShared";
+import { HOME_CARD, HOME_ART, HomeDecorArt } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -37,11 +37,11 @@ export function StudentHomeQuickPractice({ items, isLoading }: Props) {
       to={continueRoute(candidate)}
       className={cn(
         HOME_CARD,
-        "flex items-center gap-3 border-home-learning-accent/15 bg-gradient-to-r from-home-learning to-white px-3.5 py-3 transition-transform duration-200 active:scale-[0.985] motion-reduce:transition-none",
+        "relative flex items-center gap-3 overflow-hidden border-home-learning-accent/15 bg-gradient-to-r from-home-learning to-white px-3.5 py-3 transition-transform duration-200 active:scale-[0.985] motion-reduce:transition-none",
       )}
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(219_95%_60%)] to-[hsl(223_79%_45%)] shadow-[0_6px_16px_rgba(37,74,168,0.30)]">
-        <Zap className="h-5 w-5 text-white" aria-hidden="true" />
+        <HomeDecorArt src={HOME_ART.goldBolt} className="h-7 w-7 drop-shadow-[0_2px_6px_rgba(15,23,42,0.25)]" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15.5px] font-bold text-slate-900">Quick Practice</span>

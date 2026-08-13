@@ -1,14 +1,7 @@
 import { Link } from "react-router-dom";
 import { format, isToday, isTomorrow, isThisWeek, differenceInMinutes } from "date-fns";
-import {
-  CalendarCheck,
-  CalendarClock,
-  HelpCircle,
-  GraduationCap,
-  ArrowRight,
-  BookOpen,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { CalendarCheck, ArrowRight } from "lucide-react";
+import { subjectArt } from "@/lib/classIllustrations";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
 import {
   HomeSection,
@@ -16,6 +9,8 @@ import {
   HomeErrorState,
   HomeEmptyState,
   HOME_CARD,
+  HOME_ART,
+  HomeDecorArt,
 } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +27,6 @@ function dayLabel(iso: string): string {
   if (isTomorrow(d)) return "Tomorrow";
   if (isThisWeek(d, { weekStartsOn: 1 })) return format(d, "EEEE");
   return format(d, "EEE d MMM");
-}
-
-function itemIcon(kind: HomeUpcomingItem["kind"]): LucideIcon {
-  if (kind === "class") return BookOpen;
-  if (kind === "quiz_due") return HelpCircle;
-  return CalendarClock;
 }
 
 /**
@@ -72,6 +61,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
         <HomeSectionHeader
           title="Coming Up"
           icon={CalendarCheck}
+          art={HOME_ART.calendar}
           accentClassName="bg-home-schedule text-home-schedule-accent"
           action={{ label: "Calendar", to: "/timetable" }}
           actionClassName="text-home-schedule-accent"
@@ -85,6 +75,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
       ) : visible.length === 0 ? (
         <HomeEmptyState
           icon={CalendarCheck}
+          art={HOME_ART.calendar}
           title="You’re all caught up 🎉"
           description="Nothing scheduled for the next few days."
           action={{ label: "View full schedule", to: "/timetable" }}
@@ -121,7 +112,6 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                 </p>
                 <ul>
                   {group.items.map((item, i) => {
-                    const Icon = itemIcon(item.kind);
                     const at = new Date(item.at);
                     const isLast = i === group.items.length - 1;
                     return (
@@ -153,10 +143,14 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                                 : upcomingKindLabel(item.kind)}
                             </span>
                           </span>
-                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-home-schedule">
-                            <Icon
-                              className="h-[17px] w-[17px] text-home-schedule-accent"
-                              aria-hidden="true"
+                          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] overflow-hidden bg-home-schedule shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+                            <HomeDecorArt
+                              src={
+                                item.kind === "quiz_due"
+                                  ? HOME_ART.quiz
+                                  : subjectArt(item.class_name ?? item.subject_name)
+                              }
+                              className="h-9 w-9 scale-[1.3] drop-shadow-[0_2px_4px_rgba(15,23,42,0.16)]"
                             />
                           </span>
                         </Link>
