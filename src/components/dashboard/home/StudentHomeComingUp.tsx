@@ -150,7 +150,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                                   ? HOME_ART.quiz
                                   : subjectArt(item.class_name ?? item.subject_name)
                               }
-                              className="h-9 w-9 scale-[1.5] drop-shadow-[0_2px_4px_rgba(15,23,42,0.16)]"
+                              className="h-9 w-9 scale-[1.3] drop-shadow-[0_2px_4px_rgba(15,23,42,0.16)]"
                             />
                           </span>
                         </Link>

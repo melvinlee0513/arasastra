@@ -301,7 +301,7 @@ export const HOME_ART = {
 export function HomePageDecor() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <HomeDecorArt src={HOME_ART.orbs} className="absolute -right-8 top-[430px] h-28 w-28 opacity-[0.16]" />
+      <HomeDecorArt src={HOME_ART.orbs} className="absolute -right-10 top-[430px] h-28 w-28 opacity-[0.10]" />
       <HomeDecorArt src={HOME_ART.star} className="absolute left-[-14px] top-[720px] h-12 w-12 opacity-[0.18]" />
       <HomeDecorArt
         src={HOME_ART.achievementStar}
