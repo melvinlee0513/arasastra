@@ -69,6 +69,15 @@
     --home-ranking: 355 100% 97%;
     --home-ranking-accent: 353 65% 50%;
 
+    /* Class Hub — soft blue/purple tint system for section chrome, launcher
+       tiles and illustrated states. Kept separate from the global --primary
+       (deep navy) so hub accents read as blue rather than grey. */
+    --hub-accent: 223 100% 50%;
+    --hub-tint: 222 100% 96%;
+    --hub-tint-strong: 222 96% 92%;
+    --hub-purple: 258 90% 66%;
+    --hub-purple-tint: 258 100% 96%;
+
     /* Student mobile "More" utility hub — restrained per-service accents.
        Card surfaces stay white; only icon bubbles and tints use these. */
     --more-timetable: 214 100% 96%;

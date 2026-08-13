@@ -179,17 +179,26 @@ export function ClassShell({
             )}
           >
             {/* Compact banner: 16:9 on mobile, banner-height on tablet/desktop. */}
+            {/* Tutor-uploaded cover stays the dominant identity image. When a
+                class has no cover we show a shorter branded subject panel. */}
             <ClassCover
               classId={k.id}
               coverPath={k.cover_image_path}
               version={k.cover_image_updated_at}
               priority
               fallbackArt={heroArt}
-              sizeClassName="aspect-video sm:aspect-auto sm:h-44 md:h-52 lg:h-60"
+              sizeClassName={
+                k.cover_image_path
+                  ? "aspect-video sm:aspect-auto sm:h-44 md:h-52 lg:h-60"
+                  : "h-32 sm:h-40 md:h-48 lg:h-56"
+              }
               overlay={
                 <>
-                  {/* Subtle gradient for legibility of any overlay text/actions */}
-                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
+                  {/* Legibility scrim only over a real photographic cover —
+                      it would grey out the pastel subject fallback. */}
+                  {k.cover_image_path && (
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
+                  )}
                   {canManageCover && (
                     <div className="absolute top-3 right-3 z-10">
                       <ClassCoverManager
@@ -215,28 +224,38 @@ export function ClassShell({
               }
             />
             <div className="relative p-4 sm:p-6">
-              {/* Soft-3D subject medallion straddling the cover edge (mobile only). */}
-              <span className="md:hidden absolute -top-9 right-4 z-10 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/70 bg-white/95 shadow-[0_10px_24px_rgb(0,0,0,0.10)] backdrop-blur-sm">
-                <Illustration src={heroArt} className="h-10 w-10" priority />
-              </span>
+              {/* Supporting subject medallion — only over a real cover, so the
+                  fallback artwork is never duplicated. */}
+              {k.cover_image_path && (
+                <span className="md:hidden absolute -top-8 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/70 bg-white/95 shadow-[0_10px_24px_rgb(0,0,0,0.10)] backdrop-blur-sm">
+                  <Illustration src={heroArt} className="h-9 w-9" priority />
+                </span>
+              )}
               <Decor art="star" className="hidden md:block right-4 top-3 w-8 opacity-70" />
               <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-[21px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-tight pr-16 md:pr-0">
+                  <h1
+                    className={cn(
+                      "text-[19px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-snug line-clamp-2 md:line-clamp-none",
+                      k.cover_image_path && "pr-16 md:pr-0",
+                    )}
+                    title={k.title}
+                  >
                     {k.title}
                   </h1>
                   {k.cohort_label && (
-                    <p className="text-[13px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{k.cohort_label}</p>
+                    <p className="text-[12.5px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{k.cohort_label}</p>
                   )}
                   {k.schedule_label && (
-                    <p className="md:hidden mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
-                      <Calendar className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+                    <p className="md:hidden mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-600">
+                      <Calendar className="w-3.5 h-3.5 text-hub-accent" aria-hidden="true" />
                       {k.schedule_label}
                     </p>
                   )}
+
                   <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                     {k.subject?.name && (
-                      <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
+                      <Badge className="rounded-full bg-hub-tint text-hub-accent hover:bg-hub-tint-strong">
                         <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
                       </Badge>
                     )}
@@ -326,10 +345,11 @@ export function ClassShell({
         {k && !mobileImmersive && (
           <nav
             aria-label="Class sections"
-            className="md:hidden relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            className="md:hidden relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white px-2.5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
-            <Decor art="orbs" className="-right-6 -top-4 w-20 opacity-30" />
-            <ul className="relative grid grid-cols-4 gap-2">
+            {/* No decorative art inside the launcher — tiles fill the surface
+                and any accent would sit behind an icon or label. */}
+            <ul className="relative grid grid-cols-4 gap-x-1 gap-y-2">
               {visibleNav.map((item) => {
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -339,26 +359,28 @@ export function ClassShell({
                   <>
                     <span
                       className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
+                        "flex h-[42px] w-[42px] items-center justify-center rounded-2xl transition-colors",
                         isActive
-                          ? "bg-primary/10 ring-1 ring-inset ring-primary/25"
-                          : "bg-slate-50",
+                          ? "bg-hub-tint-strong ring-1 ring-inset ring-hub-accent/25"
+                          : disabled
+                            ? "bg-slate-50/70"
+                            : "bg-slate-50",
                       )}
                     >
                       <Illustration
                         src={item.art}
                         priority={isActive}
                         className={cn(
-                          "h-7 w-7 drop-shadow-[0_4px_8px_rgba(15,23,42,0.14)]",
-                          disabled && "opacity-40 grayscale",
+                          "h-[26px] w-[26px] drop-shadow-[0_3px_6px_rgba(15,23,42,0.12)]",
+                          disabled && "opacity-35",
                         )}
                       />
                     </span>
                     <span
                       className={cn(
-                        "text-center text-[11px] leading-tight",
-                        isActive ? "font-semibold text-primary" : "font-medium text-slate-600",
-                        disabled && "text-slate-400",
+                        "w-full truncate text-center text-[11px] leading-tight",
+                        isActive ? "font-semibold text-hub-accent" : "font-medium text-slate-600",
+                        disabled && "font-medium text-slate-400",
                       )}
                     >
                       {short}
@@ -366,7 +388,7 @@ export function ClassShell({
                   </>
                 );
                 const tileCls =
-                  "w-full min-h-[78px] flex flex-col items-center justify-center gap-1.5 rounded-2xl transition-transform";
+                  "w-full min-h-[72px] flex flex-col items-center justify-center gap-1.5 rounded-2xl px-0.5 transition-transform";
                 return (
                   <li key={item.key}>
                     {disabled ? (
@@ -386,8 +408,8 @@ export function ClassShell({
                         aria-current={isActive ? "page" : undefined}
                         className={cn(
                           tileCls,
-                          "active:scale-[0.96] active:bg-slate-50 motion-reduce:active:scale-100",
-                          isActive && "bg-primary/[0.04]",
+                          "active:scale-[0.96] motion-reduce:active:scale-100",
+                          isActive && "bg-hub-tint/60",
                         )}
                       >
                         {inner}
@@ -398,6 +420,7 @@ export function ClassShell({
               })}
             </ul>
           </nav>
+
         )}
 
         <div>{children}</div>

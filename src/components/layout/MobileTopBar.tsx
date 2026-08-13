@@ -51,7 +51,7 @@ export function MobileTopBar({
         </Link>
         {titleVariant === "pill" ? (
           <span className="flex-1 min-w-0 flex justify-end pr-1">
-            <span className="max-w-full truncate rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-semibold text-primary">
+            <span className="max-w-full truncate rounded-full bg-hub-tint px-3 py-1.5 text-[13px] font-semibold text-hub-accent">
               {title}
             </span>
           </span>
