@@ -85,3 +85,164 @@ export function subjectArt(subjectName?: string | null): string {
   }
   return asset("learning/glossy_pastel_stack_of_books.webp");
 }
+
+// ------------------------------------------------------------------
+// Subject art families (Study / My Classes premium class cards)
+// ------------------------------------------------------------------
+
+/**
+ * Compositional artwork for one subject family. `hero` is the dominant object
+ * in the card's visual region, `support`/`accent` are the smaller layered
+ * objects. Every path is a real file in `public/assets/illustrations/subjects`
+ * (or `/learning` for the generic fallback).
+ */
+export type SubjectArtSet = {
+  /** Family key — useful for stable React keys and analytics-free debugging. */
+  key: string;
+  hero: string;
+  support: string;
+  accent: string;
+  /** Tailwind gradient classes for the card's pale visual region. */
+  tint: string;
+};
+
+const SUBJECT_FAMILIES: { key: string; match: RegExp; art: Omit<SubjectArtSet, "key"> }[] = [
+  {
+    key: "additional-mathematics",
+    // "Add Maths", "Additional Maths", "Matematik Tambahan"
+    match: /(add(itional|\.|\b)[\s-]*(math|maths|mathematics)|matematik\s*tambahan|add\s*maths)/i,
+    art: {
+      hero: asset("subjects/additional mathematics/glossy_3d_graph_board_icon.webp"),
+      support: asset("subjects/additional mathematics/geometry-shapes.webp"),
+      accent: asset("subjects/additional mathematics/ruler-yellow.webp"),
+      tint: "from-indigo-100 via-sky-50 to-violet-100",
+    },
+  },
+  {
+    key: "mathematics",
+    match: /(math|maths|mathematics|matematik)/i,
+    art: {
+      hero: asset("subjects/mathematics/glossy_blue_3d_calculator_icon.webp"),
+      support: asset("subjects/mathematics/geometry-compass.webp"),
+      accent: asset("subjects/mathematics/set-square.webp"),
+      tint: "from-sky-100 via-blue-50 to-indigo-100",
+    },
+  },
+  {
+    key: "physics",
+    match: /(physic|fizik)/i,
+    art: {
+      hero: asset("subjects/physics/atom-variant.webp"),
+      support: asset("subjects/physics/physics-notebook.webp"),
+      accent: asset("subjects/physics/glossy_red_and_blue_horseshoe_magnet.webp"),
+      tint: "from-sky-100 via-white to-blue-100",
+    },
+  },
+  {
+    key: "chemistry",
+    match: /(chem|kimia)/i,
+    art: {
+      hero: asset("subjects/chemistry/chemistry-flask-blue.webp"),
+      support: asset("subjects/chemistry/glossy_colourful_molecule_icon.webp"),
+      accent: asset("subjects/chemistry/beaker-blue.webp"),
+      tint: "from-violet-100 via-sky-50 to-blue-100",
+    },
+  },
+  {
+    key: "biology",
+    match: /(bio|biologi)/i,
+    art: {
+      hero: asset("subjects/biology/dna-helix.webp"),
+      support: asset("subjects/biology/microscope.webp"),
+      accent: asset("subjects/biology/glossy_pastel_animal_cell_cutaway.webp"),
+      tint: "from-emerald-50 via-sky-50 to-teal-100",
+    },
+  },
+  {
+    key: "science",
+    match: /(science|sains)/i,
+    art: {
+      hero: asset("subjects/science/glossy_blue_liquid_beaker_with_stirring_rod.webp"),
+      support: asset("subjects/science/glossy_3d_science_notebook_icon.webp"),
+      accent: asset("subjects/science/test-tube-rack-wood.webp"),
+      tint: "from-cyan-100 via-sky-50 to-blue-100",
+    },
+  },
+  {
+    key: "sejarah",
+    match: /(sejarah|history)/i,
+    art: {
+      hero: asset("subjects/sejarah/historical-monument.webp"),
+      support: asset("subjects/sejarah/history-compass.webp"),
+      accent: asset("learning/global-learning.webp"),
+      tint: "from-amber-50 via-sky-50 to-indigo-100",
+    },
+  },
+  {
+    key: "bahasa-melayu",
+    match: /(bahasa\s*melayu|bahasa\s*malaysia|\bbm\b|melayu)/i,
+    art: {
+      hero: asset("subjects/languages/bahasa-melayu-notebook.webp"),
+      support: asset("subjects/languages/pantun-books.webp"),
+      accent: asset("subjects/languages/quote-bubble.webp"),
+      tint: "from-indigo-100 via-sky-50 to-violet-100",
+    },
+  },
+  {
+    key: "english",
+    match: /(english|bahasa\s*inggeris|\bbi\b)/i,
+    art: {
+      hero: asset("subjects/languages/english-book.webp"),
+      support: asset("subjects/languages/abc-blocks.webp"),
+      accent: asset("subjects/languages/speech-bubbles.webp"),
+      tint: "from-violet-100 via-sky-50 to-blue-100",
+    },
+  },
+  {
+    key: "languages",
+    match: /(language|bahasa|mandarin|tamil|arab|literature|sastera)/i,
+    art: {
+      hero: asset("subjects/languages/english-book.webp"),
+      support: asset("subjects/languages/fountain-pen.webp"),
+      accent: asset("subjects/languages/quill.webp"),
+      tint: "from-violet-100 via-sky-50 to-indigo-100",
+    },
+  },
+];
+
+const GENERIC_ART: Omit<SubjectArtSet, "key"> = {
+  hero: asset("learning/glossy_pastel_stack_of_books.webp"),
+  support: asset("ui/glossy_blue_graduation_cap_with_gold_tassel.webp"),
+  accent: asset("learning/glossy_colourful_idea_lightbulb_icon.webp"),
+  tint: "from-sky-100 via-white to-indigo-100",
+};
+
+/**
+ * Resolve the soft-3D artwork family for a class. Matching prefers the subject
+ * name, then falls back to the class title so classes without a linked subject
+ * still get contextual artwork. Stored names are never mutated.
+ */
+export function subjectArtSet(
+  subjectName?: string | null,
+  classTitle?: string | null,
+): SubjectArtSet {
+  for (const candidate of [subjectName, classTitle]) {
+    if (!candidate) continue;
+    const hit = SUBJECT_FAMILIES.find((f) => f.match.test(candidate));
+    if (hit) return { key: hit.key, ...hit.art };
+  }
+  return { key: "generic", ...GENERIC_ART };
+}
+
+/** Study / My Classes header + Up Next artwork. */
+export const STUDY_ART = {
+  graduationCap: asset("ui/glossy_blue_graduation_cap_with_gold_tassel.webp"),
+  alarmClock: asset("learning/glossy_lavender_twin_bell_alarm_clock.webp"),
+  emptyClasses: asset("learning/glossy_pastel_stack_of_books.webp"),
+  error: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
+  starYellow: asset("ui/sparkle-yellow.webp"),
+  sparklePurple: asset("decorative/sparkle-purple.png"),
+  cloud: asset("decorative/glossy_fluffy_cloud_icon.webp"),
+  paperPlane: asset("decorative/paper-plane-purple.webp"),
+  bookmark: asset("ui/glossy_blue_bookmark_icon.webp"),
+} as const;
