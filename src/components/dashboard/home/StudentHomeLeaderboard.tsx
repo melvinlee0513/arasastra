@@ -6,7 +6,13 @@ import {
   LeaderboardPodiumSkeleton,
   gapToNextLabel,
 } from "@/components/dashboard/leaderboard/LeaderboardShared";
-import { HomeSection, HomeSectionHeader, HomeErrorState, HomeEmptyState } from "./StudentHomeShared";
+import {
+  HomeSection,
+  HomeSectionHeader,
+  HomeErrorState,
+  HomeEmptyState,
+  HOME_ART,
+} from "./StudentHomeShared";
 
 interface Props {
   currentUserId: string | undefined;
@@ -30,6 +36,7 @@ export function StudentHomeLeaderboard({ currentUserId }: Props) {
         <HomeSectionHeader
           title="XP Leaderboard"
           icon={Trophy}
+          art={HOME_ART.trophy}
           accentClassName="bg-home-ranking text-home-ranking-accent"
           caption="This week"
           action={{ label: "View all", to: "/dashboard/leaderboard" }}
@@ -44,6 +51,7 @@ export function StudentHomeLeaderboard({ currentUserId }: Props) {
       ) : top.length === 0 ? (
         <HomeEmptyState
           icon={Trophy}
+          art={HOME_ART.trophy}
           title="No leaderboard activity yet"
           description="Start earning XP this week to claim a spot."
           accentClassName="bg-home-ranking text-home-ranking-accent"

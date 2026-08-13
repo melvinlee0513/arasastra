@@ -16,6 +16,8 @@ import {
   HomeErrorState,
   HomeEmptyState,
   HOME_CARD,
+  HOME_ART,
+  HomeDecorArt,
 } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +74,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
         <HomeSectionHeader
           title="Coming Up"
           icon={CalendarCheck}
+          art={HOME_ART.calendar}
           accentClassName="bg-home-schedule text-home-schedule-accent"
           action={{ label: "Calendar", to: "/timetable" }}
           actionClassName="text-home-schedule-accent"
@@ -85,6 +88,7 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
       ) : visible.length === 0 ? (
         <HomeEmptyState
           icon={CalendarCheck}
+          art={HOME_ART.calendar}
           title="You’re all caught up 🎉"
           description="Nothing scheduled for the next few days."
           action={{ label: "View full schedule", to: "/timetable" }}
