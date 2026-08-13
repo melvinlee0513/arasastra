@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Video, FileText, ClipboardList, ExternalLink, HelpCircle, Layers,
-  ArrowRight, Info, Calendar, User, BookOpen, Play, Lock, CheckCircle2, Clock,
+  FileText, HelpCircle, Layers,
+  ArrowRight, Calendar, User, BookOpen, Play, Lock, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import { STATE_ART } from "@/lib/classIllustrations";
 import { ResourcePreviewCard } from "@/components/resources/ResourcePreviewCard";
 import { hasValidSource, openClassResource } from "@/lib/classResources";
 import { useLatestClassAnnouncement } from "@/hooks/useClassAnnouncements";
-import { Megaphone, Pin } from "lucide-react";
+import { Pin } from "lucide-react";
 import { toast } from "sonner";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { listStudentClassQuizzes, quizStudentKeys, formatDateTime, type StudentQuizListRow } from "@/lib/quizzes";
