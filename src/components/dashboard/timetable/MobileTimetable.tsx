@@ -369,24 +369,24 @@ export function MobileTimetable() {
       ) : view === "day" ? (
         <>
           {/* Unified week calendar */}
-          <section className="mb-5 rounded-[22px] bg-white p-3 shadow-[0_4px_18px_rgb(0,0,0,0.04)]">
-            <div className="mb-2 flex items-center justify-between">
+          <section className="mb-5 rounded-[26px] border border-slate-200/70 bg-white p-3.5 shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
+            <div className="mb-2.5 flex items-center justify-between">
               <button
                 type="button"
                 aria-label="Previous week"
                 onClick={() => shiftWeek(-1)}
-                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition-transform duration-150 active:scale-95 active:bg-slate-100 motion-reduce:transition-none"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
-              <p className="text-[14px] font-semibold text-slate-900">
+              <p className="text-[14.5px] font-bold tracking-[-0.01em] text-slate-900">
                 {format(weekDates[0], "MMM d")} – {format(weekDates[6], "MMM d, yyyy")}
               </p>
               <button
                 type="button"
                 aria-label="Next week"
                 onClick={() => shiftWeek(1)}
-                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 active:bg-slate-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500 transition-transform duration-150 active:scale-95 active:bg-slate-100 motion-reduce:transition-none"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -395,6 +395,7 @@ export function MobileTimetable() {
             <div className="grid grid-cols-7 gap-0.5">
               {weekDates.map((date, i) => {
                 const selected = isSameDay(date, selectedDate);
+                const today = isToday(date);
                 const hasClasses = week.some((e) => isSameDay(new Date(e.starts_at), date));
                 return (
                   <button
@@ -402,32 +403,40 @@ export function MobileTimetable() {
                     type="button"
                     onClick={() => setSelectedDate(date)}
                     aria-current={selected ? "date" : undefined}
-                    aria-label={format(date, "EEEE d MMMM")}
-                    className="flex flex-col items-center gap-1 py-1"
+                    aria-label={`${format(date, "EEEE d MMMM")}${today ? " (today)" : ""}${
+                      hasClasses ? " — has classes" : ""
+                    }`}
+                    className="flex flex-col items-center gap-1 rounded-2xl py-1 transition-transform duration-150 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <span
                       className={cn(
                         "text-[10px] font-semibold uppercase tracking-wide",
-                        selected ? "text-primary" : "text-slate-400",
+                        selected ? "text-primary" : today ? "text-slate-600" : "text-slate-400",
                       )}
                     >
                       {DAY_LETTERS[i]}
                     </span>
                     <span
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-[14px] text-[15px] font-semibold transition-colors duration-200 motion-reduce:transition-none",
+                        "flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-bold transition-all duration-200 motion-reduce:transition-none",
                         selected
-                          ? "bg-primary/10 text-primary ring-1 ring-primary/25"
-                          : "text-slate-700",
+                          ? "-translate-y-[1px] bg-[linear-gradient(135deg,#4f7dfb_0%,#7c5cf5_100%)] text-white shadow-[0_6px_16px_rgba(79,125,251,0.40)]"
+                          : today
+                            ? "bg-slate-100 text-slate-900 ring-1 ring-inset ring-slate-300"
+                            : "text-slate-700",
                       )}
                     >
                       {date.getDate()}
                     </span>
                     <span className="flex h-1.5 items-center gap-0.5">
-                      {isToday(date) && !selected && (
-                        <span className="h-1 w-1 rounded-full bg-slate-400" />
+                      {hasClasses && (
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            selected ? "bg-primary" : "bg-violet-400",
+                          )}
+                        />
                       )}
-                      {hasClasses && <span className="h-1 w-1 rounded-full bg-primary" />}
                     </span>
                   </button>
                 );
@@ -437,8 +446,8 @@ export function MobileTimetable() {
 
           {/* Day heading */}
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[17px] font-bold text-slate-900">{dayHeading}</h2>
-            <span className="text-[12px] font-medium text-slate-500">{countLabel}</span>
+            <h2 className="text-[17.5px] font-bold tracking-[-0.01em] text-slate-900">{dayHeading}</h2>
+            <span className="text-[12px] font-semibold text-slate-500">{countLabel}</span>
           </div>
 
           {dayEntries.length > 0 ? (
@@ -448,43 +457,36 @@ export function MobileTimetable() {
               nextClassId={selectedIsToday ? (nextClass?.class_id ?? null) : null}
             />
           ) : (
-            <div className="space-y-5">
-              <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
-                <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
-                <p className="text-[14px] font-semibold text-slate-900">
-                  {selectedIsToday ? "No classes today" : "No classes this day"}
-                </p>
-                <p className="text-[12px] text-slate-500">Your schedule is clear.</p>
-              </div>
+            <div className="space-y-4">
+              <EmptyDayCard
+                title={selectedIsToday ? "No classes today" : "No classes this day"}
+                description="Your schedule is clear."
+              />
 
               {nextClass && (
                 <section>
-                  <h3 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">
+                  <h3 className="mb-2 px-0.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">
                     Next class
                   </h3>
-                  <ClassBlock entry={nextClass} isNext />
-                  <p className="mt-2 px-1 text-[12px] text-slate-500">
-                    {format(new Date(nextClass.starts_at), "EEEE · d MMM")}
-                  </p>
+                  <NextClassCard entry={nextClass} />
                 </section>
               )}
             </div>
           )}
         </>
       ) : groupedUpcoming.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-1 rounded-[22px] bg-slate-50 px-4 py-6">
-          <CalendarCheck className="h-6 w-6 text-slate-400" aria-hidden="true" />
-          <p className="text-[14px] font-semibold text-slate-900">No upcoming classes</p>
-          <p className="text-[12px] text-slate-500">New classes appear here once scheduled.</p>
-        </div>
+        <EmptyDayCard
+          title="No upcoming classes"
+          description="New classes appear here once scheduled."
+        />
       ) : (
         <div className="space-y-5">
           {groupedUpcoming.map((group) => (
             <section key={group.key}>
-              <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wide text-slate-400">
+              <h2 className="mb-2 px-0.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">
                 {group.label}
               </h2>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {group.items.map((entry) => (
                   <CompactRow key={`${entry.class_id}-${entry.starts_at}`} entry={entry} />
                 ))}
@@ -493,6 +495,7 @@ export function MobileTimetable() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
