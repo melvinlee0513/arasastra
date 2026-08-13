@@ -81,7 +81,7 @@ export function ClassCover({
             draggable={false}
             loading={priority ? "eager" : "lazy"}
             decoding="async"
-            className="h-[62%] max-h-28 w-auto select-none object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.18)]"
+            className="h-[74%] max-h-32 w-auto select-none object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.18)]"
           />
         </div>
       ) : (
