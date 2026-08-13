@@ -79,11 +79,16 @@ export function StudentHomeHero({
 
   return (
     <section className="relative">
-      <HomeSparkAccents className="right-[76px] top-[74px]" />
-      <HomeDecorArt
-        src={HOME_ART.orbs}
-        className="absolute -right-6 -top-4 h-20 w-20 opacity-[0.22]"
-      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-x-4 -top-5 bottom-0 overflow-hidden"
+      >
+        <HomeSparkAccents className="right-[92px] top-[80px]" />
+        <HomeDecorArt
+          src={HOME_ART.orbs}
+          className="absolute right-0 top-0 h-20 w-20 opacity-[0.22]"
+        />
+      </span>
 
       <div className="relative flex items-start gap-3">
         {isLoading ? (
