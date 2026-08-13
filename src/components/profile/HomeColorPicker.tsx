@@ -1,7 +1,8 @@
-import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toSafeMessage } from "@/components/common/TenantGate";
+import { PROFILE_ART } from "@/lib/studentIllustrations";
+import { ProfileSectionCard } from "@/components/profile/ProfileChrome";
 import {
   HERO_COLOR_PRESETS,
   heroPresetFor,
@@ -16,6 +17,9 @@ interface HomeColorPickerProps {
 /**
  * Personal Home hero colour. Curated presets only, all dark enough for the
  * white hero text, so contrast stays accessible for every choice.
+ *
+ * Visual-only redesign — storage/application of the selected colour is
+ * unchanged (`useSaveHeroColor`).
  */
 export function HomeColorPicker({ value }: HomeColorPickerProps) {
   const current = heroPresetFor(value).key;
@@ -29,14 +33,23 @@ export function HomeColorPicker({ value }: HomeColorPickerProps) {
   };
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-[15px] font-semibold text-slate-900">Personalisation</h2>
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-        <p className="text-[13.5px] font-medium text-slate-900">Home card colour</p>
-        <p className="mt-0.5 text-[12.5px] text-slate-500">
+    <ProfileSectionCard
+      art={PROFILE_ART.palette}
+      title="Personalisation"
+      accentArt={PROFILE_ART.paintbrush}
+      showSparkle
+    >
+      <div className="rounded-[22px] border border-sky-100/80 bg-[#fbfdff] p-3.5 sm:p-4">
+        <p className="text-[15px] font-bold text-[#0F172A]">Home card colour</p>
+        <p className="mt-1 text-[13px] leading-snug text-slate-500">
           Only you see this. It doesn't change your centre's branding.
         </p>
-        <ul role="radiogroup" aria-label="Home card colour" className="mt-3 flex flex-wrap gap-2.5">
+
+        <ul
+          role="radiogroup"
+          aria-label="Home card colour"
+          className="mt-4 flex flex-wrap gap-3 sm:gap-3.5"
+        >
           {HERO_COLOR_PRESETS.map((p) => {
             const selected = p.key === current;
             return (
@@ -45,30 +58,45 @@ export function HomeColorPicker({ value }: HomeColorPickerProps) {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  aria-label={p.label}
+                  aria-label={selected ? `${p.label} (selected)` : p.label}
                   disabled={save.isPending}
                   onClick={() => choose(p.key)}
                   style={{ backgroundColor: p.background }}
                   className={cn(
-                    "relative flex h-11 w-11 items-center justify-center rounded-full transition",
+                    "relative flex h-12 w-12 items-center justify-center rounded-full sm:h-[52px] sm:w-[52px]",
+                    "border-[3px] border-white transition-all duration-[170ms] motion-reduce:transition-none",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                    "active:scale-[0.97] motion-reduce:active:scale-100",
                     selected
-                      ? "ring-2 ring-slate-900 ring-offset-2"
-                      : "ring-1 ring-slate-200 ring-offset-1",
+                      ? "ring-[3px] ring-primary ring-offset-2 shadow-[0_6px_18px_rgba(37,99,235,0.35)] sm:-translate-y-0.5"
+                      : "shadow-[0_3px_10px_rgba(15,23,42,0.14)] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0",
                     save.isPending && "opacity-70",
                   )}
                 >
-                  {selected && <Check className="w-4 h-4 text-white" aria-hidden="true" />}
+                  {selected && (
+                    <img
+                      src={PROFILE_ART.selectedCheck}
+                      alt=""
+                      aria-hidden="true"
+                      loading="lazy"
+                      decoding="async"
+                      className="pointer-events-none h-full w-full object-contain"
+                    />
+                  )}
                 </button>
               </li>
             );
           })}
         </ul>
-        <p className="mt-3 text-[12.5px] text-slate-500">
-          Selected: <span className="font-medium text-slate-900">{heroPresetFor(value).label}</span>
-        </p>
+
+        <div className="mt-4 rounded-2xl border border-sky-100/80 bg-white px-3.5 py-2.5">
+          <p className="text-[13.5px] text-slate-500">
+            Selected:{" "}
+            <span className="font-bold text-primary">{heroPresetFor(value).label}</span>
+          </p>
+        </div>
       </div>
-    </section>
+    </ProfileSectionCard>
   );
 }
 
