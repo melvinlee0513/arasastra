@@ -2,13 +2,9 @@ import { Link } from "react-router-dom";
 import { format, isToday, isTomorrow, isThisWeek, differenceInMinutes } from "date-fns";
 import {
   CalendarCheck,
-  CalendarClock,
-  HelpCircle,
-  GraduationCap,
   ArrowRight,
   BookOpen,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { subjectArt } from "@/lib/classIllustrations";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
 import {
@@ -35,12 +31,6 @@ function dayLabel(iso: string): string {
   if (isTomorrow(d)) return "Tomorrow";
   if (isThisWeek(d, { weekStartsOn: 1 })) return format(d, "EEEE");
   return format(d, "EEE d MMM");
-}
-
-function itemIcon(kind: HomeUpcomingItem["kind"]): LucideIcon {
-  if (kind === "class") return BookOpen;
-  if (kind === "quiz_due") return HelpCircle;
-  return CalendarClock;
 }
 
 /**
@@ -126,7 +116,6 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                 </p>
                 <ul>
                   {group.items.map((item, i) => {
-                    const Icon = itemIcon(item.kind);
                     const at = new Date(item.at);
                     const isLast = i === group.items.length - 1;
                     return (
