@@ -145,8 +145,17 @@ export function ClassShell({
   );
 
   return (
-    <div className={HUB_CANVAS}>
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 md:space-y-6">
+    <div className={cn(HUB_CANVAS, "relative overflow-hidden")}>
+      {/* Supportive floating accents — decorative only, never over content. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <Decor art="star" className="left-1 top-[168px] w-7 opacity-70" />
+        <Decor art="orbs" className="right-0 top-[120px] w-16 opacity-25" />
+        <Decor art="star" className="right-2 top-[520px] w-6 opacity-50" />
+        <Decor art="orbs" className="-left-3 top-[640px] w-14 opacity-20" />
+        <Decor art="cloud" className="-left-6 bottom-24 w-28 opacity-40" />
+        <Decor art="cloud" className="-right-8 bottom-6 w-32 opacity-35" />
+      </div>
+      <div className="relative z-10 max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 md:space-y-6">
         {/* Mobile: native app bar. Desktop/tablet: breadcrumbs. */}
         <MobileTopBar
           backTo={backTo}
@@ -349,7 +358,7 @@ export function ClassShell({
           >
             {/* No decorative art inside the launcher — tiles fill the surface
                 and any accent would sit behind an icon or label. */}
-            <ul className="relative grid grid-cols-4 gap-x-1 gap-y-2">
+            <ul className="relative grid grid-cols-4 gap-x-1 gap-y-1.5">
               {visibleNav.map((item) => {
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -359,36 +368,43 @@ export function ClassShell({
                   <>
                     <span
                       className={cn(
-                        "flex h-[42px] w-[42px] items-center justify-center rounded-2xl transition-colors",
+                        "flex h-[56px] w-[56px] items-center justify-center rounded-[18px] transition-colors",
                         isActive
-                          ? "bg-hub-tint-strong ring-1 ring-inset ring-hub-accent/25"
+                          ? "bg-hub-tint-strong ring-1 ring-inset ring-hub-accent/25 shadow-[0_6px_16px_rgba(0,82,255,0.14)]"
                           : disabled
                             ? "bg-slate-50/70"
-                            : "bg-slate-50",
+                            : "bg-slate-50 shadow-[0_2px_6px_rgba(15,23,42,0.05)]",
                       )}
                     >
                       <Illustration
                         src={item.art}
                         priority={isActive}
                         className={cn(
-                          "h-[26px] w-[26px] drop-shadow-[0_3px_6px_rgba(15,23,42,0.12)]",
+                          "h-[38px] w-[38px] drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)]",
                           disabled && "opacity-35",
                         )}
                       />
                     </span>
                     <span
                       className={cn(
-                        "w-full truncate text-center text-[11px] leading-tight",
+                        "w-full truncate text-center text-[11.5px] leading-tight",
                         isActive ? "font-semibold text-hub-accent" : "font-medium text-slate-600",
                         disabled && "font-medium text-slate-400",
                       )}
                     >
                       {short}
                     </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "h-[3px] w-4 rounded-full transition-colors",
+                        isActive ? "bg-hub-accent" : "bg-transparent",
+                      )}
+                    />
                   </>
                 );
                 const tileCls =
-                  "w-full min-h-[72px] flex flex-col items-center justify-center gap-1.5 rounded-2xl px-0.5 transition-transform";
+                  "w-full min-h-[92px] flex flex-col items-center justify-center gap-1.5 rounded-2xl px-0.5 pt-1 transition-transform";
                 return (
                   <li key={item.key}>
                     {disabled ? (
