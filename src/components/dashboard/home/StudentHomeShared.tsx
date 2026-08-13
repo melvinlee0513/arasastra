@@ -126,6 +126,7 @@ interface HomeSectionHeaderProps {
 export function HomeSectionHeader({
   title,
   icon,
+  art,
   accentClassName = "bg-primary/10 text-primary",
   action,
   actionClassName,
@@ -133,7 +134,11 @@ export function HomeSectionHeader({
 }: HomeSectionHeaderProps) {
   return (
     <div className="flex items-center gap-2.5 px-0.5">
-      <IconBubble icon={icon} className={cn("bg-white", accentClassName)} />
+      {art ? (
+        <ArtBubble src={art} className={cn("bg-white", accentClassName)} />
+      ) : (
+        <IconBubble icon={icon} className={cn("bg-white", accentClassName)} />
+      )}
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-[18px] font-bold leading-tight tracking-[-0.01em] text-slate-900">
           {title}
