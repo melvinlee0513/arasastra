@@ -86,6 +86,7 @@ const StudentQuizAttemptPreview = lazy(() => import("@/pages/preview/StudentQuiz
 const StudentQuizResultsPreview = lazy(() => import("@/pages/preview/StudentQuizResultsPreview"));
 const EnrollmentMatrixPreview = lazy(() => import("@/pages/preview/EnrollmentMatrixPreview"));
 const TenantConfigurationPreview = lazy(() => import("@/pages/preview/TenantConfigurationPreview"));
+const ClassHubQaHarness = lazy(() => import("@/pages/preview/ClassHubQaHarness"));
 import { DevPreviewGuard } from "@/components/common/DevPreviewGuard";
 
 // Guardian
@@ -206,6 +207,7 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><StudentQuizResultsPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/admin/enrollment-matrix/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><EnrollmentMatrixPreview /></DevPreviewGuard></ProtectedRoute>} />
             <Route path="/superadmin/tenants/:centerId/configuration/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><TenantConfigurationPreview /></DevPreviewGuard></ProtectedRoute>} />
+            {import.meta.env.DEV && <Route path="/__qa/class-hub" element={<ClassHubQaHarness />} />}
 
             {/* Legacy quiz entry point */}
             <Route path="/quiz/:quizId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><LegacyQuizRedirect /></DashboardLayout></TenantGuard></ProtectedRoute>} />
