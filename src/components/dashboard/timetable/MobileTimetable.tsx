@@ -8,9 +8,15 @@ import {
   isToday,
   isTomorrow,
 } from "date-fns";
-import { AlertCircle, CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  DecorArt,
+  ServiceArtBubble,
+} from "@/components/dashboard/services/StudentServiceChrome";
+import { DECOR_ART, TIMETABLE_ART } from "@/lib/studentIllustrations";
+import { subjectArt } from "@/lib/classIllustrations";
 import {
   SUBJECT_ACCENT_BG,
   SUBJECT_ACCENT_TEXT,
