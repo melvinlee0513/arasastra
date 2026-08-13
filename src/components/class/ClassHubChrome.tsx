@@ -88,23 +88,24 @@ export function ClassHubEmptyState({
   className?: string;
 }) {
   return (
-    <ClassHubPanel className={cn("px-6 py-10 sm:py-14 text-center", className)}>
-      <Decor art="cloud" className="-left-6 top-4 w-24 opacity-50" />
-      <Decor art="orbs" className="-right-8 bottom-0 w-28 opacity-40" />
-      <div className="relative mx-auto mb-5 flex h-28 w-28 items-center justify-center">
+    <ClassHubPanel className={cn("px-6 py-9 sm:py-12 text-center", className)}>
+      {/* Decor stays in the corners, well clear of the text column. */}
+      <Decor art="cloud" className="-left-5 -top-3 w-16 opacity-45" />
+      <Decor art="orbs" className="-right-6 -top-2 w-16 opacity-30" />
+      <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center">
         <span
           aria-hidden
-          className="absolute inset-0 rounded-full bg-primary/10 blur-[2px]"
+          className="absolute inset-0 rounded-full bg-primary/10"
         />
         <span
           aria-hidden
-          className="absolute inset-3 rounded-full bg-white/70"
+          className="absolute inset-[10px] rounded-full bg-primary/[0.06]"
         />
-        <Illustration src={art} className="relative h-20 w-20 drop-shadow-[0_10px_18px_rgba(15,23,42,0.16)]" />
+        <Illustration src={art} className="relative h-16 w-16 drop-shadow-[0_8px_16px_rgba(15,23,42,0.14)]" />
       </div>
       <h2 className="relative text-[17px] font-bold text-slate-900">{title}</h2>
       {description && (
-        <p className="relative mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-slate-500">
+        <p className="relative mx-auto mt-1.5 max-w-[17rem] sm:max-w-sm text-[13.5px] leading-relaxed text-slate-500">
           {description}
         </p>
       )}
@@ -112,3 +113,4 @@ export function ClassHubEmptyState({
     </ClassHubPanel>
   );
 }
+
