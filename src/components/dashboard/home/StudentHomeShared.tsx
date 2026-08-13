@@ -193,20 +193,27 @@ export const HOME_CARD =
  */
 export function HomeEmptyState({
   icon,
+  art,
   title,
   description,
   action,
   accentClassName = "bg-slate-100 text-slate-400",
 }: {
   icon: LucideIcon;
+  /** Optional soft-3D illustration shown instead of the flat icon. */
+  art?: string;
   title: string;
   description?: string;
   action?: { label: string; to: string };
   accentClassName?: string;
 }) {
   return (
-    <div className={cn(HOME_CARD, "flex flex-col items-center gap-2 px-4 py-7 text-center")}>
-      <IconBubble icon={icon} size="lg" className={accentClassName} />
+    <div className={cn(HOME_CARD, "relative flex flex-col items-center gap-2 overflow-hidden px-4 py-7 text-center")}>
+      {art ? (
+        <ArtBubble src={art} size="xl" className={cn("relative", accentClassName)} />
+      ) : (
+        <IconBubble icon={icon} size="lg" className={accentClassName} />
+      )}
       <p className="mt-0.5 text-[15px] font-bold text-slate-900">{title}</p>
       {description && <p className="max-w-[260px] text-[13px] text-slate-500">{description}</p>}
       {action && (
