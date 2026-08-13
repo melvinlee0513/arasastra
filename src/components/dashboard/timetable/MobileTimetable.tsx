@@ -236,6 +236,86 @@ function DayTimeline({
   );
 }
 
+/* ------------------------------------------------------------ empty states */
+
+/** Large illustrated empty state used when a day (or the feed) has no classes. */
+function EmptyDayCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="relative flex flex-col items-center overflow-hidden rounded-[28px] border border-slate-200/70 bg-[linear-gradient(170deg,#ffffff_0%,#f6f9ff_100%)] px-5 py-8 text-center shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <DecorArt src={DECOR_ART.cloudSoft} className="absolute left-4 top-6 h-10 w-10 opacity-40" />
+        <DecorArt src={DECOR_ART.cloud} className="absolute right-5 top-10 h-9 w-9 opacity-35" />
+        <DecorArt src={DECOR_ART.paperPlane} className="absolute right-8 top-2 h-8 w-8 opacity-60" />
+        <DecorArt src={DECOR_ART.star} className="absolute left-10 top-2 h-5 w-5 opacity-50" />
+        <DecorArt src={DECOR_ART.orb} className="absolute -bottom-8 -left-6 h-24 w-24 opacity-[0.12]" />
+      </div>
+      <div className="relative flex items-end gap-2">
+        <img
+          src={TIMETABLE_ART.empty}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width={96}
+          height={96}
+          className="h-[88px] w-[88px] object-contain drop-shadow-[0_8px_14px_rgba(15,23,42,0.16)]"
+        />
+        <img
+          src={TIMETABLE_ART.clock}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width={48}
+          height={48}
+          className="mb-1 h-11 w-11 object-contain drop-shadow-[0_6px_10px_rgba(15,23,42,0.14)]"
+        />
+      </div>
+      <p className="relative mt-3 text-[16px] font-bold tracking-[-0.01em] text-slate-900">{title}</p>
+      <p className="relative mt-0.5 text-[13px] text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+/** Compact "next class" footer card shown beneath an empty day. */
+function NextClassCard({ entry }: { entry: TimetableEntry }) {
+  const start = new Date(entry.starts_at);
+  return (
+    <Link
+      to={classRoute(entry)}
+      className={cn(
+        "flex items-center gap-3 rounded-[24px] border border-slate-200/70 bg-white p-3.5",
+        "shadow-[0_6px_22px_rgba(15,23,42,0.06)]",
+        "transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.985] motion-reduce:transition-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+      )}
+      aria-label={`Next class — ${entry.title}, ${format(start, "EEEE h:mm a")}`}
+    >
+      <ServiceArtBubble
+        src={subjectArt(entry.subject_name)}
+        size="lg"
+        className="bg-slate-50"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+          Next class
+        </p>
+        <p className="truncate text-[15px] font-bold tracking-[-0.01em] text-slate-900">
+          {entry.title}
+        </p>
+        {entry.tutor_name && (
+          <p className="truncate text-[12px] text-slate-500">{entry.tutor_name}</p>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+        <CalendarDays className="h-4 w-4 text-slate-300" aria-hidden="true" />
+        <p className="text-[12.5px] font-semibold text-slate-700">{format(start, "EEEE")}</p>
+        <p className="text-[12px] text-slate-500">{format(start, "h:mm a")}</p>
+      </div>
+    </Link>
+  );
+}
+
 /* --------------------------------------------------------------- skeletons */
 
 function TimetableSkeleton() {
