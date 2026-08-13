@@ -254,7 +254,7 @@ export function ClassShell({
                   <h1
                     className={cn(
                       "text-[19px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-snug line-clamp-2 md:line-clamp-none",
-                      k.cover_image_path && "pr-16 md:pr-0",
+                      k.cover_image_path ? "pr-16 md:pr-0" : "pr-24 md:pr-0",
                     )}
                     title={k.title}
                   >
