@@ -245,14 +245,14 @@ export function ClassShell({
                   )}
                   {k.schedule_label && (
                     <p className="md:hidden mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-600">
-                      <Calendar className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+                      <Calendar className="w-3.5 h-3.5 text-hub-accent" aria-hidden="true" />
                       {k.schedule_label}
                     </p>
                   )}
 
                   <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                     {k.subject?.name && (
-                      <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
+                      <Badge className="rounded-full bg-hub-tint text-hub-accent hover:bg-hub-tint-strong">
                         <BookOpen className="w-3 h-3 mr-1" /> {k.subject.name}
                       </Badge>
                     )}
@@ -358,7 +358,7 @@ export function ClassShell({
                       className={cn(
                         "flex h-[42px] w-[42px] items-center justify-center rounded-2xl transition-colors",
                         isActive
-                          ? "bg-primary/[0.12] ring-1 ring-inset ring-primary/20"
+                          ? "bg-hub-tint-strong ring-1 ring-inset ring-hub-accent/25"
                           : disabled
                             ? "bg-slate-50/70"
                             : "bg-slate-50",
@@ -376,7 +376,7 @@ export function ClassShell({
                     <span
                       className={cn(
                         "w-full truncate text-center text-[11px] leading-tight",
-                        isActive ? "font-semibold text-primary" : "font-medium text-slate-600",
+                        isActive ? "font-semibold text-hub-accent" : "font-medium text-slate-600",
                         disabled && "font-medium text-slate-400",
                       )}
                     >
@@ -406,7 +406,7 @@ export function ClassShell({
                         className={cn(
                           tileCls,
                           "active:scale-[0.96] motion-reduce:active:scale-100",
-                          isActive && "bg-primary/[0.05]",
+                          isActive && "bg-hub-tint/60",
                         )}
                       >
                         {inner}

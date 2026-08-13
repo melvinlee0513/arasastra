@@ -95,11 +95,11 @@ export function ClassHubEmptyState({
       <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center">
         <span
           aria-hidden
-          className="absolute inset-0 rounded-full bg-primary/10"
+          className="absolute inset-0 rounded-full bg-hub-tint"
         />
         <span
           aria-hidden
-          className="absolute inset-[10px] rounded-full bg-primary/[0.06]"
+          className="absolute inset-[10px] rounded-full bg-hub-tint-strong"
         />
         <Illustration src={art} className="relative h-16 w-16 drop-shadow-[0_8px_16px_rgba(15,23,42,0.14)]" />
       </div>
