@@ -310,14 +310,23 @@ export function MobileTimetable() {
         : `${dayEntries.length} classes`;
 
   return (
-    <div
-      className="px-4 pb-6"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
-    >
+    <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f7faff_0%,#f9fbff_45%,#f6f8fd_100%)]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-[radial-gradient(120%_100%_at_50%_0%,rgba(99,102,241,0.10),transparent_70%)]"
+      />
+      <div
+        className="relative px-4 pb-8"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      >
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-[26px] font-bold tracking-tight text-slate-900">Timetable</h1>
-        <div className="inline-flex rounded-full bg-slate-100 p-1">
+      <div className="relative mb-4 flex items-center justify-between gap-3">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <DecorArt src={DECOR_ART.star} className="absolute left-[104px] -top-1 h-5 w-5 opacity-50" />
+          <DecorArt src={DECOR_ART.cloudSoft} className="absolute left-[132px] top-6 h-6 w-6 opacity-35" />
+        </div>
+        <h1 className="relative text-[26px] font-bold tracking-[-0.02em] text-slate-900">Timetable</h1>
+        <div className="relative inline-flex rounded-full border border-slate-200/70 bg-white/80 p-1 shadow-[0_4px_16px_rgba(15,23,42,0.05)] backdrop-blur-sm">
           {(["day", "upcoming"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
@@ -325,10 +334,11 @@ export function MobileTimetable() {
               onClick={() => setView(mode)}
               aria-pressed={view === mode}
               className={cn(
-                "h-9 rounded-full px-3 text-[13px] font-semibold transition-all duration-200 motion-reduce:transition-none",
+                "h-9 rounded-full px-3.5 text-[13px] font-semibold transition-all duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 view === mode
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500",
+                  ? "bg-[linear-gradient(135deg,#4f7dfb_0%,#7c5cf5_100%)] text-white shadow-[0_4px_14px_rgba(79,125,251,0.35)]"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
               {mode === "day" ? "By day" : "Upcoming"}
@@ -336,6 +346,7 @@ export function MobileTimetable() {
           ))}
         </div>
       </div>
+
 
       {isLoading ? (
         <TimetableSkeleton />
