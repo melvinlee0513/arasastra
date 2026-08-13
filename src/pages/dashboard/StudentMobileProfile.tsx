@@ -10,7 +10,6 @@ import { HomeColorPicker } from "@/components/profile/HomeColorPicker";
 import {
   AccountActionRow,
   PROFILE_CARD,
-  ProfileArtBubble,
   ProfileDecor,
   ProfileFooterDecor,
   ProfileHeader,
