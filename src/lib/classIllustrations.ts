@@ -35,6 +35,8 @@ export const DECOR_ART = {
   cloud: asset("decorative/glossy_fluffy_cloud_icon.webp"),
   books: asset("learning/glossy_pastel_stack_of_books.webp"),
   paperPlane: asset("decorative/paper-plane-purple.webp"),
+  sparkleStar: asset("gamification/achievement-star.webp"),
+  bell: asset("decorative/glossy_golden_notification_bell.webp"),
 } as const;
 
 /** Content illustrations used by empty/complete states. */
@@ -48,6 +50,11 @@ export const STATE_ART = {
   calendar: asset("learning/glossy_pastel_calendar_with_checkmark.webp"),
   trophy: asset("decorative/glossy_golden_star_trophy_icon.webp"),
   lock: asset("gamification/glossy_purple_lock_medal_badge.webp"),
+  /** "At a glance" header art — magnifier stands in for the reference binoculars. */
+  glance: asset("ui/magnifying-glass.webp"),
+  /** Link resources — globe/network artwork reads as an external destination. */
+  link: asset("learning/global-learning.webp"),
+  about: asset("ui/glossy_blue_3d_information_bubble.webp"),
 } as const;
 
 const SUBJECT_ART: { match: RegExp; src: string }[] = [
