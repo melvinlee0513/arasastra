@@ -183,13 +183,17 @@ export async function fetchTutorsByClass(
       user_id: string;
       full_name: string | null;
       display_name: string | null;
+      avatar_path?: string | null;
     }>) {
       profByUser.set(p.user_id, {
+        user_id: p.user_id,
+        avatar_path: p.avatar_path ?? null,
         full_name: p.full_name,
         display_name: p.display_name,
       });
     }
   }
+
 
   for (const [classId, userIds] of byClass) {
     const identities = userIds
