@@ -29,7 +29,6 @@ const ClassesPage = lazy(() => import("@/pages/ClassesPage").then(m => ({ defaul
 const InboxPage = lazy(() => import("@/pages/InboxPage").then(m => ({ default: m.InboxPage })));
 const AccountPage = lazy(() => import("@/pages/AccountPage").then(m => ({ default: m.AccountPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then(m => ({ default: m.ResetPasswordPage })));
-const ClassHubQaHarness = lazy(() => import("@/pages/preview/ClassHubQaHarness"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const MobileOnboarding = lazy(() => import("@/pages/MobileOnboarding").then(m => ({ default: m.MobileOnboarding })));
 const TenantDashboard = lazy(() => import("@/pages/tenant/TenantDashboard").then(m => ({ default: m.TenantDashboard })));
@@ -283,7 +282,6 @@ const App = () => (
             <Route path="/center" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><TenantDashboard /></TenantGuard></ProtectedRoute>} />
 
             {/* 404 */}
-            {import.meta.env.DEV && <Route path="/__qa/class-hub" element={<ClassHubQaHarness />} />}
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>

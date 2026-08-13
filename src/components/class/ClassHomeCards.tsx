@@ -92,7 +92,7 @@ export function ClassGlanceCard({
   return (
     <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-5">
       <Decor art="star" className="right-3 top-3 w-7 opacity-75" />
-      <Decor art="orbs" className="-left-5 bottom-20 w-14 opacity-20" />
+      <Decor art="orbs" className="-left-5 bottom-3 w-14 opacity-20" />
       <div className="relative mb-2 flex items-center gap-2.5">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-hub-tint">
           <Illustration
