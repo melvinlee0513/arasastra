@@ -157,10 +157,14 @@ export function StudentHomeComingUp({ items, isLoading, isError, onRetry }: Prop
                                 : upcomingKindLabel(item.kind)}
                             </span>
                           </span>
-                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-home-schedule">
-                            <Icon
-                              className="h-[17px] w-[17px] text-home-schedule-accent"
-                              aria-hidden="true"
+                          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-home-schedule shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+                            <HomeDecorArt
+                              src={
+                                item.kind === "quiz_due"
+                                  ? HOME_ART.quiz
+                                  : subjectArt(item.class_name ?? item.subject_name)
+                              }
+                              className="h-[26px] w-[26px] drop-shadow-[0_2px_4px_rgba(15,23,42,0.16)]"
                             />
                           </span>
                         </Link>
