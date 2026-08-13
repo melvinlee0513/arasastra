@@ -1,10 +1,6 @@
 import { Link } from "react-router-dom";
 import { format, isToday, isTomorrow, isThisWeek, differenceInMinutes } from "date-fns";
-import {
-  CalendarCheck,
-  ArrowRight,
-  BookOpen,
-} from "lucide-react";
+import { CalendarCheck, ArrowRight } from "lucide-react";
 import { subjectArt } from "@/lib/classIllustrations";
 import { upcomingKindLabel, upcomingRoute, type HomeUpcomingItem } from "@/lib/studentHome";
 import {
