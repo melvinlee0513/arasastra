@@ -179,13 +179,19 @@ export function ClassShell({
             )}
           >
             {/* Compact banner: 16:9 on mobile, banner-height on tablet/desktop. */}
+            {/* Tutor-uploaded cover stays the dominant identity image. When a
+                class has no cover we show a shorter branded subject panel. */}
             <ClassCover
               classId={k.id}
               coverPath={k.cover_image_path}
               version={k.cover_image_updated_at}
               priority
               fallbackArt={heroArt}
-              sizeClassName="aspect-video sm:aspect-auto sm:h-44 md:h-52 lg:h-60"
+              sizeClassName={
+                k.cover_image_path
+                  ? "aspect-video sm:aspect-auto sm:h-44 md:h-52 lg:h-60"
+                  : "h-32 sm:h-40 md:h-48 lg:h-56"
+              }
               overlay={
                 <>
                   {/* Subtle gradient for legibility of any overlay text/actions */}
@@ -215,25 +221,35 @@ export function ClassShell({
               }
             />
             <div className="relative p-4 sm:p-6">
-              {/* Soft-3D subject medallion straddling the cover edge (mobile only). */}
-              <span className="md:hidden absolute -top-9 right-4 z-10 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/70 bg-white/95 shadow-[0_10px_24px_rgb(0,0,0,0.10)] backdrop-blur-sm">
-                <Illustration src={heroArt} className="h-10 w-10" priority />
-              </span>
+              {/* Supporting subject medallion — only over a real cover, so the
+                  fallback artwork is never duplicated. */}
+              {k.cover_image_path && (
+                <span className="md:hidden absolute -top-8 right-4 z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/70 bg-white/95 shadow-[0_10px_24px_rgb(0,0,0,0.10)] backdrop-blur-sm">
+                  <Illustration src={heroArt} className="h-9 w-9" priority />
+                </span>
+              )}
               <Decor art="star" className="hidden md:block right-4 top-3 w-8 opacity-70" />
               <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-[21px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-tight pr-16 md:pr-0">
+                  <h1
+                    className={cn(
+                      "text-[19px] sm:text-2xl md:text-3xl font-bold text-slate-900 break-words leading-snug line-clamp-2 md:line-clamp-none",
+                      k.cover_image_path && "pr-16 md:pr-0",
+                    )}
+                    title={k.title}
+                  >
                     {k.title}
                   </h1>
                   {k.cohort_label && (
-                    <p className="text-[13px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{k.cohort_label}</p>
+                    <p className="text-[12.5px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{k.cohort_label}</p>
                   )}
                   {k.schedule_label && (
-                    <p className="md:hidden mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+                    <p className="md:hidden mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-slate-600">
                       <Calendar className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
                       {k.schedule_label}
                     </p>
                   )}
+
                   <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
                     {k.subject?.name && (
                       <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">
