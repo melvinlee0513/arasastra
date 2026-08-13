@@ -122,6 +122,10 @@ async function readBitmap(file: File): Promise<ImageBitmap | HTMLImageElement> {
 // ------------------------------------------------------------------
 
 export type TutorIdentity = {
+  /** Auth user id — present for rows resolved through `get_public_profiles`. */
+  user_id?: string | null;
+  /** Private-bucket avatar object path (never a public URL). */
+  avatar_path?: string | null;
   full_name: string | null;
   display_name: string | null;
 };
@@ -179,13 +183,17 @@ export async function fetchTutorsByClass(
       user_id: string;
       full_name: string | null;
       display_name: string | null;
+      avatar_path?: string | null;
     }>) {
       profByUser.set(p.user_id, {
+        user_id: p.user_id,
+        avatar_path: p.avatar_path ?? null,
         full_name: p.full_name,
         display_name: p.display_name,
       });
     }
   }
+
 
   for (const [classId, userIds] of byClass) {
     const identities = userIds
