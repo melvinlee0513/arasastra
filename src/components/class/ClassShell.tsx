@@ -240,6 +240,14 @@ export function ClassShell({
                   <Illustration src={heroArt} className="h-9 w-9" priority />
                 </span>
               )}
+              {/* Reference-style soft-3D book stack straddling the cover edge.
+                  Only when there is no cover medallion competing for the slot. */}
+              {!k.cover_image_path && (
+                <Decor
+                  art="books"
+                  className="md:hidden -top-10 right-2 z-10 w-24 drop-shadow-[0_12px_22px_rgba(15,23,42,0.18)]"
+                />
+              )}
               <Decor art="star" className="hidden md:block right-4 top-3 w-8 opacity-70" />
               <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
