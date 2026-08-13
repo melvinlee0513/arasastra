@@ -38,6 +38,13 @@ export default {
           leaderboard: "hsl(var(--more-leaderboard))",
           "leaderboard-accent": "hsl(var(--more-leaderboard-accent))",
         },
+        hub: {
+          accent: "hsl(var(--hub-accent))",
+          tint: "hsl(var(--hub-tint))",
+          "tint-strong": "hsl(var(--hub-tint-strong))",
+          purple: "hsl(var(--hub-purple))",
+          "purple-tint": "hsl(var(--hub-purple-tint))",
+        },
         podium: {
           DEFAULT: "hsl(var(--podium-surface))",
           border: "hsl(var(--podium-border))",
