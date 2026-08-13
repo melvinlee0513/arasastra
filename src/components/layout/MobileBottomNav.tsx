@@ -56,8 +56,8 @@ export function MobileBottomNav() {
       className={cn(
         "fixed z-[60] left-3 right-3 mx-auto w-auto max-w-[420px]",
         "bottom-[calc(0.625rem+env(safe-area-inset-bottom))]",
-        "h-[66px] rounded-full border border-slate-200/80 bg-white/95 backdrop-blur-lg",
-        "shadow-[0_6px_24px_rgba(15,23,42,0.12)]",
+        "h-[68px] rounded-full border border-white/80 bg-white/92 backdrop-blur-xl",
+        "shadow-[0_10px_30px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.9)]",
       )}
     >
       <div className="flex h-full items-stretch px-1.5">
@@ -71,21 +71,28 @@ export function MobileBottomNav() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-1 basis-0 flex-col items-center justify-center gap-[3px]",
-                "min-h-[44px] min-w-0 rounded-full transition-colors active:opacity-80",
+                "min-h-[44px] min-w-0 rounded-full transition-all duration-200 active:scale-95 motion-reduce:transition-none",
                 active ? "text-primary" : "text-slate-500",
               )}
             >
               {active && (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-y-[7px] inset-x-1 rounded-full bg-primary/10"
+                  className="absolute inset-y-[6px] inset-x-1 rounded-[22px] bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
                 />
               )}
-              <tab.icon className="relative w-[21px] h-[21px]" aria-hidden="true" />
+              <tab.icon
+                className={cn(
+                  "relative transition-transform duration-200 motion-reduce:transition-none",
+                  active ? "h-[23px] w-[23px] -translate-y-[1px]" : "h-[21px] w-[21px]",
+                )}
+                strokeWidth={active ? 2.4 : 2}
+                aria-hidden="true"
+              />
               <span
                 className={cn(
                   "relative text-[11px] leading-none",
-                  active ? "font-semibold" : "font-medium",
+                  active ? "font-bold" : "font-medium",
                 )}
               >
                 {tab.label}
