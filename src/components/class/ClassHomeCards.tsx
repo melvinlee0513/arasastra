@@ -34,14 +34,13 @@ export function ClassAnnouncementCard({
         announcement.is_pinned ? "border-amber-200 bg-amber-50/80" : "border-slate-200 bg-white"
       }`}
     >
-      <Decor art="star" className="right-[104px] top-3 w-6 opacity-75" />
-      <Decor art="orbs" className="right-[76px] bottom-3 w-12 opacity-25" />
+      <Decor art="star" className="left-2 bottom-3 w-6 opacity-60" />
       {/* Soft-3D megaphone anchors the card, matching the reference. */}
       <Illustration
         src={STATE_ART.megaphone}
-        className="pointer-events-none absolute -right-2 top-1/2 w-24 -translate-y-1/2 drop-shadow-[0_12px_22px_rgba(15,23,42,0.18)] sm:w-28"
+        className="pointer-events-none absolute -right-3 top-1/2 w-28 -translate-y-1/2 drop-shadow-[0_14px_24px_rgba(15,23,42,0.18)] sm:w-32"
       />
-      <div className="relative pr-[92px] sm:pr-28">
+      <div className="relative">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-[15px] font-bold text-slate-900 md:text-base">Latest announcement</h2>
           <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 px-2 text-[13px] text-hub-accent">
@@ -50,6 +49,7 @@ export function ClassAnnouncementCard({
             </Link>
           </Button>
         </div>
+        <div className="pr-[104px] sm:pr-32">
         {announcement.is_pinned && (
           <Badge className="mt-2 rounded-full bg-amber-100 text-amber-800 hover:bg-amber-100">
             <Pin className="mr-1 h-3 w-3" /> Pinned
@@ -68,6 +68,7 @@ export function ClassAnnouncementCard({
             {announcement.body}
           </p>
         )}
+        </div>
       </div>
     </section>
   );
@@ -91,7 +92,7 @@ export function ClassGlanceCard({
   return (
     <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-5">
       <Decor art="star" className="right-3 top-3 w-7 opacity-75" />
-      <Decor art="orbs" className="-right-4 bottom-16 w-14 opacity-20" />
+      <Decor art="orbs" className="-left-5 bottom-20 w-14 opacity-20" />
       <div className="relative mb-2 flex items-center gap-2.5">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-hub-tint">
           <Illustration
