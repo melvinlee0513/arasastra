@@ -83,7 +83,7 @@ export function StudentHomeHero({
         aria-hidden="true"
         className="pointer-events-none absolute -inset-x-4 -top-5 bottom-0 overflow-hidden"
       >
-        <HomeSparkAccents className="right-[92px] top-[80px]" />
+        <HomeSparkAccents className="right-[4px] top-[108px]" />
         <HomeDecorArt
           src={HOME_ART.orbs}
           className="absolute right-0 top-0 h-20 w-20 opacity-[0.22]"
