@@ -342,10 +342,11 @@ export function ClassShell({
         {k && !mobileImmersive && (
           <nav
             aria-label="Class sections"
-            className="md:hidden relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            className="md:hidden relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white px-2.5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
-            <Decor art="orbs" className="-right-6 -top-4 w-20 opacity-30" />
-            <ul className="relative grid grid-cols-4 gap-2">
+            {/* Decor kept to the extreme corner so it never sits behind a tile label. */}
+            <Decor art="orbs" className="-right-8 -top-6 w-14 opacity-20" />
+            <ul className="relative grid grid-cols-4 gap-x-1 gap-y-2">
               {visibleNav.map((item) => {
                 const isActive = item.key === section;
                 const href = resolveHref(item.key, basePath, materialsPath);
@@ -355,26 +356,28 @@ export function ClassShell({
                   <>
                     <span
                       className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-2xl transition-colors",
+                        "flex h-[42px] w-[42px] items-center justify-center rounded-2xl transition-colors",
                         isActive
-                          ? "bg-primary/10 ring-1 ring-inset ring-primary/25"
-                          : "bg-slate-50",
+                          ? "bg-primary/[0.12] ring-1 ring-inset ring-primary/20"
+                          : disabled
+                            ? "bg-slate-50/70"
+                            : "bg-slate-50",
                       )}
                     >
                       <Illustration
                         src={item.art}
                         priority={isActive}
                         className={cn(
-                          "h-7 w-7 drop-shadow-[0_4px_8px_rgba(15,23,42,0.14)]",
-                          disabled && "opacity-40 grayscale",
+                          "h-[26px] w-[26px] drop-shadow-[0_3px_6px_rgba(15,23,42,0.12)]",
+                          disabled && "opacity-35",
                         )}
                       />
                     </span>
                     <span
                       className={cn(
-                        "text-center text-[11px] leading-tight",
+                        "w-full truncate text-center text-[11px] leading-tight",
                         isActive ? "font-semibold text-primary" : "font-medium text-slate-600",
-                        disabled && "text-slate-400",
+                        disabled && "font-medium text-slate-400",
                       )}
                     >
                       {short}
@@ -382,7 +385,7 @@ export function ClassShell({
                   </>
                 );
                 const tileCls =
-                  "w-full min-h-[78px] flex flex-col items-center justify-center gap-1.5 rounded-2xl transition-transform";
+                  "w-full min-h-[72px] flex flex-col items-center justify-center gap-1.5 rounded-2xl px-0.5 transition-transform";
                 return (
                   <li key={item.key}>
                     {disabled ? (
@@ -402,8 +405,8 @@ export function ClassShell({
                         aria-current={isActive ? "page" : undefined}
                         className={cn(
                           tileCls,
-                          "active:scale-[0.96] active:bg-slate-50 motion-reduce:active:scale-100",
-                          isActive && "bg-primary/[0.04]",
+                          "active:scale-[0.96] motion-reduce:active:scale-100",
+                          isActive && "bg-primary/[0.05]",
                         )}
                       >
                         {inner}
@@ -414,6 +417,7 @@ export function ClassShell({
               })}
             </ul>
           </nav>
+
         )}
 
         <div>{children}</div>
