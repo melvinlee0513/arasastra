@@ -39,9 +39,80 @@ export function IconBubble({
   );
 }
 
+/**
+ * Soft-3D artwork bubble. Renders a WebP illustration from the shared library
+ * inside the same rounded bubble geometry as {@link IconBubble}, so headers and
+ * cards can upgrade from flat icons to illustrations without layout drift.
+ */
+export function ArtBubble({
+  src,
+  alt = "",
+  className,
+  size = "md",
+}: {
+  src: string;
+  alt?: string;
+  className?: string;
+  size?: "sm" | "md" | "lg" | "xl";
+}) {
+  const dims =
+    size === "xl"
+      ? "h-14 w-14 rounded-[20px]"
+      : size === "lg"
+        ? "h-11 w-11 rounded-[16px]"
+        : size === "sm"
+          ? "h-8 w-8 rounded-[11px]"
+          : "h-9 w-9 rounded-[14px]";
+  const art =
+    size === "xl" ? "h-10 w-10" : size === "lg" ? "h-8 w-8" : size === "sm" ? "h-[22px] w-[22px]" : "h-6 w-6";
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(15,23,42,0.07)]",
+        dims,
+        className,
+      )}
+    >
+      <img
+        src={src}
+        alt={alt}
+        aria-hidden={alt ? undefined : "true"}
+        loading="lazy"
+        decoding="async"
+        className={cn("object-contain drop-shadow-[0_2px_4px_rgba(15,23,42,0.14)]", art)}
+      />
+    </span>
+  );
+}
+
+/** Free-standing decorative illustration (no bubble). Always aria-hidden. */
+export function HomeDecorArt({
+  src,
+  className,
+  style,
+}: {
+  src: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+      style={style}
+      className={cn("pointer-events-none select-none object-contain", className)}
+    />
+  );
+}
+
 interface HomeSectionHeaderProps {
   title: string;
   icon: LucideIcon;
+  /** Optional soft-3D illustration replacing the flat icon inside the bubble. */
+  art?: string;
   /** Icon bubble + accent colour classes, e.g. "bg-home-updates text-home-updates-accent". */
   accentClassName?: string;
   action?: { label: string; to: string };
