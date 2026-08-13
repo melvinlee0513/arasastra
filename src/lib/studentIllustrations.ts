@@ -52,7 +52,30 @@ export const TIMETABLE_ART = {
   empty: asset("learning/glossy_pastel_calendar_with_checkmark.webp"),
 } as const;
 
+/** Student Profile page artwork. */
+export const PROFILE_ART = {
+  starBadge: asset("ui/profile-star-badge.png"),
+  starAward: asset("gamification/profile-star-award.png"),
+  editPencil: asset("gamification/edit-pencil-blue.png"),
+  palette: asset("ui/personalisation-palette.png"),
+  paintbrush: asset("ui/personalisation-paintbrush.png"),
+  userBadge: asset("ui/profile-user-badge.png"),
+  helpBadge: asset("ui/help-question-badge.png"),
+  signOut: asset("ui/sign-out-red.png"),
+  selectedCheck: asset("ui/selected-check-blue.png"),
+  graduationCap: asset("ui/graduation-cap-blue.png"),
+  calendar: asset("ui/calendar-purple.png"),
+  /** Single completed decorative composition: clouds + smiling star + heart. */
+  cardTile: asset("decorative/sleeping-star-cloud.png"),
+  happyStar: asset("decorative/happy-star.png"),
+  cloudSoftBlue: asset("decorative/cloud-soft-blue.png"),
+  sparklePurple: asset("decorative/sparkle-purple.png"),
+  orb: asset("decorative/orb-blue-purple.png"),
+  starYellow: asset("ui/sparkle-yellow.webp"),
+} as const;
+
 /** Decorative accents — always aria-hidden and pointer-events-none. */
+
 export const DECOR_ART = {
   star: asset("ui/sparkle-yellow.webp"),
   sparkleStar: asset("gamification/achievement-star.webp"),
