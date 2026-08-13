@@ -61,14 +61,14 @@ export default function ClassHubQaHarness() {
           {[1, 2].map((i) => (
             <ClassHubPanel key={i} className="p-4">
               <div className="flex gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-hub-tint ring-1 ring-inset ring-hub-accent/15">
                   <Illustration src={STATE_ART.quiz} className="h-8 w-8" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-[15px] font-bold text-slate-900">Chapter {i}: Differentiation</h3>
                   <p className="mt-0.5 text-[13px] text-slate-500">10 questions · 15 min</p>
                   <div className="mt-2 flex gap-1.5">
-                    <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/15">Available</Badge>
+                    <Badge className="rounded-full bg-hub-tint text-hub-accent hover:bg-hub-tint-strong">Available</Badge>
                   </div>
                 </div>
               </div>
