@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, LayoutGrid, RefreshCw, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,12 +6,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { fetchTutorsByClass, type TutorIdentity } from "@/lib/classCovers";
 import { STUDY_ART } from "@/lib/classIllustrations";
+import { useClassBookmarks, useToggleClassBookmark } from "@/lib/classBookmarks";
+import { heroPresetFor, useStudentProfile } from "@/lib/studentProfile";
+import { showSupabaseError } from "@/lib/supabaseErrors";
 import {
   StudentClassCard,
   StudentClassCardSkeleton,
   type StudentClassCardData,
 } from "@/components/dashboard/classes/StudentClassCard";
 import { StudyUpNext, pickUpNext } from "@/components/dashboard/classes/StudyUpNext";
+
 
 /**
  * Student Study / My Classes.
