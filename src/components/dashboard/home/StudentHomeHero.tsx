@@ -3,6 +3,7 @@ import { Bell } from "lucide-react";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import {
   firstNameFrom,
+  heroBackgroundFor,
   type StudentProfileRecord,
 } from "@/lib/studentProfile";
 import { HomeSparkAccents, HomeDecorArt, HOME_ART } from "./StudentHomeShared";
