@@ -118,15 +118,34 @@ export function MyClasses() {
     },
   });
 
+  const { data: bookmarks } = useClassBookmarks();
+  const toggleBookmark = useToggleClassBookmark();
+  const { data: profile } = useStudentProfile();
+  const accentColor = heroPresetFor(profile?.home_header_color).background;
+
+  const handleToggleBookmark = useCallback(
+    (klass: StudentClassCardData, bookmarked: boolean) => {
+      toggleBookmark.mutate(
+        { classId: klass.id, bookmarked, centerId: profile?.center_id ?? null },
+        { onError: (err) => showSupabaseError(err, "Couldn't update your bookmark") },
+      );
+    },
+    [toggleBookmark, profile?.center_id],
+  );
+
   const ordered = useMemo(() => {
     const list = [...(classes || [])];
     list.sort((a, b) => {
+      // Bookmarked enrolled classes first; existing schedule ordering within groups.
+      const ba = bookmarks?.has(a.id) ? 0 : 1;
+      const bb = bookmarks?.has(b.id) ? 0 : 1;
+      if (ba !== bb) return ba - bb;
       const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
       const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
       return ta - tb || a.title.localeCompare(b.title);
     });
     return list;
-  }, [classes]);
+  }, [classes, bookmarks]);
 
   const visible = useMemo(
     () => (filter === "today" ? ordered.filter((c) => isToday(c.scheduled_at)) : ordered),
@@ -134,6 +153,7 @@ export function MyClasses() {
   );
 
   const upNext = useMemo(() => pickUpNext(ordered), [ordered]);
+
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f7faff_0%,#f9fbff_45%,#f6f8fd_100%)]">
