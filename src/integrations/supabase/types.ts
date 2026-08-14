@@ -397,6 +397,45 @@ export type Database = {
           },
         ]
       }
+      class_bookmarks: {
+        Row: {
+          center_id: string
+          class_id: string
+          created_at: string
+          id: string
+          student_user_id: string
+        }
+        Insert: {
+          center_id: string
+          class_id: string
+          created_at?: string
+          id?: string
+          student_user_id: string
+        }
+        Update: {
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          student_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_bookmarks_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_bookmarks_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_content_folders: {
         Row: {
           center_id: string

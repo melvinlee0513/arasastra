@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, LayoutGrid, RefreshCw, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,12 +6,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { fetchTutorsByClass, type TutorIdentity } from "@/lib/classCovers";
 import { STUDY_ART } from "@/lib/classIllustrations";
+import { useClassBookmarks, useToggleClassBookmark } from "@/lib/classBookmarks";
+import { heroPresetFor, useStudentProfile } from "@/lib/studentProfile";
+import { showSupabaseError } from "@/lib/supabaseErrors";
 import {
   StudentClassCard,
   StudentClassCardSkeleton,
   type StudentClassCardData,
 } from "@/components/dashboard/classes/StudentClassCard";
 import { StudyUpNext, pickUpNext } from "@/components/dashboard/classes/StudyUpNext";
+
 
 /**
  * Student Study / My Classes.
@@ -114,15 +118,34 @@ export function MyClasses() {
     },
   });
 
+  const { data: bookmarks } = useClassBookmarks();
+  const toggleBookmark = useToggleClassBookmark();
+  const { data: profile } = useStudentProfile();
+  const accentColor = heroPresetFor(profile?.home_header_color).background;
+
+  const handleToggleBookmark = useCallback(
+    (klass: StudentClassCardData, bookmarked: boolean) => {
+      toggleBookmark.mutate(
+        { classId: klass.id, bookmarked, centerId: profile?.center_id ?? null },
+        { onError: (err) => showSupabaseError(err, "Couldn't update your bookmark") },
+      );
+    },
+    [toggleBookmark, profile?.center_id],
+  );
+
   const ordered = useMemo(() => {
     const list = [...(classes || [])];
     list.sort((a, b) => {
+      // Bookmarked enrolled classes first; existing schedule ordering within groups.
+      const ba = bookmarks?.has(a.id) ? 0 : 1;
+      const bb = bookmarks?.has(b.id) ? 0 : 1;
+      if (ba !== bb) return ba - bb;
       const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
       const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER;
       return ta - tb || a.title.localeCompare(b.title);
     });
     return list;
-  }, [classes]);
+  }, [classes, bookmarks]);
 
   const visible = useMemo(
     () => (filter === "today" ? ordered.filter((c) => isToday(c.scheduled_at)) : ordered),
@@ -130,6 +153,7 @@ export function MyClasses() {
   );
 
   const upNext = useMemo(() => pickUpNext(ordered), [ordered]);
+
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,#f7faff_0%,#f9fbff_45%,#f6f8fd_100%)]">
@@ -239,19 +263,25 @@ export function MyClasses() {
           </div>
         ) : (
           <>
-            {/* Mobile: horizontal snap carousel. Tablet+: stacked full cards. */}
+            {/* Mobile: horizontal snap carousel. Tablet+: responsive card grid. */}
             <div
-              className="-mx-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-1 sm:gap-5 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="-mx-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               aria-label="Enrolled classes"
             >
               {visible.map((c) => (
                 <div
                   key={c.id}
-                  className="w-[88%] max-w-[420px] shrink-0 snap-center sm:w-full sm:max-w-none"
+                  className="w-[84%] max-w-[420px] shrink-0 snap-center sm:w-full sm:max-w-none"
                 >
-                  <StudentClassCard klass={c} />
+                  <StudentClassCard
+                    klass={c}
+                    bookmarked={bookmarks?.has(c.id) ?? false}
+                    onToggleBookmark={handleToggleBookmark}
+                    accentColor={accentColor}
+                  />
                 </div>
               ))}
+
             </div>
 
             {visible.length > 1 && (
