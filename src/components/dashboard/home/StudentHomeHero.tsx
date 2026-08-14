@@ -203,7 +203,9 @@ export function StudentHomeHero({
           </ul>
         ) : null
       )}
+      </div>
     </section>
+
   );
 }
 
