@@ -90,7 +90,20 @@ export function StudentHomeHero({
         />
       </span>
 
+      {/* Illustrated hero background — decorative layer behind all content. */}
+      <div className="relative overflow-hidden rounded-[28px] p-3.5 pb-4">
+        <img
+          src={heroBackgroundFor(profile?.home_header_color)}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          fetchPriority="high"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
+        />
+
       <div className="relative flex items-start gap-3">
+
         {isLoading ? (
           <div
             aria-hidden="true"
