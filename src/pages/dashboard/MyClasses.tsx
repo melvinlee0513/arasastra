@@ -263,19 +263,25 @@ export function MyClasses() {
           </div>
         ) : (
           <>
-            {/* Mobile: horizontal snap carousel. Tablet+: stacked full cards. */}
+            {/* Mobile: horizontal snap carousel. Tablet+: responsive card grid. */}
             <div
-              className="-mx-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-1 sm:gap-5 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="-mx-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               aria-label="Enrolled classes"
             >
               {visible.map((c) => (
                 <div
                   key={c.id}
-                  className="w-[88%] max-w-[420px] shrink-0 snap-center sm:w-full sm:max-w-none"
+                  className="w-[84%] max-w-[420px] shrink-0 snap-center sm:w-full sm:max-w-none"
                 >
-                  <StudentClassCard klass={c} />
+                  <StudentClassCard
+                    klass={c}
+                    bookmarked={bookmarks?.has(c.id) ?? false}
+                    onToggleBookmark={handleToggleBookmark}
+                    accentColor={accentColor}
+                  />
                 </div>
               ))}
+
             </div>
 
             {visible.length > 1 && (
