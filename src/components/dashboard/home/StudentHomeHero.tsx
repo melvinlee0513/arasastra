@@ -103,7 +103,7 @@ export function StudentHomeHero({
           className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
         />
 
-      <div className="relative flex items-start gap-3">
+      <div className="relative z-10 flex items-start gap-3">
 
         {isLoading ? (
           <div
@@ -158,7 +158,7 @@ export function StudentHomeHero({
 
       {showGamification && (
         statsLoading ? (
-          <div className="mt-4 flex gap-2.5" aria-hidden="true">
+          <div className="relative z-10 mt-4 flex gap-2.5" aria-hidden="true">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
@@ -167,7 +167,7 @@ export function StudentHomeHero({
             ))}
           </div>
         ) : stats.length > 0 ? (
-          <ul className="mt-4 flex gap-2.5">
+          <ul className="relative z-10 mt-4 flex gap-2.5">
             {stats.map((s) => (
               <li
                 key={s.caption + s.value}
