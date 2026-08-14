@@ -63,41 +63,70 @@ export function invalidateProfileSurfaces(
 
 /* ------------------------------- hero colour ------------------------------ */
 
+/** The six supported Home hero background colours. Nothing else is valid. */
 export type HeroColorKey =
-  | "navy"
-  | "indigo"
-  | "purple"
-  | "teal"
-  | "emerald"
+  | "red"
   | "blue"
-  | "coral"
-  | "slate";
+  | "purple"
+  | "green"
+  | "yellow"
+  | "orange";
 
 export interface HeroColorPreset {
   key: HeroColorKey;
   label: string;
-  /** Solid, saturated surface. Every preset is dark enough for white text. */
+  /** Solid swatch used by the Profile picker. */
   background: string;
+  /** Canonical illustrated Home hero background (WebP in /public). */
+  image: string;
 }
 
 /**
- * Curated presets only — each one is a dark/saturated surface so the white
- * foreground text always clears WCAG AA at body sizes. No custom hex input,
- * which keeps unreadable combinations impossible by construction.
+ * Canonical colour → illustrated background mapping. The artwork lives in
+ * /public/assets/illustrations/ui and is never recreated in CSS.
  */
 export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
-  { key: "navy", label: "Navy", background: "#0F172A" },
-  { key: "indigo", label: "Indigo", background: "#312E81" },
-  { key: "purple", label: "Purple", background: "#4C1D95" },
-  { key: "teal", label: "Teal", background: "#115E59" },
-  { key: "emerald", label: "Emerald", background: "#065F46" },
-  { key: "blue", label: "Blue", background: "#1D4ED8" },
-  { key: "coral", label: "Coral", background: "#B91C1C" },
-  { key: "slate", label: "Slate", background: "#334155" },
+  {
+    key: "red",
+    label: "Red",
+    background: "#EF4444",
+    image: "/assets/illustrations/ui/student-home-hero-background-red.webp",
+  },
+  {
+    key: "blue",
+    label: "Blue",
+    background: "#2563EB",
+    image: "/assets/illustrations/ui/student-home-hero-background-blue.webp",
+  },
+  {
+    key: "purple",
+    label: "Purple",
+    background: "#7C3AED",
+    image: "/assets/illustrations/ui/student-home-hero-background-purple.webp",
+  },
+  {
+    key: "green",
+    label: "Green",
+    background: "#16A34A",
+    image: "/assets/illustrations/ui/student-home-hero-background-green.webp",
+  },
+  {
+    key: "yellow",
+    label: "Yellow",
+    background: "#FACC15",
+    image: "/assets/illustrations/ui/student-home-hero-background-yellow.webp",
+  },
+  {
+    key: "orange",
+    label: "Orange",
+    background: "#F97316",
+    image: "/assets/illustrations/ui/student-home-hero-background-orange.webp",
+  },
 ];
 
-export const DEFAULT_HERO_COLOR: HeroColorKey = "navy";
+export const DEFAULT_HERO_COLOR: HeroColorKey = "red";
 
+/** Tolerant resolver — legacy/invalid stored values fall back to red. */
 export function heroPresetFor(key: string | null | undefined): HeroColorPreset {
   return (
     HERO_COLOR_PRESETS.find((p) => p.key === key) ??
@@ -105,10 +134,16 @@ export function heroPresetFor(key: string | null | undefined): HeroColorPreset {
   );
 }
 
+/** Background illustration for a stored preference value. */
+export function heroBackgroundFor(key: string | null | undefined): string {
+  return heroPresetFor(key).image;
+}
+
 /** Persist the student's own hero colour. Scoped to auth.uid() by RLS. */
 export function useSaveHeroColor() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const queryKey = studentProfileKeys.profile(user?.id);
 
   return useMutation({
     mutationFn: async (key: HeroColorKey) => {
@@ -123,11 +158,28 @@ export function useSaveHeroColor() {
       if (error) throw error;
       return key;
     },
+    // Optimistic: the swatch, the "Selected:" line and Home all read the same
+    // cached profile record, so the UI flips instantly with no refetch flash.
+    onMutate: async (key: HeroColorKey) => {
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueryData<StudentProfileRecord | null>(queryKey);
+      if (previous) {
+        qc.setQueryData<StudentProfileRecord | null>(queryKey, {
+          ...previous,
+          home_header_color: key,
+        });
+      }
+      return { previous };
+    },
+    onError: (_e, _key, ctx) => {
+      if (ctx?.previous !== undefined) qc.setQueryData(queryKey, ctx.previous);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: studentProfileKeys.profile(user?.id) });
+      qc.invalidateQueries({ queryKey });
     },
   });
 }
+
 
 /* --------------------------------- naming -------------------------------- */
 
