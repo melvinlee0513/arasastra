@@ -58,7 +58,11 @@ export function HomeColorPicker({ value }: HomeColorPickerProps) {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  aria-label={selected ? `${p.label} (selected)` : p.label}
+                  aria-label={
+                    selected
+                      ? `${p.label} home card (selected)`
+                      : `${p.label} home card`
+                  }
                   disabled={save.isPending}
                   onClick={() => choose(p.key)}
                   style={{ backgroundColor: p.background }}
