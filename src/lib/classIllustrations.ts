@@ -234,6 +234,71 @@ export function subjectArtSet(
   return { key: "generic", ...GENERIC_ART };
 }
 
+// ------------------------------------------------------------------
+// Composite class-tile artwork (Study / My Classes card covers)
+// ------------------------------------------------------------------
+
+/**
+ * ONE class preview = ONE composite WebP. These files already contain the full
+ * subject scene (notebook + instruments + decorative accents), so cards must
+ * never recreate the composition from the smaller micro-assets.
+ *
+ * Keys match `subjectArtSet()` family keys. Every path was verified on disk.
+ */
+export const CLASS_TILE_ART: Record<string, string> = {
+  physics: asset("subjects/physics/class-card-preview-physics.webp"),
+  chemistry: asset("subjects/chemistry/class-card-preview-chemistry.webp"),
+  biology: asset("subjects/biology/class-card-preview-biology.webp"),
+  science: asset("subjects/science/class-card-preview-science.webp"),
+  mathematics: asset("subjects/mathematics/class-card-preview-mathematics.webp"),
+  "additional-mathematics": asset(
+    "subjects/additional mathematics/class-card-preview-additional-mathematics.webp",
+  ),
+  english: asset("subjects/languages/class-card-preview-english.webp"),
+  "bahasa-melayu": asset("subjects/languages/class-card-preview-bahasa-melayu.webp"),
+  sejarah: asset("subjects/sejarah/class-card-preview-sejarah.webp"),
+};
+
+/** Very light, subject-appropriate cover backgrounds (one design system). */
+const CLASS_TILE_TINT: Record<string, string> = {
+  physics: "from-sky-50 via-sky-100/70 to-blue-100/70",
+  chemistry: "from-indigo-50 via-violet-100/60 to-sky-100/70",
+  biology: "from-emerald-50 via-teal-50 to-sky-100/70",
+  science: "from-cyan-50 via-sky-50 to-blue-100/70",
+  mathematics: "from-sky-50 via-blue-50 to-indigo-100/60",
+  "additional-mathematics": "from-violet-50 via-indigo-50 to-sky-100/70",
+  english: "from-sky-50 via-indigo-50 to-violet-100/60",
+  "bahasa-melayu": "from-violet-50 via-indigo-50 to-sky-100/70",
+  sejarah: "from-amber-50/80 via-sky-50 to-indigo-100/60",
+  generic: "from-sky-50 via-white to-indigo-100/60",
+};
+
+export interface ClassTileArt {
+  key: string;
+  /** Composite subject scene, or null when no composite exists for the family. */
+  src: string | null;
+  /** Tailwind gradient classes for the cover surface. */
+  tint: string;
+}
+
+/**
+ * Resolve the composite cover artwork for a class. Matching is robust to
+ * naming variants ("Physics Form 5", "Add Math", "BM") because it reuses the
+ * canonical `subjectArtSet()` family matcher. Presentation only — it never
+ * affects which classes a student can see.
+ */
+export function classTileArt(
+  subjectName?: string | null,
+  classTitle?: string | null,
+): ClassTileArt {
+  const { key } = subjectArtSet(subjectName, classTitle);
+  return {
+    key,
+    src: CLASS_TILE_ART[key] ?? null,
+    tint: CLASS_TILE_TINT[key] ?? CLASS_TILE_TINT.generic,
+  };
+}
+
 /** Study / My Classes header + Up Next artwork. */
 export const STUDY_ART = {
   graduationCap: asset("ui/glossy_blue_graduation_cap_with_gold_tassel.webp"),
@@ -245,4 +310,6 @@ export const STUDY_ART = {
   cloud: asset("decorative/glossy_fluffy_cloud_icon.webp"),
   paperPlane: asset("decorative/paper-plane-purple.webp"),
   bookmark: asset("ui/glossy_blue_bookmark_icon.webp"),
+  bookmarkActive: asset("ui/bookmark-yellow-active.webp"),
 } as const;
+
