@@ -676,6 +676,8 @@ export type Database = {
           is_live: boolean | null
           is_published: boolean | null
           live_url: string | null
+          recurrence: string
+          recurrence_until: string | null
           schedule_label: string | null
           scheduled_at: string
           standard_id: string | null
@@ -704,6 +706,8 @@ export type Database = {
           is_live?: boolean | null
           is_published?: boolean | null
           live_url?: string | null
+          recurrence?: string
+          recurrence_until?: string | null
           schedule_label?: string | null
           scheduled_at: string
           standard_id?: string | null
@@ -732,6 +736,8 @@ export type Database = {
           is_live?: boolean | null
           is_published?: boolean | null
           live_url?: string | null
+          recurrence?: string
+          recurrence_until?: string | null
           schedule_label?: string | null
           scheduled_at?: string
           standard_id?: string | null
@@ -2784,6 +2790,16 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      class_occurrences: {
+        Args: {
+          _from: string
+          _recurrence: string
+          _start: string
+          _to: string
+          _until: string
+        }
+        Returns: string[]
+      }
       delete_class_about_section: {
         Args: { p_section_id: string }
         Returns: boolean
@@ -2869,11 +2885,16 @@ export type Database = {
         Args: {
           _announcement_limit?: number
           _continue_limit?: number
+          _upcoming_days?: number
           _upcoming_limit?: number
         }
         Returns: Json
       }
       get_student_inbox: { Args: { _limit?: number }; Returns: Json }
+      get_student_next_classes: {
+        Args: { _horizon_days?: number }
+        Returns: Json
+      }
       get_student_timetable: {
         Args: { _from: string; _to: string }
         Returns: Json
