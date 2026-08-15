@@ -98,7 +98,7 @@ export function ScheduleManager() {
       if (subjectsRes.error) throw subjectsRes.error;
       if (tutorsRes.error) throw tutorsRes.error;
 
-      setClasses(classesRes.data || []);
+      setClasses((classesRes.data || []) as unknown as ClassItem[]);
       setSubjects(subjectsRes.data || []);
       setTutors(tutorsRes.data || []);
     } catch (error) {
@@ -239,7 +239,9 @@ export function ScheduleManager() {
 
         if (error) throw error;
         
-        setClasses((prev) => prev.map((c) => (c.id === tempId ? data : c)));
+        setClasses((prev) =>
+          prev.map((c) => (c.id === tempId ? (data as unknown as ClassItem) : c))
+        );
         toast({ title: "Success", description: "Class created successfully" });
       }
     } catch (error) {
