@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+
 import { ChevronRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,9 +46,6 @@ export function StudentMobileProfile() {
     navigate("/");
   };
 
-  const memberSince = profile?.created_at
-    ? format(new Date(profile.created_at), "MMM yyyy")
-    : null;
 
   return (
     <ProfilePage>
@@ -127,18 +124,14 @@ export function StudentMobileProfile() {
 
                 <p className="mt-1 truncate text-[14px] text-slate-500">{user?.email}</p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {profile.form_year && (
+                {profile.form_year && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <ProfileMetaChip art={PROFILE_ART.graduationCap}>
                       {profile.form_year}
                     </ProfileMetaChip>
-                  )}
-                  {memberSince && (
-                    <ProfileMetaChip art={PROFILE_ART.calendar} tone="lavender">
-                      Member since {memberSince}
-                    </ProfileMetaChip>
-                  )}
-                </div>
+                  </div>
+                )}
+
               </div>
             </div>
           </section>
