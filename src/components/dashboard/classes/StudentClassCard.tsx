@@ -21,7 +21,10 @@ export interface StudentClassCardData {
   subject_name: string | null;
   cohort_label: string | null;
   schedule_label: string | null;
+  /** Next real occurrence of the class, expanded from its recurrence server-side. */
   scheduled_at: string | null;
+  /** True when that occurrence is running right now. */
+  in_progress?: boolean;
   tutors: TutorIdentity[];
 }
 
@@ -35,7 +38,10 @@ const NEXT_FMT = new Intl.DateTimeFormat(undefined, {
 export function nextClassLabel(c: StudentClassCardData): string {
   if (c.scheduled_at) {
     const d = new Date(c.scheduled_at);
-    if (!Number.isNaN(d.getTime()) && d.getTime() >= Date.now()) return NEXT_FMT.format(d);
+    if (!Number.isNaN(d.getTime())) {
+      if (c.in_progress) return "Happening now";
+      if (d.getTime() >= Date.now()) return NEXT_FMT.format(d);
+    }
   }
   if (c.schedule_label?.trim()) return c.schedule_label.trim();
   return "Not scheduled";
