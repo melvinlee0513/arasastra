@@ -46,9 +46,6 @@ export function StudentMobileProfile() {
     navigate("/");
   };
 
-  const memberSince = profile?.created_at
-    ? format(new Date(profile.created_at), "MMM yyyy")
-    : null;
 
   return (
     <ProfilePage>
