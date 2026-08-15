@@ -123,6 +123,51 @@ export function useNextTimetableClass() {
   return { next, isLoading: query.isLoading, isError: query.isError };
 }
 
+/* -------------------------------------------------- next session per class */
+
+export interface NextClassSession {
+  class_id: string;
+  starts_at: string;
+  ends_at: string;
+  duration_minutes: number;
+  in_progress: boolean;
+}
+
+/**
+ * Next (or currently running) session for every class the student is actively
+ * enrolled in, expanded from the class's canonical recurrence by
+ * `get_student_next_classes`. This is the single source the Study page uses for
+ * "Next class", so it can never drift from the Timetable.
+ */
+export function useStudentNextClassSessions() {
+  const { user } = useAuth();
+  const { currentTenantId } = useTenant();
+
+  const query = useQuery({
+    queryKey: ["student-next-class-sessions", currentTenantId ?? null, user?.id ?? null],
+    enabled: !!user?.id,
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_student_next_classes", {
+        _horizon_days: 60,
+      });
+      if (error) throw error;
+      return Array.isArray(data) ? (data as unknown as NextClassSession[]) : [];
+    },
+  });
+
+  const byClass = useMemo(() => {
+    const map = new Map<string, NextClassSession>();
+    for (const s of query.data ?? []) map.set(s.class_id, s);
+    return map;
+  }, [query.data]);
+
+  return { ...query, sessions: query.data ?? [], byClass };
+}
+
+
 /* ---------------------------------------------------------------- subjects */
 
 export type SubjectTone = "blue" | "violet" | "amber" | "green" | "cyan" | "slate";
