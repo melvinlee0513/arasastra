@@ -381,4 +381,19 @@
     -webkit-user-select: text;
     user-select: text;
   }
+
+  /* Static artwork must never expose the native long-press save/share sheet. */
+  img {
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Purely decorative illustrations are inert to touch entirely. */
+  img[aria-hidden="true"],
+  img[data-decorative="true"] {
+    pointer-events: none;
+  }
 }
+
