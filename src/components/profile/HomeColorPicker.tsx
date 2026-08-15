@@ -78,16 +78,15 @@ export function HomeColorPicker({ value }: HomeColorPickerProps) {
                   )}
                 >
                   {selected && (
-                    <img
-                      src={PROFILE_ART.selectedCheck}
-                      alt=""
+                    <span
                       aria-hidden="true"
-                      loading="lazy"
-                      decoding="async"
-                      className="pointer-events-none h-full w-full object-contain"
-                    />
+                      className="pointer-events-none absolute -bottom-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary ring-2 ring-white"
+                    >
+                      <Check className="h-3 w-3 text-white" strokeWidth={3.5} />
+                    </span>
                   )}
                 </button>
+
               </li>
             );
           })}
