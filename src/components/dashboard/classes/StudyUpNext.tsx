@@ -36,7 +36,8 @@ export function pickUpNext(classes: StudentClassCardData[]): StudentClassCardDat
       .filter((c) => {
         if (!c.scheduled_at) return false;
         const t = new Date(c.scheduled_at).getTime();
-        return !Number.isNaN(t) && t >= now;
+        if (Number.isNaN(t)) return false;
+        return c.in_progress || t >= now;
       })
       .sort(
         (a, b) =>

@@ -8,6 +8,7 @@ import { fetchTutorsByClass, type TutorIdentity } from "@/lib/classCovers";
 import { STUDY_ART } from "@/lib/classIllustrations";
 import { useClassBookmarks, useToggleClassBookmark } from "@/lib/classBookmarks";
 import { heroPresetFor, useStudentProfile } from "@/lib/studentProfile";
+import { useStudentNextClassSessions } from "@/lib/studentTimetable";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import {
   StudentClassCard,
@@ -118,6 +119,23 @@ export function MyClasses() {
     },
   });
 
+  // Canonical recurring next-session data (same reader family as Timetable).
+  const { byClass: nextSessions } = useStudentNextClassSessions();
+
+  const withSchedule = useMemo<StudentClassCardData[]>(
+    () =>
+      (classes || []).map((c) => {
+        const session = nextSessions.get(c.id);
+        return {
+          ...c,
+          // The real next occurrence replaces the raw first-session timestamp.
+          scheduled_at: session?.starts_at ?? null,
+          in_progress: session?.in_progress ?? false,
+        };
+      }),
+    [classes, nextSessions],
+  );
+
   const { data: bookmarks } = useClassBookmarks();
   const toggleBookmark = useToggleClassBookmark();
   const { data: profile } = useStudentProfile();
@@ -134,7 +152,7 @@ export function MyClasses() {
   );
 
   const ordered = useMemo(() => {
-    const list = [...(classes || [])];
+    const list = [...withSchedule];
     list.sort((a, b) => {
       // Bookmarked enrolled classes first; existing schedule ordering within groups.
       const ba = bookmarks?.has(a.id) ? 0 : 1;
@@ -145,7 +163,7 @@ export function MyClasses() {
       return ta - tb || a.title.localeCompare(b.title);
     });
     return list;
-  }, [classes, bookmarks]);
+  }, [withSchedule, bookmarks]);
 
   const visible = useMemo(
     () => (filter === "today" ? ordered.filter((c) => isToday(c.scheduled_at)) : ordered),

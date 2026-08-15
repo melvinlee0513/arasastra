@@ -101,6 +101,7 @@ export async function fetchStudentHomeFeed(): Promise<StudentHomeFeed> {
     _announcement_limit: 3,
     _continue_limit: 5,
     _upcoming_limit: 6,
+    _upcoming_days: 14,
   });
   if (error) throw error;
   const payload = (data ?? {}) as Record<string, unknown>;

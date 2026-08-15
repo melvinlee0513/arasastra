@@ -38,6 +38,9 @@ interface ClassItem {
   live_url: string | null;
   is_live: boolean;
   is_published: boolean;
+  /** Canonical schedule recurrence: 'weekly' repeats the same weekday/time. */
+  recurrence: "none" | "weekly";
+  recurrence_until: string | null;
   zoom_link?: string | null;
   subject?: { name: string; color: string } | null;
   tutor?: { name: string } | null;
@@ -180,6 +183,8 @@ export function ScheduleManager() {
       live_url: editingClass.live_url || null,
       is_live: editingClass.is_live || false,
       is_published: editingClass.is_published ?? true,
+      recurrence: editingClass.recurrence ?? "weekly",
+      recurrence_until: editingClass.recurrence_until ?? null,
       subject: subjects.find((s) => s.id === editingClass.subject_id) || null,
       tutor: tutors.find((t) => t.id === editingClass.tutor_id) || null,
     };
@@ -209,6 +214,8 @@ export function ScheduleManager() {
             live_url: editingClass.live_url,
             is_live: editingClass.is_live,
             is_published: editingClass.is_published,
+            recurrence: editingClass.recurrence ?? "weekly",
+            recurrence_until: editingClass.recurrence_until ?? null,
           })
           .eq("id", editingClass.id);
 
@@ -226,6 +233,8 @@ export function ScheduleManager() {
           live_url: editingClass.live_url,
           is_live: editingClass.is_live || false,
           is_published: editingClass.is_published ?? true,
+          recurrence: editingClass.recurrence ?? "weekly",
+          recurrence_until: editingClass.recurrence_until ?? null,
         }).select("*, subject:subjects(name, color), tutor:tutors(name)").single();
 
         if (error) throw error;
@@ -493,6 +502,51 @@ export function ScheduleManager() {
                     setEditingClass((prev) => ({
                       ...prev,
                       duration_minutes: parseInt(e.target.value),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Repeats</Label>
+                <Select
+                  value={editingClass?.recurrence ?? "weekly"}
+                  onValueChange={(value) =>
+                    setEditingClass((prev) => ({
+                      ...prev,
+                      recurrence: value as "none" | "weekly",
+                      recurrence_until: value === "none" ? null : prev?.recurrence_until ?? null,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Every week (same day &amp; time)</SelectItem>
+                    <SelectItem value="none">One-off session</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Repeats until (optional)</Label>
+                <Input
+                  type="date"
+                  disabled={(editingClass?.recurrence ?? "weekly") === "none"}
+                  value={
+                    editingClass?.recurrence_until
+                      ? format(new Date(editingClass.recurrence_until), "yyyy-MM-dd")
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setEditingClass((prev) => ({
+                      ...prev,
+                      recurrence_until: e.target.value
+                        ? new Date(`${e.target.value}T23:59:59`).toISOString()
+                        : null,
                     }))
                   }
                 />
