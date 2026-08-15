@@ -91,19 +91,29 @@ export function StudentHomeHero({
         />
       </span>
 
-      {/* Illustrated hero background — decorative layer behind all content. */}
-      <div className="relative overflow-hidden rounded-[28px] p-3.5 pb-4">
-        <img
-          src={heroBackgroundFor(profile?.home_header_color)}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          fetchPriority="high"
-          decoding="async"
-          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
-        />
+      {/* Illustrated hero background — decorative layer behind all content.
+          While the profile preference is still resolving we show a neutral
+          surface instead of the red fallback, so no colour flash occurs. */}
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-[30px] px-5 pb-5 pt-5 sm:px-6 sm:pb-6",
+          isLoading && "bg-[linear-gradient(135deg,#f4f7fc_0%,#eef2f9_100%)]",
+        )}
+      >
+        {!isLoading && (
+          <img
+            src={heroBackgroundFor(profile?.home_header_color)}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            fetchPriority="high"
+            decoding="async"
+            className="pointer-events-none absolute left-1/2 top-1/2 h-[112%] w-[112%] -translate-x-1/2 -translate-y-1/2 select-none object-cover object-center"
+          />
+        )}
 
       <div className="relative z-10 flex items-start gap-3">
+
 
         {isLoading ? (
           <div
