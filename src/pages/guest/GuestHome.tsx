@@ -1,3 +1,5 @@
+import { useIsGuestDesktop } from "@/components/guest/GuestDesktopChrome";
+import { GuestHomeDesktop } from "@/pages/guest/desktop/GuestHomeDesktop";
 import { Link } from "react-router-dom";
 import { ChevronRight, Lock, Sparkles, BookOpen } from "lucide-react";
 import {
@@ -34,7 +36,7 @@ const PROGRESS_PREVIEWS = [
  * Guest mobile Home — mascot hero, locked learning-progress previews, the
  * centre's real public subject list, and a sign-in call to action.
  */
-export function GuestHome() {
+function GuestHomeMobile() {
   const subjects = usePublicSubjects();
   const list = (subjects.data ?? []).slice(0, 6);
 
@@ -137,6 +139,17 @@ export function GuestHome() {
       />
     </GuestPage>
   );
+}
+
+
+
+/**
+ * Guest Home entry — renders the desktop sidebar layout from
+ * 1024px up and the mobile guest layout below it.
+ */
+export function GuestHome() {
+  const isDesktop = useIsGuestDesktop();
+  return isDesktop ? <GuestHomeDesktop /> : <GuestHomeMobile />;
 }
 
 export default GuestHome;
