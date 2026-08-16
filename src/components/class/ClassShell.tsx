@@ -376,7 +376,7 @@ export function ClassShell({
                   <>
                     <span
                       className={cn(
-                        "flex h-[56px] w-[56px] items-center justify-center rounded-[18px] transition-colors",
+                        "flex h-[58px] w-[58px] items-center justify-center rounded-[18px] transition-colors sm:h-[62px] sm:w-[62px]",
                         isActive
                           ? "bg-hub-tint-strong ring-1 ring-inset ring-hub-accent/25 shadow-[0_6px_16px_rgba(0,82,255,0.14)]"
                           : disabled
@@ -388,7 +388,7 @@ export function ClassShell({
                         src={item.art}
                         priority={isActive}
                         className={cn(
-                          "h-[38px] w-[38px] drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)]",
+                          "h-[42px] w-[42px] drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)] sm:h-[46px] sm:w-[46px]",
                           disabled && "opacity-35",
                         )}
                       />

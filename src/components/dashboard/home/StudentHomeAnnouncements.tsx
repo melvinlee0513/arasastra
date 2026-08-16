@@ -27,22 +27,19 @@ interface Props {
 }
 
 /**
- * Soft-3D notice artwork: the shared library's pinned note sheet with the golden
- * notification bell layered on top, matching the reference composition.
+ * Soft-3D notice artwork. Announcements use the shared library's 3D megaphone —
+ * one consistent, decorative visual for both important and informational
+ * updates. Purely presentational and never interactive.
  */
-function NoticeArt({ tone }: { tone: "important" | "normal" }) {
+function NoticeArt() {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute right-0 top-7 h-[112px] w-[118px]"
+      className="pointer-events-none absolute right-2 top-1/2 flex h-[86px] w-[86px] -translate-y-1/2 items-center justify-center md:right-3 md:h-[96px] md:w-[96px]"
     >
       <HomeDecorArt
-        src={HOME_ART.notebook}
-        className="absolute right-4 top-4 h-[76px] w-[76px] rotate-[6deg] drop-shadow-[0_8px_16px_rgba(15,23,42,0.14)]"
-      />
-      <HomeDecorArt
-        src={tone === "important" ? HOME_ART.bell : HOME_ART.link}
-        className="absolute right-[52px] top-0 h-[54px] w-[54px] drop-shadow-[0_8px_16px_rgba(217,119,6,0.24)]"
+        src={HOME_ART.megaphone}
+        className="h-[64px] w-[64px] drop-shadow-[0_10px_18px_rgba(15,23,42,0.16)] md:h-[80px] md:w-[80px]"
       />
     </span>
   );
@@ -108,7 +105,7 @@ export function StudentHomeAnnouncements({
               <div
                 key={a.id}
                 role="listitem"
-                className={cn("shrink-0 snap-start", visible.length > 1 ? "w-[86%]" : "w-full")}
+                className={cn("shrink-0 snap-start", visible.length > 1 ? "w-[86%] lg:w-full" : "w-full")}
               >
                 <Link
                   to={announcementRoute(a)}
@@ -127,7 +124,7 @@ export function StudentHomeAnnouncements({
                         : "bg-home-learning-accent/60",
                     )}
                   />
-                  <NoticeArt tone={priority} />
+                  <NoticeArt />
 
                   <div className="relative flex items-center gap-2">
                     {priority === "important" ? (

@@ -6,7 +6,7 @@ import {
   heroBackgroundFor,
   type StudentProfileRecord,
 } from "@/lib/studentProfile";
-import { HomeSparkAccents, HomeDecorArt, HOME_ART } from "./StudentHomeShared";
+import { HOME_ART } from "./StudentHomeShared";
 import { cn } from "@/lib/utils";
 
 interface StudentHomeHeroProps {
@@ -79,24 +79,15 @@ export function StudentHomeHero({
   }
 
   return (
-    <section className="relative">
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-x-4 -top-5 bottom-0 overflow-hidden"
-      >
-        <HomeSparkAccents className="right-[4px] top-[108px]" />
-        <HomeDecorArt
-          src={HOME_ART.orbs}
-          className="absolute right-0 top-0 h-20 w-20 opacity-[0.22]"
-        />
-      </span>
-
+    <section className="relative isolate">
       {/* Illustrated hero background — decorative layer behind all content.
-          While the profile preference is still resolving we show a neutral
-          surface instead of the red fallback, so no colour flash occurs. */}
+          The rounded mask lives on this single wrapper (nothing above it clips),
+          so all four corners stay fully rounded on every breakpoint. While the
+          profile preference is still resolving we show a neutral surface
+          instead of the red fallback, so no colour flash occurs. */}
       <div
         className={cn(
-          "relative overflow-hidden rounded-[30px] px-5 pb-5 pt-5 sm:px-6 sm:pb-6",
+          "relative overflow-hidden rounded-[26px] px-5 pb-5 pt-5 sm:px-6 sm:pb-6 md:rounded-[32px] md:px-7 md:pb-6 md:pt-6",
           isLoading && "bg-[linear-gradient(135deg,#f4f7fc_0%,#eef2f9_100%)]",
         )}
       >
@@ -118,7 +109,7 @@ export function StudentHomeHero({
         {isLoading ? (
           <div
             aria-hidden="true"
-            className="h-[62px] w-[62px] shrink-0 animate-pulse rounded-full bg-slate-200/70"
+            className="h-[62px] w-[62px] shrink-0 animate-pulse rounded-full bg-slate-200/70 md:h-[74px] md:w-[74px]"
           />
         ) : (
           <Link to="/dashboard/profile" aria-label="Open your profile" className="shrink-0">
@@ -126,7 +117,7 @@ export function StudentHomeHero({
               path={profile?.avatar_path ?? null}
               name={profile?.display_name || profile?.full_name || "Student"}
               refreshKey={profile?.avatar_updated_at}
-              className="h-[62px] w-[62px] ring-2 ring-white shadow-[0_6px_18px_rgba(15,23,42,0.12)]"
+              className="h-[62px] w-[62px] md:h-[74px] md:w-[74px] ring-2 ring-white shadow-[0_6px_18px_rgba(15,23,42,0.12)]"
               fallbackClassName="bg-primary/10 text-primary text-lg font-bold"
             />
           </Link>
@@ -140,10 +131,10 @@ export function StudentHomeHero({
             </div>
           ) : (
             <>
-              <h1 className="text-[21px] font-bold leading-tight tracking-[-0.02em] text-slate-900">
+              <h1 className="text-[21px] font-bold leading-tight tracking-[-0.02em] text-slate-900 md:text-[30px]">
                 Welcome back, {firstNameFrom(profile)} 👋
               </h1>
-              <p className="mt-0.5 text-[13.5px] text-slate-500">
+              <p className="mt-0.5 text-[13.5px] text-slate-500 md:text-[15px]">
                 Ready to learn something new today?
               </p>
             </>
@@ -168,20 +159,20 @@ export function StudentHomeHero({
 
       {showGamification && (
         statsLoading ? (
-          <div className="relative z-10 mt-4 flex gap-2.5" aria-hidden="true">
+          <div className="relative z-10 mt-4 flex gap-2.5 md:mt-5 md:max-w-[560px]" aria-hidden="true">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-[70px] flex-1 animate-pulse rounded-[20px] border border-slate-200/70 bg-white"
+                className="h-[62px] flex-1 animate-pulse rounded-[20px] border border-slate-200/70 bg-white"
               />
             ))}
           </div>
         ) : stats.length > 0 ? (
-          <ul className="relative z-10 mt-4 flex gap-2.5">
+          <ul className="relative z-10 mt-4 flex gap-2.5 md:mt-5 md:max-w-[560px]">
             {stats.map((s) => (
               <li
                 key={s.caption + s.value}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white bg-white px-2.5 py-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white bg-white px-3 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]"
               >
                 <span
                   className={cn(

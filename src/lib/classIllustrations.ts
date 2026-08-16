@@ -49,7 +49,7 @@ export const STATE_ART = {
   flashcards: asset("learning/learning-flashcards.webp"),
   calendar: asset("learning/glossy_pastel_calendar_with_checkmark.webp"),
   trophy: asset("decorative/glossy_golden_star_trophy_icon.webp"),
-  lock: asset("gamification/glossy_purple_lock_medal_badge.webp"),
+  lock: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
   /** "At a glance" header art — magnifier stands in for the reference binoculars. */
   glance: asset("ui/magnifying-glass.webp"),
   /** Link resources — globe/network artwork reads as an external destination. */

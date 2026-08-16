@@ -174,19 +174,16 @@ export function StudentClassMaterials() {
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         {/* Desktop keeps the horizontal pill filters. */}
         <div className="hidden md:block overflow-x-auto md:-mx-1 md:px-1 scrollbar-thin">
+          {/* Materials browsing is scoped to files: All / Replays / Notes /
+              Worksheets. Links, quizzes and flashcards keep their own dedicated
+              Class Hub sections. */}
           <TabsList className="bg-white border border-slate-200 rounded-full p-1 h-auto shadow-sm flex-nowrap w-max">
+            <Tab value="all" icon={<LayoutGrid className="w-4 h-4 mr-1.5" />} label={`All (${allResources.length})`} />
             {replaysOn && (
               <Tab value="replays" icon={<Video className="w-4 h-4 mr-1.5" />} label={`Replays (${replays.length})`} />
             )}
             <Tab value="notes" icon={<FileText className="w-4 h-4 mr-1.5" />} label={`Notes (${notes.length})`} />
             <Tab value="worksheets" icon={<ClipboardList className="w-4 h-4 mr-1.5" />} label={`Worksheets (${worksheets.length})`} />
-            <Tab value="quizzes" icon={<HelpCircle className="w-4 h-4 mr-1.5" />} label={`Quizzes (${quizzes.length})`} />
-            {links.length > 0 && (
-              <Tab value="links" icon={<ExternalLink className="w-4 h-4 mr-1.5" />} label={`Links (${links.length})`} />
-            )}
-            {flashcardsOn && (
-              <Tab value="flashcards" icon={<Layers className="w-4 h-4 mr-1.5" />} label="Flashcards" />
-            )}
           </TabsList>
         </div>
 
@@ -201,11 +198,6 @@ export function StudentClassMaterials() {
               : []),
             { value: "notes", label: "Notes", full: "Notes", icon: <FileText className="w-4 h-4" />, count: notes.length },
             { value: "worksheets", label: "Work", full: "Worksheets", icon: <ClipboardList className="w-4 h-4" />, count: worksheets.length },
-            { value: "links", label: "Links", full: "Links", icon: <ExternalLink className="w-4 h-4" />, count: links.length },
-            { value: "quizzes", label: "Quiz", full: "Quizzes", icon: <HelpCircle className="w-4 h-4" />, count: quizzes.length },
-            ...(flashcardsOn
-              ? [{ value: "flashcards", label: "Cards", full: "Flashcards", icon: <Layers className="w-4 h-4" /> }]
-              : []),
           ]}
         />
 

@@ -258,17 +258,7 @@ function EmptyDayCard({ title, description }: { title: string; description: stri
           decoding="async"
           width={96}
           height={96}
-          className="h-[88px] w-[88px] object-contain drop-shadow-[0_8px_14px_rgba(15,23,42,0.16)]"
-        />
-        <img
-          src={TIMETABLE_ART.clock}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          width={48}
-          height={48}
-          className="mb-1 h-11 w-11 object-contain drop-shadow-[0_6px_10px_rgba(15,23,42,0.14)]"
+          className="h-[88px] w-[88px] object-contain drop-shadow-[0_8px_14px_rgba(15,23,42,0.16)] md:h-[104px] md:w-[104px]"
         />
       </div>
       <p className="relative mt-3 text-[16px] font-bold tracking-[-0.01em] text-slate-900">{title}</p>
@@ -293,7 +283,7 @@ function NextClassCard({ entry }: { entry: TimetableEntry }) {
     >
       <ServiceArtBubble
         src={subjectArt(entry.subject_name)}
-        size="lg"
+        size="xl"
         className="bg-slate-50"
       />
       <div className="min-w-0 flex-1">

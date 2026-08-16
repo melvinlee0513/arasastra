@@ -97,7 +97,7 @@ export function ClassGlanceCard({
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-hub-tint">
           <Illustration
             src={STATE_ART.glance}
-            className="h-8 w-8 drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)]"
+            className="h-9 w-9 drop-shadow-[0_4px_9px_rgba(15,23,42,0.16)]"
           />
         </span>
         <h3 className="text-[16px] font-bold text-slate-900">At a glance</h3>
@@ -123,7 +123,7 @@ function GlanceRow({ art, label, value }: { art: string; label: string; value: n
       <span className="inline-flex min-w-0 items-center gap-2.5 font-medium text-slate-700">
         <Illustration
           src={art}
-          className="h-8 w-8 shrink-0 drop-shadow-[0_3px_7px_rgba(15,23,42,0.14)]"
+          className="h-[26px] w-[26px] shrink-0 drop-shadow-[0_3px_7px_rgba(15,23,42,0.14)] sm:h-7 sm:w-7"
         />
         <span className="truncate">{label}</span>
       </span>

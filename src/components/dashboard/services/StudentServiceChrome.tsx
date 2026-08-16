@@ -47,14 +47,20 @@ export function ServiceArtBubble({
 }) {
   const dims =
     size === "xl"
-      ? "h-16 w-16 rounded-[22px]"
+      ? "h-[58px] w-[58px] rounded-[22px] md:h-16 md:w-16"
       : size === "lg"
         ? "h-14 w-14 rounded-[20px]"
         : size === "sm"
           ? "h-9 w-9 rounded-[13px]"
           : "h-11 w-11 rounded-[16px]";
   const art =
-    size === "xl" ? "h-11 w-11" : size === "lg" ? "h-9 w-9" : size === "sm" ? "h-[22px] w-[22px]" : "h-7 w-7";
+    size === "xl"
+      ? "h-[46px] w-[46px]"
+      : size === "lg"
+        ? "h-[38px] w-[38px]"
+        : size === "sm"
+          ? "h-[24px] w-[24px]"
+          : "h-[30px] w-[30px]";
   return (
     <span
       className={cn(
