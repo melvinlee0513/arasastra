@@ -6,6 +6,7 @@
  * avatar change reflects everywhere without a hard refresh.
  */
 
+import type { CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -79,7 +80,15 @@ export interface HeroColorPreset {
   background: string;
   /** Canonical illustrated Home hero background (WebP in /public). */
   image: string;
+  /**
+   * Accessible darker shade of the same hue, used for text/labels on a very
+   * light tinted background (bright hues like yellow need this).
+   */
+  foreground: string;
+  /** Strong-but-readable icon shade. */
+  icon: string;
 }
+
 
 /**
  * Canonical colour → illustrated background mapping. The artwork lives in
@@ -91,38 +100,52 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Red",
     background: "#EF4444",
     image: "/assets/illustrations/ui/student-home-hero-background-red.webp",
+    foreground: "#B91C1C",
+    icon: "#DC2626",
   },
   {
     key: "blue",
     label: "Blue",
     background: "#2563EB",
     image: "/assets/illustrations/ui/student-home-hero-background-blue.webp",
+    foreground: "#1D4ED8",
+    icon: "#2563EB",
   },
   {
     key: "purple",
     label: "Purple",
     background: "#7C3AED",
     image: "/assets/illustrations/ui/student-home-hero-background-purple.webp",
+    foreground: "#6D28D9",
+    icon: "#7C3AED",
   },
   {
     key: "green",
     label: "Green",
     background: "#16A34A",
     image: "/assets/illustrations/ui/student-home-hero-background-green.webp",
+    foreground: "#15803D",
+    icon: "#16A34A",
   },
   {
     key: "yellow",
     label: "Yellow",
     background: "#FACC15",
     image: "/assets/illustrations/ui/student-home-hero-background-yellow.webp",
+    // Bright hue: text and icon need a much darker amber to stay readable.
+    foreground: "#92400E",
+    icon: "#B45309",
   },
   {
     key: "orange",
     label: "Orange",
     background: "#F97316",
     image: "/assets/illustrations/ui/student-home-hero-background-orange.webp",
+    foreground: "#C2410C",
+    icon: "#EA580C",
   },
 ];
+
 
 export const DEFAULT_HERO_COLOR: HeroColorKey = "red";
 
@@ -138,6 +161,69 @@ export function heroPresetFor(key: string | null | undefined): HeroColorPreset {
 export function heroBackgroundFor(key: string | null | undefined): string {
   return heroPresetFor(key).image;
 }
+
+/* ------------------------- personal accent tokens ------------------------- */
+
+/** Hex → "r g b" so it can be composed with alpha inside CSS colour funcs. */
+function rgbTriplet(hex: string): string {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.replace(/(.)/g, "$1$1") : h, 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+
+export interface StudentAccentTokens {
+  preset: HeroColorPreset;
+  /** Emphasis colour (icons, arrows). */
+  accent: string;
+  /** Accessible darker shade for text. */
+  accentForeground: string;
+  /** Very light tinted background (~10%). */
+  accentSoft: string;
+  /** Even lighter hover tint (~6%). */
+  accentSofter: string;
+  /** Subtle accent border. */
+  accentBorder: string;
+  /** Ready-to-spread CSS custom properties. */
+  vars: CSSProperties;
+}
+
+/**
+ * Derived, accessible tokens for the student's PERSONAL accent.
+ *
+ * Single source of truth: the same `profiles.home_header_color` preference the
+ * Home hero and Profile picker read, via the shared `["student-profile"]` query
+ * cache — so changing the colour updates every consumer live with no local
+ * duplicate state. This is deliberately NOT tenant branding.
+ */
+export function useStudentAccent(): StudentAccentTokens {
+  const { data: profile } = useStudentProfile();
+  const preset = heroPresetFor(profile?.home_header_color);
+  const triplet = rgbTriplet(preset.background);
+
+  const accent = preset.icon;
+  const accentForeground = preset.foreground;
+  const accentSoft = `rgb(${triplet} / 0.12)`;
+  const accentSofter = `rgb(${triplet} / 0.06)`;
+  const accentBorder = `rgb(${triplet} / 0.22)`;
+
+  return {
+    preset,
+    accent,
+    accentForeground,
+    accentSoft,
+    accentSofter,
+    accentBorder,
+    vars: {
+      "--student-accent": accent,
+      "--student-accent-foreground": accentForeground,
+      "--student-accent-soft": accentSoft,
+      "--student-accent-softer": accentSofter,
+      "--student-accent-border": accentBorder,
+    } as CSSProperties,
+  };
+}
+
+
 
 /** Persist the student's own hero colour. Scoped to auth.uid() by RLS. */
 export function useSaveHeroColor() {

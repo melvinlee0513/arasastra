@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureEnabled } from "@/hooks/useFeature";
-import { useStudentProfile, bestStudentName } from "@/lib/studentProfile";
+import { useStudentProfile, useStudentAccent, bestStudentName } from "@/lib/studentProfile";
 import { useInboxUnreadCount } from "@/lib/studentInbox";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import owlMascot from "@/assets/owl-mascot.png";
@@ -53,6 +53,8 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { data: profile } = useStudentProfile();
+  // Single source of truth: the student's personal accent (NOT tenant branding).
+  const accent = useStudentAccent();
 
   const inboxOn = useFeatureEnabled("studentInbox");
   const gamificationOn = useFeatureEnabled("gamification");
@@ -91,6 +93,7 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
 
   return (
     <aside
+      style={accent.vars}
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-slate-200/80",
         "bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_60%,#f6f9ff_100%)]",
@@ -117,23 +120,38 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
         <ul className="space-y-1.5">
           {PRIMARY.map((d) => {
             const active = activeFor(d);
+            // "More" stays recognisable as the active parent while the student
+            // is inside one of its child services, but with a softer tint than
+            // the child itself.
+            const parentOnly = d.path === "/dashboard/more" && serviceActive && pathname !== d.path;
             return (
               <li key={d.path}>
                 <NavLink
                   to={d.path}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={active && !parentOnly ? "page" : undefined}
                   title={collapsed ? d.label : undefined}
+                  style={
+                    active
+                      ? {
+                          backgroundColor: parentOnly
+                            ? "var(--student-accent-softer)"
+                            : "var(--student-accent-soft)",
+                          color: "var(--student-accent-foreground)",
+                        }
+                      : undefined
+                  }
                   className={cn(
-                    "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[14.5px] font-semibold transition-colors",
+                    "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[14.5px] font-semibold transition-colors duration-200 motion-reduce:transition-none",
                     collapsed && "justify-center px-0",
                     active
-                      ? "bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                      ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
                       : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900",
                   )}
                 >
                   <d.icon
                     className="h-[21px] w-[21px] shrink-0"
-                    strokeWidth={active ? 2.4 : 2}
+                    style={active ? { color: "var(--student-accent)" } : undefined}
+                    strokeWidth={active && !parentOnly ? 2.4 : 2}
                     aria-hidden="true"
                   />
                   {!collapsed && <span className="truncate">{d.label}</span>}
@@ -149,17 +167,33 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
                           <NavLink
                             to={s.path}
                             aria-current={sActive ? "page" : undefined}
-                            className={cn(
-                              "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] transition-colors",
+                            style={
                               sActive
-                                ? "bg-primary/8 font-semibold text-primary"
+                                ? {
+                                    backgroundColor: "var(--student-accent-soft)",
+                                    color: "var(--student-accent-foreground)",
+                                    borderColor: "var(--student-accent-border)",
+                                  }
+                                : undefined
+                            }
+                            className={cn(
+                              "flex items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-[13.5px] transition-colors duration-200 motion-reduce:transition-none",
+                              sActive
+                                ? "font-semibold"
                                 : "font-medium text-slate-500 hover:bg-slate-100/80 hover:text-slate-800",
                             )}
                           >
-                            <s.icon className="h-[17px] w-[17px] shrink-0" aria-hidden="true" />
+                            <s.icon
+                              className="h-[17px] w-[17px] shrink-0"
+                              style={sActive ? { color: "var(--student-accent)" } : undefined}
+                              aria-hidden="true"
+                            />
                             <span className="truncate">{s.label}</span>
                             {!!s.badge && s.badge > 0 && (
-                              <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+                              <span
+                                className="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                                style={{ backgroundColor: "var(--student-accent)" }}
+                              >
                                 {s.badge > 99 ? "99+" : s.badge}
                               </span>
                             )}
@@ -174,6 +208,7 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
           })}
         </ul>
       </nav>
+
 
       {/* Identity card */}
       {user && (
