@@ -38,7 +38,9 @@ export function StudentHomeMobile() {
   return (
     <div className="relative min-h-screen bg-[hsl(220_20%_98%)]">
       <HomePageDecor />
-      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] md:max-w-5xl md:space-y-6 md:px-8 md:pb-12 xl:max-w-6xl">
+      {/* Single vertical column on every breakpoint — desktop only gets a wider
+          centred container and slightly larger rhythm, never a bento grid. */}
+      <div className="relative mx-auto w-full max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] md:max-w-4xl md:space-y-8 md:px-8 md:pb-12 lg:max-w-5xl">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}
@@ -51,64 +53,38 @@ export function StudentHomeMobile() {
           unreadCount={inboxOn ? unread.count : 0}
         />
 
-        {/* Row 2 on desktop: Important Updates | Continue Learning.
-            On mobile this stays a plain vertical stack. */}
-        <div className="space-y-7 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-          <StudentHomeAnnouncements
-            items={feed.data?.announcements ?? []}
-            isLoading={feed.isLoading}
-            isError={feed.isError}
-            onRetry={() => feed.refetch()}
-            viewAllTo={
-              feed.data?.announcements?.[0]
-                ? `/dashboard/classes/${feed.data.announcements[0].class_id}/announcements`
-                : undefined
-            }
-          />
+        <StudentHomeAnnouncements
+          items={feed.data?.announcements ?? []}
+          isLoading={feed.isLoading}
+          isError={feed.isError}
+          onRetry={() => feed.refetch()}
+          viewAllTo={
+            feed.data?.announcements?.[0]
+              ? `/dashboard/classes/${feed.data.announcements[0].class_id}/announcements`
+              : undefined
+          }
+        />
 
-          <div className="space-y-3">
-            <StudentHomeContinueLearning
-              items={feed.data?.continue_learning ?? []}
-              isLoading={feed.isLoading}
-              isError={feed.isError}
-              onRetry={() => feed.refetch()}
-            />
+        <StudentHomeContinueLearning
+          items={feed.data?.continue_learning ?? []}
+          isLoading={feed.isLoading}
+          isError={feed.isError}
+          onRetry={() => feed.refetch()}
+        />
 
-            <div className="lg:hidden">
-              <StudentHomeQuickPractice
-                items={feed.data?.continue_learning ?? []}
-                isLoading={feed.isLoading}
-              />
-            </div>
-          </div>
-        </div>
+        <StudentHomeQuickPractice
+          items={feed.data?.continue_learning ?? []}
+          isLoading={feed.isLoading}
+        />
 
-        {/* Row 3 on desktop: Quick Practice | Coming Up | XP Leaderboard.
-            Flex + empty:hidden lets a column that renders nothing (e.g. Quick
-            Practice with no practice sets) collapse instead of leaving a hole. */}
-        <div className="space-y-7 lg:flex lg:items-start lg:gap-6 lg:space-y-0">
-          <div className="hidden empty:hidden lg:block lg:min-w-0 lg:flex-[0.9]">
-            <StudentHomeQuickPractice
-              items={feed.data?.continue_learning ?? []}
-              isLoading={feed.isLoading}
-            />
-          </div>
+        <StudentHomeComingUp
+          items={feed.data?.coming_up ?? []}
+          isLoading={feed.isLoading}
+          isError={feed.isError}
+          onRetry={() => feed.refetch()}
+        />
 
-          <div className="empty:hidden lg:min-w-0 lg:flex-1">
-            <StudentHomeComingUp
-              items={feed.data?.coming_up ?? []}
-              isLoading={feed.isLoading}
-              isError={feed.isError}
-              onRetry={() => feed.refetch()}
-            />
-          </div>
-
-          {showLeaderboard && (
-            <div className="empty:hidden lg:min-w-0 lg:flex-[1.25]">
-              <StudentHomeLeaderboard currentUserId={user?.id} />
-            </div>
-          )}
-        </div>
+        {showLeaderboard && <StudentHomeLeaderboard currentUserId={user?.id} />}
       </div>
     </div>
   );
