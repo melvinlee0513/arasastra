@@ -99,38 +99,52 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Red",
     background: "#EF4444",
     image: "/assets/illustrations/ui/student-home-hero-background-red.webp",
+    foreground: "#B91C1C",
+    icon: "#DC2626",
   },
   {
     key: "blue",
     label: "Blue",
     background: "#2563EB",
     image: "/assets/illustrations/ui/student-home-hero-background-blue.webp",
+    foreground: "#1D4ED8",
+    icon: "#2563EB",
   },
   {
     key: "purple",
     label: "Purple",
     background: "#7C3AED",
     image: "/assets/illustrations/ui/student-home-hero-background-purple.webp",
+    foreground: "#6D28D9",
+    icon: "#7C3AED",
   },
   {
     key: "green",
     label: "Green",
     background: "#16A34A",
     image: "/assets/illustrations/ui/student-home-hero-background-green.webp",
+    foreground: "#15803D",
+    icon: "#16A34A",
   },
   {
     key: "yellow",
     label: "Yellow",
     background: "#FACC15",
     image: "/assets/illustrations/ui/student-home-hero-background-yellow.webp",
+    // Bright hue: text and icon need a much darker amber to stay readable.
+    foreground: "#92400E",
+    icon: "#B45309",
   },
   {
     key: "orange",
     label: "Orange",
     background: "#F97316",
     image: "/assets/illustrations/ui/student-home-hero-background-orange.webp",
+    foreground: "#C2410C",
+    icon: "#EA580C",
   },
 ];
+
 
 export const DEFAULT_HERO_COLOR: HeroColorKey = "red";
 
