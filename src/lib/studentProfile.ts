@@ -79,7 +79,15 @@ export interface HeroColorPreset {
   background: string;
   /** Canonical illustrated Home hero background (WebP in /public). */
   image: string;
+  /**
+   * Accessible darker shade of the same hue, used for text/labels on a very
+   * light tinted background (bright hues like yellow need this).
+   */
+  foreground: string;
+  /** Strong-but-readable icon shade. */
+  icon: string;
 }
+
 
 /**
  * Canonical colour → illustrated background mapping. The artwork lives in
