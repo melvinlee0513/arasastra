@@ -269,7 +269,7 @@ export function TimetablePage() {
   };
 
   // Mobile students get the dedicated weekly timeline; desktop keeps its layout.
-  if (isMobile && role === "student") return <MobileTimetable />;
+  if (role === "student") return <MobileTimetable />;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
