@@ -13,7 +13,7 @@ export function LeaderboardPage() {
   const { role } = useAuth();
 
   // Mobile students get the dedicated podium experience; desktop is unchanged.
-  if (isMobile && role === "student") return <MobileLeaderboard />;
+  if (isMobile || role === "student") return <MobileLeaderboard />;
 
   return (
     <div className="min-h-screen bg-slate-50">

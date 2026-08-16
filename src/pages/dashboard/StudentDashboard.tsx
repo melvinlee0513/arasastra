@@ -52,7 +52,7 @@ interface EnrolledSubject {
 }
 
 export function StudentDashboard() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [enrolledSubjects, setEnrolledSubjects] = useState<EnrolledSubject[]>([]);
@@ -154,8 +154,9 @@ export function StudentDashboard() {
     }
   };
 
-  // Mobile students get the dedicated Home command centre (Phase 5C).
-  if (isMobile) {
+  // Students get the dedicated Home command centre at every width; the legacy
+  // desktop dashboard below is retained for staff previews only.
+  if (isMobile || !isAdmin) {
     return <StudentHomeMobile />;
   }
 

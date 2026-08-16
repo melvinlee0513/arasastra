@@ -81,7 +81,7 @@ export function MobileLeaderboard() {
       className="min-h-screen bg-slate-50"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
     >
-      <div className="mx-auto max-w-[480px] space-y-4 px-4 pb-[calc(96px+env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-[480px] space-y-4 px-4 pb-[calc(96px+env(safe-area-inset-bottom))] md:max-w-2xl md:px-6 md:pb-12">
         <Link
           to="/dashboard/more"
           className="-ml-1 inline-flex h-11 items-center gap-1 pr-2 text-[13px] font-semibold text-slate-500"

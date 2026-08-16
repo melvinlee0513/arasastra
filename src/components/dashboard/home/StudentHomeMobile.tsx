@@ -38,7 +38,7 @@ export function StudentHomeMobile() {
   return (
     <div className="relative min-h-screen bg-[hsl(220_20%_98%)]">
       <HomePageDecor />
-      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))]">
+      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] md:max-w-5xl md:px-8 md:pb-12">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}

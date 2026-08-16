@@ -1,9 +1,11 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { StudentSidebar } from "@/components/layout/StudentSidebar";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarState } from "@/hooks/useSidebarState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getStudentChromeState } from "@/lib/studentNav";
 import { cn } from "@/lib/utils";
@@ -13,10 +15,10 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin, hasRole } = useAuth();
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebarState(false);
 
   const chrome = getStudentChromeState(pathname);
   // Tab bar is a root-level affordance only; class and learning routes use the
@@ -24,6 +26,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const showTabBar = isMobile && chrome === "root";
   // Immersive learning routes drop the desktop sidebar too.
   const showSidebar = !isMobile && chrome !== "immersive";
+  // Students get the light four-destination sidebar; staff keep the legacy one.
+  const studentShell = !isAdmin && !hasRole("tutor");
 
   if (isLoading) {
     return (
@@ -43,18 +47,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {showSidebar && (
-        <DesktopSidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-      )}
+      {showSidebar &&
+        (studentShell ? (
+          <StudentSidebar collapsed={collapsed} onToggle={toggle} />
+        ) : (
+          <DesktopSidebar collapsed={collapsed} onToggle={toggle} />
+        ))}
 
       <main
         className={cn(
           "transition-all duration-300 ease-in-out",
           showTabBar && "pb-[calc(5.5rem+env(safe-area-inset-bottom))]",
-          !isMobile && (showSidebar ? (sidebarCollapsed ? "ml-16" : "ml-64") : ""),
+          !isMobile &&
+            showSidebar &&
+            (studentShell
+              ? collapsed
+                ? "ml-[76px]"
+                : "ml-[264px]"
+              : collapsed
+                ? "ml-16"
+                : "ml-64"),
         )}
       >
         <div className="min-h-screen">{children}</div>

@@ -232,7 +232,7 @@ export function AccountPage() {
 
   // Mobile students get the simplified profile (summary + Edit sheet +
   // personalisation). Desktop, tutors and admins keep the existing page.
-  if (isMobile && !isAdmin && !hasRole("tutor")) {
+  if (!isAdmin && !hasRole("tutor")) {
     return <StudentMobileProfile />;
   }
 
