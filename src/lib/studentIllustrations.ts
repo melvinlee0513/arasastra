@@ -34,7 +34,7 @@ export const INBOX_ART = {
 export const ACHIEVEMENT_ART = {
   trophy: asset("decorative/glossy_golden_star_trophy_icon.webp"),
   certificate: asset("ui/glossy_3d_certificate_scroll_with_medal.webp"),
-  locked: asset("gamification/glossy_purple_lock_medal_badge.webp"),
+  locked: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
   firstStep: asset("gamification/glossy_bronze_star_medal_badge.webp"),
   streak: asset("gamification/glossy_flame_streak_reward_badge.webp"),
   streakLong: asset("gamification/streak-flame-7.webp"),
