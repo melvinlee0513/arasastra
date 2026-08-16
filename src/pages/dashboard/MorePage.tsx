@@ -71,52 +71,37 @@ export function MorePage() {
         />
       </ServiceReveal>
 
-      {isMobile ? (
-        <section className="pb-2">
-          <ServiceSectionHeading title="Student services" />
-          {visible.length === 0 ? (
-            <p className="px-1 py-6 text-sm text-slate-500">
-              No extra services are enabled for your centre yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3.5">
-              <ServiceReveal delay={40}>
-                <TimetableCard />
+      <section className="pb-2">
+        <ServiceSectionHeading title="Student services" />
+        {visible.length === 0 ? (
+          <p className="px-1 py-6 text-sm text-slate-500">
+            No extra services are enabled for your centre yet.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4 md:gap-5">
+            <ServiceReveal delay={40}>
+              <TimetableCard />
+            </ServiceReveal>
+            {inboxOn && (
+              <ServiceReveal delay={80}>
+                <InboxCard />
               </ServiceReveal>
-              {inboxOn && (
-                <ServiceReveal delay={80}>
-                  <InboxCard />
-                </ServiceReveal>
-              )}
-              {achievementsOn && (
-                <ServiceReveal delay={120}>
-                  <AchievementsCard />
-                </ServiceReveal>
-              )}
-              {leaderboardOn && (
-                <ServiceReveal delay={160}>
-                  <LeaderboardCard />
-                </ServiceReveal>
-              )}
-            </div>
-          )}
-          <ServiceFooterDecor />
-        </section>
-      ) : (
-        <Section title="Student services">
-          {visible.length === 0 ? (
-            <p className="px-1 py-6 text-sm text-slate-500">
-              No extra services are enabled for your centre yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-              {visible.map((s) => (
-                <Tile key={s.to} tile={s} />
-              ))}
-            </div>
-          )}
-        </Section>
-      )}
+            )}
+            {achievementsOn && (
+              <ServiceReveal delay={120}>
+                <AchievementsCard />
+              </ServiceReveal>
+            )}
+            {leaderboardOn && (
+              <ServiceReveal delay={160}>
+                <LeaderboardCard />
+              </ServiceReveal>
+            )}
+          </div>
+        )}
+        <ServiceFooterDecor />
+      </section>
+
     </ServicePage>
   );
 }
