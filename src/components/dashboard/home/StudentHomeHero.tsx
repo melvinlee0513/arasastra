@@ -86,8 +86,9 @@ export function StudentHomeHero({
           profile preference is still resolving we show a neutral surface
           instead of the red fallback, so no colour flash occurs. */}
       <div
+        
         className={cn(
-          "relative overflow-hidden rounded-[26px] px-5 pb-5 pt-5 sm:px-6 sm:pb-6 md:rounded-[32px] md:px-7 md:pb-6 md:pt-6",
+          "relative isolate overflow-hidden px-5 pb-5 pt-5 [border-radius:28px] sm:px-6 sm:pb-6 md:px-7 md:pb-6 md:pt-6 md:[border-radius:32px]",
           isLoading && "bg-[linear-gradient(135deg,#f4f7fc_0%,#eef2f9_100%)]",
         )}
       >
