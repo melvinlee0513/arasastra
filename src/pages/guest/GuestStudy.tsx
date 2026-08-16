@@ -7,15 +7,9 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART, guestSubjectArt } from "@/lib/guestIllustrations";
+import { GUEST_ART, guestSubjectArt, guestSubjectPreview } from "@/lib/guestIllustrations";
 import { usePublicSubjects } from "@/lib/guestPublicContent";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const PREVIEW_COVERS = [
-  GUEST_ART.physicsPreview,
-  GUEST_ART.biologyPreview,
-  GUEST_ART.chemistryPreview,
-];
 
 const LEARNING_TOOLS = [
   { art: GUEST_ART.quizzes, title: "Quizzes", body: "Timed practice with instant scoring." },
@@ -84,14 +78,14 @@ export function GuestStudy() {
           </GuestCard>
         ) : (
           <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {previews.map((subject, i) => (
+            {previews.map((subject) => (
               <GuestCard
                 key={subject.id}
                 className="w-[228px] shrink-0 snap-start overflow-hidden"
               >
                 <div className="relative flex h-[124px] items-center justify-center bg-[hsl(214_100%_96%)]">
                   <img
-                    src={PREVIEW_COVERS[i % PREVIEW_COVERS.length]}
+                    src={guestSubjectPreview(subject.name)}
                     alt=""
                     aria-hidden="true"
                     draggable={false}

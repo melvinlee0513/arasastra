@@ -100,3 +100,22 @@ export function guestSubjectArt(name: string | null | undefined): string {
   if (n.includes("science") || n.includes("sains")) return GUEST_ART.science;
   return GUEST_ART.subjectFallback;
 }
+
+/** Subject-matched public class preview cover. */
+export function guestSubjectPreview(name: string | null | undefined): string {
+  const n = (name ?? "").toLowerCase();
+  const cover = (rel: string) => asset(rel);
+  if (n.includes("bio")) return cover("subjects/biology/class-card-preview-biology.webp");
+  if (n.includes("chem")) return cover("subjects/chemistry/class-card-preview-chemistry.webp");
+  if (n.includes("physic")) return cover("subjects/physics/class-card-preview-physics.webp");
+  if (n.includes("add") && n.includes("math"))
+    return cover("subjects/additional mathematics/class-card-preview-additional-mathematics.webp");
+  if (n.includes("math") || n.includes("matemat"))
+    return cover("subjects/mathematics/class-card-preview-mathematics.webp");
+  if (n.includes("english")) return cover("subjects/languages/class-card-preview-english.webp");
+  if (n.includes("bahasa") || n.includes("melayu"))
+    return cover("subjects/languages/class-card-preview-bahasa-melayu.webp");
+  if (n.includes("sejarah") || n.includes("history"))
+    return cover("subjects/sejarah/class-card-preview-sejarah.webp");
+  return cover("subjects/science/class-card-preview-science.webp");
+}
