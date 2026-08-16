@@ -17,7 +17,7 @@ export default defineTool({
   name: "get_my_profile",
   title: "Get my profile",
   description:
-    "Fetch the signed-in Arasa A+ user's profile: full name, role, form/year, and organisation.",
+    "Fetch the signed-in Aras A+ user's profile: full name, role, form/year, and organisation.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx) => {

@@ -95,10 +95,10 @@ export default function OAuthConsent() {
           <div className="space-y-5">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold text-[#0F172A]">
-                Connect {details.client?.name ?? "an app"} to Arasa A+
+                Connect {details.client?.name ?? "an app"} to Aras A+
               </h1>
               <p className="text-slate-500 text-sm">
-                {details.client?.name ?? "The client"} will act on your behalf using your Arasa A+
+                {details.client?.name ?? "The client"} will act on your behalf using your Aras A+
                 account. You can revoke access at any time.
               </p>
             </div>

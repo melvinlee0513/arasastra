@@ -64,7 +64,7 @@ export function MobileOnboarding() {
       {
         icon: <CheckCircle2 className="h-5 w-5" />,
         title: "Tap 'Add'",
-        description: "Confirm the name and tap Add. Arasa A+ will appear on your Home Screen!",
+        description: "Confirm the name and tap Add. Aras A+ will appear on your Home Screen!",
       },
     ],
     android: [
@@ -98,7 +98,7 @@ export function MobileOnboarding() {
           <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
             <Smartphone className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Install Arasa A+</h1>
+          <h1 className="text-2xl font-bold text-foreground">Install Aras A+</h1>
           <p className="text-muted-foreground text-sm">
             Get the full app experience — offline access, instant loading, and home screen launch.
           </p>
@@ -110,7 +110,7 @@ export function MobileOnboarding() {
               <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
               <p className="font-semibold text-foreground">App Installed!</p>
               <p className="text-sm text-muted-foreground">
-                Arasa A+ is now on your home screen. Open it anytime for instant access.
+                Aras A+ is now on your home screen. Open it anytime for instant access.
               </p>
             </CardContent>
           </Card>
@@ -122,7 +122,7 @@ export function MobileOnboarding() {
               size="lg"
             >
               <Download className="mr-2 h-5 w-5" />
-              Install Arasa A+
+              Install Aras A+
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               One tap to add to your Home Screen
@@ -168,7 +168,7 @@ export function MobileOnboarding() {
 
         {/* Branding */}
         <p className="text-center text-xs text-muted-foreground pt-4">
-          Arasa A+ Education • Your path to academic excellence
+          Aras A+ Education • Your path to academic excellence
         </p>
       </motion.div>
     </div>

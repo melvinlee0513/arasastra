@@ -179,7 +179,7 @@ function AuthPageInner({ loginForm, onLogin, isLoading, showPassword, setShowPas
   const [slugInput, setSlugInput] = useState("");
   const [slugError, setSlugError] = useState<string | null>(null);
 
-  const brandName = center?.name ?? "Arasa A+";
+  const brandName = center?.name ?? "Aras A+";
   const brandLogo = themeConfig?.logoUrl || owlMascot;
   const heroTitle = themeConfig?.loginHeroTitle ?? "Welcome back";
 

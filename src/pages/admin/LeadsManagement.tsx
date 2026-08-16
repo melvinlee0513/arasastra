@@ -257,8 +257,8 @@ export function LeadsManagement() {
     }
     const cleanPhone = phone.replace(/\D/g, "");
     const message = isNudge
-      ? encodeURIComponent(`Hi ${name}, your spot in Arasa A+ is waiting! 🎓 We'd love to help you get started on your learning journey. Let me know if you have any questions!`)
-      : encodeURIComponent(`Hi ${name}, welcome to Arasa A+! I saw you registered and wanted to personally reach out. How can I help you get started?`);
+      ? encodeURIComponent(`Hi ${name}, your spot in Aras A+ is waiting! 🎓 We'd love to help you get started on your learning journey. Let me know if you have any questions!`)
+      : encodeURIComponent(`Hi ${name}, welcome to Aras A+! I saw you registered and wanted to personally reach out. How can I help you get started?`);
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
   };
 

@@ -164,7 +164,7 @@ export function StudentDashboard() {
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       {/* Attendance Score + Welcome */}
       <div className="flex items-center gap-3">
-        <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
+        <img src={owlMascot} alt="Aras A+" className="w-12 h-12 md:hidden" />
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Welcome back, {profile?.full_name?.split(" ")[0]}! 👋

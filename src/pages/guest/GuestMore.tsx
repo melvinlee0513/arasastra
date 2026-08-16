@@ -1,3 +1,5 @@
+import { useIsGuestDesktop } from "@/components/guest/GuestDesktopChrome";
+import { GuestMoreDesktop } from "@/pages/guest/desktop/GuestMoreDesktop";
 import { LayoutGrid, HeartHandshake } from "lucide-react";
 import {
   GuestCTA,
@@ -36,7 +38,7 @@ const WHY_JOIN = [
  * Guest mobile "More" hub — the same student services shown as clearly locked
  * previews, plus the reasons to join and a sign-in call to action.
  */
-export function GuestMore() {
+function GuestMoreMobile() {
   return (
     <GuestPage>
       <GuestMobileHero
@@ -97,6 +99,17 @@ export function GuestMore() {
       />
     </GuestPage>
   );
+}
+
+
+
+/**
+ * Guest More entry — renders the desktop sidebar layout from
+ * 1024px up and the mobile guest layout below it.
+ */
+export function GuestMore() {
+  const isDesktop = useIsGuestDesktop();
+  return isDesktop ? <GuestMoreDesktop /> : <GuestMoreMobile />;
 }
 
 export default GuestMore;

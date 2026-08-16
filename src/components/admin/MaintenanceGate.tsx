@@ -57,7 +57,7 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-6">
-          <img src={owlMascot} alt="Arasa A+" className="w-24 h-24 mx-auto object-contain" />
+          <img src={owlMascot} alt="Aras A+" className="w-24 h-24 mx-auto object-contain" />
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent">
               <Wrench className="w-4 h-4" />
@@ -70,11 +70,11 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
           </div>
           <div className="rounded-3xl border border-border/40 bg-card/80 backdrop-blur-xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <p className="text-sm text-muted-foreground">
-              Our team is making Arasa A+ even better for you. We'll be back shortly with exciting improvements!
+              Our team is making Aras A+ even better for you. We'll be back shortly with exciting improvements!
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Arasa A+ Education • Your path to academic excellence
+            Aras A+ Education • Your path to academic excellence
           </p>
         </div>
       </div>

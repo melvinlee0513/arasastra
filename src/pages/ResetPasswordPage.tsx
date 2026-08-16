@@ -48,7 +48,7 @@ export function ResetPasswordPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-6 space-y-6 bg-card/80 backdrop-blur-sm border-border">
         <div className="text-center space-y-2">
-          <img src={owlMascot} alt="Arasa A+" className="w-16 h-16 mx-auto" />
+          <img src={owlMascot} alt="Aras A+" className="w-16 h-16 mx-auto" />
           <h1 className="text-2xl font-bold text-foreground">Reset Password</h1>
           <p className="text-muted-foreground text-sm">
             {isSent

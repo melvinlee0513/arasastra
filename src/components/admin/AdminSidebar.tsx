@@ -67,10 +67,10 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
     >
       {/* Logo Section */}
       <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
-        <img src={owlMascot} alt="Arasa A+" className="w-10 h-10 rounded-xl object-contain" />
+        <img src={owlMascot} alt="Aras A+" className="w-10 h-10 rounded-xl object-contain" />
         {!collapsed && (
           <div className="animate-fade-up">
-            <h1 className="font-bold text-lg text-sidebar-foreground">Arasa A+</h1>
+            <h1 className="font-bold text-lg text-sidebar-foreground">Aras A+</h1>
             <p className="text-xs text-sidebar-foreground/60">Admin Portal</p>
           </div>
         )}

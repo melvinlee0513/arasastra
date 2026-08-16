@@ -1,3 +1,5 @@
+import { useIsGuestDesktop } from "@/components/guest/GuestDesktopChrome";
+import { GuestProfileDesktop } from "@/pages/guest/desktop/GuestProfileDesktop";
 import { Link } from "react-router-dom";
 import { ChevronRight, Gift, LifeBuoy } from "lucide-react";
 import {
@@ -43,7 +45,7 @@ const SUPPORT_ROWS = [
  * Guest mobile Profile page — no personal data exists yet, so the page sells
  * the account and routes visitors to sign-in, invites and support.
  */
-export function GuestProfile() {
+function GuestProfileMobile() {
   return (
     <GuestPage>
       <GuestMobileHero
@@ -126,6 +128,17 @@ export function GuestProfile() {
       </section>
     </GuestPage>
   );
+}
+
+
+
+/**
+ * Guest Profile entry — renders the desktop sidebar layout from
+ * 1024px up and the mobile guest layout below it.
+ */
+export function GuestProfile() {
+  const isDesktop = useIsGuestDesktop();
+  return isDesktop ? <GuestProfileDesktop /> : <GuestProfileMobile />;
 }
 
 export default GuestProfile;

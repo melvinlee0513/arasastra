@@ -35,7 +35,7 @@ function supabaseForUser(ctx) {
 var get_my_profile_default = defineTool2({
   name: "get_my_profile",
   title: "Get my profile",
-  description: "Fetch the signed-in Arasa A+ user's profile: full name, role, form/year, and organisation.",
+  description: "Fetch the signed-in Aras A+ user's profile: full name, role, form/year, and organisation.",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx) => {
@@ -80,7 +80,7 @@ function supabaseForUser2(ctx) {
 var list_my_classes_default = defineTool3({
   name: "list_my_classes",
   title: "List my classes",
-  description: "List classes the signed-in Arasa A+ student is enrolled in, or the tutor teaches. Read-only.",
+  description: "List classes the signed-in Aras A+ student is enrolled in, or the tutor teaches. Read-only.",
   inputSchema: {
     limit: z2.number().int().min(1).max(50).default(20).describe("Max classes to return.")
   },
@@ -105,9 +105,9 @@ var list_my_classes_default = defineTool3({
 var projectRef = "lbrmsxoxzjhswmnexizc";
 var mcp_default = defineMcp({
   name: "arasa-plus-mcp",
-  title: "Arasa A+ MCP",
+  title: "Aras A+ MCP",
   version: "0.1.0",
-  instructions: "Tools for the Arasa A+ learning platform. Use `echo` to verify connectivity. `get_my_profile` returns the signed-in user's profile and roles. `list_my_classes` returns the classes the signed-in user is enrolled in or teaches. All data-access tools respect row-level security and act as the signed-in user.",
+  instructions: "Tools for the Aras A+ learning platform. Use `echo` to verify connectivity. `get_my_profile` returns the signed-in user's profile and roles. `list_my_classes` returns the classes the signed-in user is enrolled in or teaches. All data-access tools respect row-level security and act as the signed-in user.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"

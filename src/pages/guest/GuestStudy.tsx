@@ -1,3 +1,5 @@
+import { useIsGuestDesktop } from "@/components/guest/GuestDesktopChrome";
+import { GuestStudyDesktop } from "@/pages/guest/desktop/GuestStudyDesktop";
 import { Link } from "react-router-dom";
 import { Eye, GraduationCap, Lock, Wrench } from "lucide-react";
 import {
@@ -22,7 +24,7 @@ const LEARNING_TOOLS = [
  * Guest mobile Study page — no enrolment data is fetched. Visitors see the
  * centre's public subject catalogue as previews plus the learning toolset.
  */
-export function GuestStudy() {
+function GuestStudyMobile() {
   const subjects = usePublicSubjects();
   const previews = (subjects.data ?? []).slice(0, 6);
 
@@ -152,6 +154,17 @@ export function GuestStudy() {
       />
     </GuestPage>
   );
+}
+
+
+
+/**
+ * Guest Study entry — renders the desktop sidebar layout from
+ * 1024px up and the mobile guest layout below it.
+ */
+export function GuestStudy() {
+  const isDesktop = useIsGuestDesktop();
+  return isDesktop ? <GuestStudyDesktop /> : <GuestStudyMobile />;
 }
 
 export default GuestStudy;

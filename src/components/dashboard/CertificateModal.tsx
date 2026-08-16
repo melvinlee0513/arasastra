@@ -90,7 +90,7 @@ export function CertificateModal({
   };
 
   const handleShare = () => {
-    const text = encodeURIComponent(`🎓 I just mastered ${subjectName} on Arasa A+! Check it out!`);
+    const text = encodeURIComponent(`🎓 I just mastered ${subjectName} on Aras A+! Check it out!`);
     window.open(`https://wa.me/?text=${text}`, "_blank");
   };
 
@@ -126,7 +126,7 @@ export function CertificateModal({
                     Certificate of Completion
                   </p>
                   <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground tracking-tight">
-                    Arasa A+
+                    Aras A+
                   </h2>
                 </div>
 

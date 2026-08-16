@@ -27,7 +27,7 @@ export function SubscriptionRenewalCard({ onSuccess, autoFillAmount }: Subscript
 
   const bankDetails = {
     bank: "Maybank",
-    accountName: "Arasa A+ Sdn Bhd",
+    accountName: "Aras A+ Sdn Bhd",
     accountNumber: "123456789012",
   };
 

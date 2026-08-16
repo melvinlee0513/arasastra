@@ -22,7 +22,7 @@ export function InstallQRCode() {
           />
         </div>
         <p className="text-xs text-muted-foreground text-center max-w-[200px]">
-          Scan with your phone camera to install Arasa A+ as an app
+          Scan with your phone camera to install Aras A+ as an app
         </p>
       </CardContent>
     </Card>

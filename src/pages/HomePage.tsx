@@ -124,7 +124,7 @@ export function HomePage() {
 
   // Dynamic content from CMS with fallbacks
   const heroSection = getSectionByKey("hero");
-  const heroTitle = heroSection?.title || "Welcome to Arasa A+";
+  const heroTitle = heroSection?.title || "Welcome to Aras A+";
   const heroSubtitle = heroSection?.subtitle || "Your gateway to academic excellence";
   const heroTagline = getContentValue("hero", "tagline", "Master your SPM subjects with Malaysia's top tutors");
   const ctaText = getContentValue("hero", "cta_text", "Get Started");
@@ -136,7 +136,7 @@ export function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={owlMascot} alt="Arasa A+" className="w-12 h-12 md:hidden" />
+          <img src={owlMascot} alt="Aras A+" className="w-12 h-12 md:hidden" />
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
               {isAuthenticated ? `Welcome back, ${displayName}!` : heroTitle} 👋
@@ -338,7 +338,7 @@ export function HomePage() {
               {heroTagline}
             </h2>
             <p className="text-primary-foreground/80 mb-6">
-              Join thousands of students excelling with Arasa A+
+              Join thousands of students excelling with Aras A+
             </p>
             <Link to="/auth">
               <Button variant="gold" size="lg">
