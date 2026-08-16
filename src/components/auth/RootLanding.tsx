@@ -18,6 +18,7 @@ import { GuestHome } from "@/pages/guest/GuestHome";
 export function RootLanding() {
   const { user, isLoading, isAdmin, isTutor } = useAuth();
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   // Never render a workspace while auth/role hydration is still in flight —
   // this is what previously caused the old public Home to flash on launch.
@@ -41,9 +42,14 @@ export function RootLanding() {
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
+  // Signed-out mobile visitors get the dedicated guest experience; desktop
+  // keeps the existing public landing page untouched.
+  if (isMobile) return <GuestHome />;
+
   return (
     <MainLayout>
       <HomePage />
     </MainLayout>
   );
+
 }
