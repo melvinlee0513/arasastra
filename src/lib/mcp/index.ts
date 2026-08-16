@@ -11,10 +11,10 @@ const projectRef =
 
 export default defineMcp({
   name: "arasa-plus-mcp",
-  title: "Arasa A+ MCP",
+  title: "Aras A+ MCP",
   version: "0.1.0",
   instructions:
-    "Tools for the Arasa A+ learning platform. Use `echo` to verify connectivity. " +
+    "Tools for the Aras A+ learning platform. Use `echo` to verify connectivity. " +
     "`get_my_profile` returns the signed-in user's profile and roles. " +
     "`list_my_classes` returns the classes the signed-in user is enrolled in or teaches. " +
     "All data-access tools respect row-level security and act as the signed-in user.",

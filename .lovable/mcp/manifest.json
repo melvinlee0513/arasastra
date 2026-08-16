@@ -13,7 +13,7 @@
     "server": {
       "name": "arasa-plus-mcp",
       "version": "0.1.0",
-      "title": "Arasa A+ MCP"
+      "title": "Aras A+ MCP"
     },
     "tools": [
       {
@@ -45,7 +45,7 @@
       {
         "name": "get_my_profile",
         "title": "Get my profile",
-        "description": "Fetch the signed-in Arasa A+ user's profile: full name, role, form/year, and organisation.",
+        "description": "Fetch the signed-in Aras A+ user's profile: full name, role, form/year, and organisation.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -61,7 +61,7 @@
       {
         "name": "list_my_classes",
         "title": "List my classes",
-        "description": "List classes the signed-in Arasa A+ student is enrolled in, or the tutor teaches. Read-only.",
+        "description": "List classes the signed-in Aras A+ student is enrolled in, or the tutor teaches. Read-only.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,

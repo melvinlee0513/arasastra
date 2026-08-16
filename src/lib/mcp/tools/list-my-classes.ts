@@ -17,7 +17,7 @@ export default defineTool({
   name: "list_my_classes",
   title: "List my classes",
   description:
-    "List classes the signed-in Arasa A+ student is enrolled in, or the tutor teaches. Read-only.",
+    "List classes the signed-in Aras A+ student is enrolled in, or the tutor teaches. Read-only.",
   inputSchema: {
     limit: z.number().int().min(1).max(50).default(20).describe("Max classes to return."),
   },

@@ -26,3 +26,38 @@ export function usePublicSubjects() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+export interface PublicTutor {
+  id: string;
+  name: string;
+  specialization: string | null;
+}
+
+/** Public, anon-readable tutor directory (marketing profiles only). */
+export function usePublicTutors() {
+  return useQuery({
+    queryKey: ["guest-public-tutors"],
+    queryFn: async (): Promise<PublicTutor[]> => {
+      const { data, error } = await supabase
+        .from("tutors")
+        .select("id, name, specialization")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as PublicTutor[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Real public tutor name for a subject, or a neutral label when unmapped. */
+export function tutorNameForSubject(
+  tutors: PublicTutor[] | undefined,
+  subjectName: string | null | undefined,
+): string {
+  const n = (subjectName ?? "").toLowerCase();
+  const match = (tutors ?? []).find(
+    (t) => t.specialization && n.includes(t.specialization.toLowerCase()),
+  );
+  return match?.name ?? "Expert Tutor";
+}

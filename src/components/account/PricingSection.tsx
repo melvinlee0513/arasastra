@@ -68,7 +68,7 @@ export function PricingSection({ selectedPlanId, onSelectPlan }: PricingSectionP
           Start Your <span className="text-primary">Learning Journey</span>
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Choose the plan that fits your needs and unlock your academic potential with Arasa A+.
+          Choose the plan that fits your needs and unlock your academic potential with Aras A+.
         </p>
       </div>
 

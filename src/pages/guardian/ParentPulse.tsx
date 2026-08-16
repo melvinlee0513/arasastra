@@ -255,7 +255,7 @@ export function ParentPulse() {
           className="w-full max-w-md"
         >
           <Card className="p-10 rounded-3xl border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-card/60 backdrop-blur-lg text-center space-y-6">
-            <img src={owlMascot} alt="Arasa A+" className="w-16 h-16 mx-auto" />
+            <img src={owlMascot} alt="Aras A+" className="w-16 h-16 mx-auto" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">Parent Pulse</h1>
               <p className="text-muted-foreground text-sm mt-1">Sign in with a magic link to view your child's progress</p>

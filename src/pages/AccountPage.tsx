@@ -196,7 +196,7 @@ export function AccountPage() {
             </div>
           </Card>
         </section>
-        <p className="text-center text-xs text-muted-foreground">Arasa A+ v1.0.0</p>
+        <p className="text-center text-xs text-muted-foreground">Aras A+ v1.0.0</p>
       </div>
     );
   }
@@ -469,7 +469,7 @@ export function AccountPage() {
         </Card>
       </section>
 
-      <p className="text-center text-xs text-muted-foreground">Arasa A+ v1.0.0</p>
+      <p className="text-center text-xs text-muted-foreground">Aras A+ v1.0.0</p>
     </div>
   );
 }

@@ -16,7 +16,7 @@ export function PaymentGuideModal() {
     {
       icon: CreditCard,
       title: "Transfer the exact amount",
-      description: "Transfer to Arasa A+ via Maybank: 123456789",
+      description: "Transfer to Aras A+ via Maybank: 123456789",
     },
     {
       icon: Camera,
