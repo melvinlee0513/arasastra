@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureEnabled } from "@/hooks/useFeature";
-import { useStudentProfile, bestStudentName } from "@/lib/studentProfile";
+import { useStudentProfile, useStudentAccent, bestStudentName } from "@/lib/studentProfile";
 import { useInboxUnreadCount } from "@/lib/studentInbox";
 import { UserAvatar } from "@/components/profile/UserAvatar";
 import owlMascot from "@/assets/owl-mascot.png";
@@ -53,6 +53,8 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { data: profile } = useStudentProfile();
+  // Single source of truth: the student's personal accent (NOT tenant branding).
+  const accent = useStudentAccent();
 
   const inboxOn = useFeatureEnabled("studentInbox");
   const gamificationOn = useFeatureEnabled("gamification");
