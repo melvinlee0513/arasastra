@@ -6,6 +6,7 @@
  * avatar change reflects everywhere without a hard refresh.
  */
 
+import type { CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -183,7 +184,7 @@ export interface StudentAccentTokens {
   /** Subtle accent border. */
   accentBorder: string;
   /** Ready-to-spread CSS custom properties. */
-  vars: React.CSSProperties;
+  vars: CSSProperties;
 }
 
 /**
@@ -218,7 +219,7 @@ export function useStudentAccent(): StudentAccentTokens {
       "--student-accent-soft": accentSoft,
       "--student-accent-softer": accentSofter,
       "--student-accent-border": accentBorder,
-    } as React.CSSProperties,
+    } as CSSProperties,
   };
 }
 
