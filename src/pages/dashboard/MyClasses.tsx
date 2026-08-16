@@ -16,6 +16,7 @@ import {
   type StudentClassCardData,
 } from "@/components/dashboard/classes/StudentClassCard";
 import { StudyUpNext, pickUpNext } from "@/components/dashboard/classes/StudyUpNext";
+import { StudentClassCarousel } from "@/components/dashboard/classes/StudentClassCarousel";
 
 
 /**
