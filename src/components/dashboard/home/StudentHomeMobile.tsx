@@ -38,7 +38,7 @@ export function StudentHomeMobile() {
   return (
     <div className="relative min-h-screen bg-[hsl(220_20%_98%)]">
       <HomePageDecor />
-      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] md:max-w-5xl md:px-8 md:pb-12">
+      <div className="relative mx-auto max-w-3xl space-y-7 px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] md:max-w-5xl md:space-y-6 md:px-8 md:pb-12 xl:max-w-6xl">
         <StudentHomeHero
           profile={profileQuery.data}
           isLoading={profileQuery.isLoading || !profileQuery.data}
@@ -51,40 +51,62 @@ export function StudentHomeMobile() {
           unreadCount={inboxOn ? unread.count : 0}
         />
 
-        <StudentHomeAnnouncements
-          items={feed.data?.announcements ?? []}
-          isLoading={feed.isLoading}
-          isError={feed.isError}
-          onRetry={() => feed.refetch()}
-          viewAllTo={
-            feed.data?.announcements?.[0]
-              ? `/dashboard/classes/${feed.data.announcements[0].class_id}/announcements`
-              : undefined
-          }
-        />
-
-        <div className="space-y-3">
-          <StudentHomeContinueLearning
-            items={feed.data?.continue_learning ?? []}
+        {/* Row 2 on desktop: Important Updates | Continue Learning.
+            On mobile this stays a plain vertical stack. */}
+        <div className="space-y-7 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+          <StudentHomeAnnouncements
+            items={feed.data?.announcements ?? []}
             isLoading={feed.isLoading}
             isError={feed.isError}
             onRetry={() => feed.refetch()}
+            viewAllTo={
+              feed.data?.announcements?.[0]
+                ? `/dashboard/classes/${feed.data.announcements[0].class_id}/announcements`
+                : undefined
+            }
           />
 
-          <StudentHomeQuickPractice
-            items={feed.data?.continue_learning ?? []}
-            isLoading={feed.isLoading}
-          />
+          <div className="space-y-3">
+            <StudentHomeContinueLearning
+              items={feed.data?.continue_learning ?? []}
+              isLoading={feed.isLoading}
+              isError={feed.isError}
+              onRetry={() => feed.refetch()}
+            />
+
+            <div className="lg:hidden">
+              <StudentHomeQuickPractice
+                items={feed.data?.continue_learning ?? []}
+                isLoading={feed.isLoading}
+              />
+            </div>
+          </div>
         </div>
 
-        <StudentHomeComingUp
-          items={feed.data?.coming_up ?? []}
-          isLoading={feed.isLoading}
-          isError={feed.isError}
-          onRetry={() => feed.refetch()}
-        />
+        {/* Row 3 on desktop: Quick Practice | Coming Up | XP Leaderboard. */}
+        <div className="space-y-7 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+          <div className="hidden lg:col-span-4 lg:block">
+            <StudentHomeQuickPractice
+              items={feed.data?.continue_learning ?? []}
+              isLoading={feed.isLoading}
+            />
+          </div>
 
-        {showLeaderboard && <StudentHomeLeaderboard currentUserId={user?.id} />}
+          <div className={showLeaderboard ? "lg:col-span-3" : "lg:col-span-8"}>
+            <StudentHomeComingUp
+              items={feed.data?.coming_up ?? []}
+              isLoading={feed.isLoading}
+              isError={feed.isError}
+              onRetry={() => feed.refetch()}
+            />
+          </div>
+
+          {showLeaderboard && (
+            <div className="lg:col-span-5">
+              <StudentHomeLeaderboard currentUserId={user?.id} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
