@@ -281,32 +281,28 @@ export function MyClasses() {
           </div>
         ) : (
           <>
-            {/* Mobile: horizontal snap carousel. Tablet+: responsive card grid. */}
-            <div
-              className="-mx-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              aria-label="Enrolled classes"
-            >
-              {visible.map((c) => (
-                <div
-                  key={c.id}
-                  className="w-[84%] max-w-[420px] shrink-0 snap-center sm:w-full sm:max-w-none"
-                >
+            {/* Single horizontal gallery at every breakpoint — never a 2nd row. */}
+            <StudentClassCarousel
+              label="Enrolled classes"
+              items={visible.map((c) => ({
+                id: c.id,
+                node: (
                   <StudentClassCard
                     klass={c}
                     bookmarked={bookmarks?.has(c.id) ?? false}
                     onToggleBookmark={handleToggleBookmark}
                     accentColor={accentColor}
                   />
-                </div>
-              ))}
-
-            </div>
+                ),
+              }))}
+            />
 
             {visible.length > 1 && (
               <p className="mt-2 text-center text-[12px] text-slate-400 sm:hidden">
                 Swipe for your other classes
               </p>
             )}
+
 
             <StudyUpNext klass={upNext} />
           </>
