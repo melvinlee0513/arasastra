@@ -71,7 +71,7 @@ export function ProfilePage({ children }: { children: ReactNode }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[340px] bg-[radial-gradient(120%_100%_at_50%_0%,rgba(99,102,241,0.10),transparent_70%)]"
       />
-      <div className="relative mx-auto w-full max-w-xl px-4 pb-10 sm:px-5 md:max-w-2xl md:px-6">{children}</div>
+      <div className="relative mx-auto w-full max-w-xl px-4 pb-10 sm:px-5 md:max-w-3xl md:px-8">{children}</div>
     </div>
   );
 }

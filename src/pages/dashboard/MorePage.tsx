@@ -62,7 +62,7 @@ export function MorePage() {
   const visible = studentServices.filter((s) => s.enabled);
 
   return (
-    <ServicePage>
+    <ServicePage maxWidth="max-w-3xl md:max-w-5xl">
       <ServiceReveal>
         <ServiceHeader
           art={STUDENT_SERVICE_ART.hub}
