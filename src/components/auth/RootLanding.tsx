@@ -42,14 +42,8 @@ export function RootLanding() {
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
-  // Signed-out mobile visitors get the dedicated guest experience; desktop
-  // keeps the existing public landing page untouched.
-  if (isMobile) return <GuestHome />;
-
-  return (
-    <MainLayout>
-      <HomePage />
-    </MainLayout>
-  );
-
+  // Signed-out visitors get the dedicated guest experience — GuestHome renders
+  // its own desktop (sidebar) and mobile layouts.
+  return <GuestHome />;
 }
+
