@@ -402,7 +402,7 @@ export function MobileTimetable() {
         className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-[radial-gradient(120%_100%_at_50%_0%,rgba(99,102,241,0.10),transparent_70%)]"
       />
       <div
-        className="relative px-4 pb-8"
+        className="relative mx-auto w-full max-w-3xl px-4 pb-8 md:max-w-5xl md:px-8 md:pb-12"
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
       {/* Header */}
