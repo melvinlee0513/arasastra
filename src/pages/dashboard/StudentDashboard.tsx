@@ -52,7 +52,7 @@ interface EnrolledSubject {
 }
 
 export function StudentDashboard() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [enrolledSubjects, setEnrolledSubjects] = useState<EnrolledSubject[]>([]);
