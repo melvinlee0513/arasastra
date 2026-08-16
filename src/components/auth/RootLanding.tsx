@@ -1,8 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { HomePage } from "@/pages/HomePage";
+import { GuestHome } from "@/pages/guest/GuestHome";
+
 
 /**
  * RootLanding — the single canonical app entry for `/` (also the PWA start_url).

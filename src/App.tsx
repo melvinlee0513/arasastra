@@ -36,6 +36,12 @@ const InvitePage = lazy(() => import("@/pages/InvitePage"));
 const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 import { TenantGuard } from "@/components/tenant/TenantGuard";
 import { RootLanding } from "@/components/auth/RootLanding";
+import { GuestRoute } from "@/components/guest/GuestRoute";
+import { GuestMore } from "@/pages/guest/GuestMore";
+import { GuestStudy } from "@/pages/guest/GuestStudy";
+import { GuestProfile } from "@/pages/guest/GuestProfile";
+import { GuestSupport } from "@/pages/guest/GuestSupport";
+
 
 // Student Dashboard
 const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
@@ -150,8 +156,14 @@ const App = () => (
             {/* Public/Student Pages with MainLayout */}
             {/* Canonical app entry (also the PWA start_url) — role-aware. */}
             <Route path="/" element={<RootLanding />} />
+            {/* Guest (signed-out) experience — authenticated users are redirected. */}
+            <Route path="/more" element={<GuestRoute authenticatedTo="/dashboard/more"><GuestMore /></GuestRoute>} />
+            <Route path="/study" element={<GuestRoute authenticatedTo="/dashboard/classes"><GuestStudy /></GuestRoute>} />
+            <Route path="/profile" element={<GuestRoute authenticatedTo="/dashboard/profile"><GuestProfile /></GuestRoute>} />
+            <Route path="/support" element={<GuestRoute authenticatedTo="/dashboard/profile"><GuestSupport /></GuestRoute>} />
             <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="/student" element={<Navigate to="/dashboard" replace />} />
+
             <Route path="/timetable" element={<MainLayout><TimetablePage /></MainLayout>} />
             <Route path="/classes" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/inbox" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><InboxPage /></MainLayout></ProtectedRoute>} />
