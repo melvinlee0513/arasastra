@@ -83,16 +83,18 @@ export function StudentHomeMobile() {
           </div>
         </div>
 
-        {/* Row 3 on desktop: Quick Practice | Coming Up | XP Leaderboard. */}
-        <div className="space-y-7 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
-          <div className="hidden lg:col-span-4 lg:block">
+        {/* Row 3 on desktop: Quick Practice | Coming Up | XP Leaderboard.
+            Flex + empty:hidden lets a column that renders nothing (e.g. Quick
+            Practice with no practice sets) collapse instead of leaving a hole. */}
+        <div className="space-y-7 lg:flex lg:items-start lg:gap-6 lg:space-y-0">
+          <div className="hidden empty:hidden lg:block lg:min-w-0 lg:flex-[0.9]">
             <StudentHomeQuickPractice
               items={feed.data?.continue_learning ?? []}
               isLoading={feed.isLoading}
             />
           </div>
 
-          <div className={showLeaderboard ? "lg:col-span-3" : "lg:col-span-8"}>
+          <div className="empty:hidden lg:min-w-0 lg:flex-1">
             <StudentHomeComingUp
               items={feed.data?.coming_up ?? []}
               isLoading={feed.isLoading}
@@ -102,7 +104,7 @@ export function StudentHomeMobile() {
           </div>
 
           {showLeaderboard && (
-            <div className="lg:col-span-5">
+            <div className="empty:hidden lg:min-w-0 lg:flex-[1.25]">
               <StudentHomeLeaderboard currentUserId={user?.id} />
             </div>
           )}
