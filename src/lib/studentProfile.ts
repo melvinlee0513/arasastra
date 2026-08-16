@@ -161,6 +161,69 @@ export function heroBackgroundFor(key: string | null | undefined): string {
   return heroPresetFor(key).image;
 }
 
+/* ------------------------- personal accent tokens ------------------------- */
+
+/** Hex → "r g b" so it can be composed with alpha inside CSS colour funcs. */
+function rgbTriplet(hex: string): string {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.replace(/(.)/g, "$1$1") : h, 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+
+export interface StudentAccentTokens {
+  preset: HeroColorPreset;
+  /** Emphasis colour (icons, arrows). */
+  accent: string;
+  /** Accessible darker shade for text. */
+  accentForeground: string;
+  /** Very light tinted background (~10%). */
+  accentSoft: string;
+  /** Even lighter hover tint (~6%). */
+  accentSofter: string;
+  /** Subtle accent border. */
+  accentBorder: string;
+  /** Ready-to-spread CSS custom properties. */
+  vars: React.CSSProperties;
+}
+
+/**
+ * Derived, accessible tokens for the student's PERSONAL accent.
+ *
+ * Single source of truth: the same `profiles.home_header_color` preference the
+ * Home hero and Profile picker read, via the shared `["student-profile"]` query
+ * cache — so changing the colour updates every consumer live with no local
+ * duplicate state. This is deliberately NOT tenant branding.
+ */
+export function useStudentAccent(): StudentAccentTokens {
+  const { data: profile } = useStudentProfile();
+  const preset = heroPresetFor(profile?.home_header_color);
+  const triplet = rgbTriplet(preset.background);
+
+  const accent = preset.icon;
+  const accentForeground = preset.foreground;
+  const accentSoft = `rgb(${triplet} / 0.12)`;
+  const accentSofter = `rgb(${triplet} / 0.06)`;
+  const accentBorder = `rgb(${triplet} / 0.22)`;
+
+  return {
+    preset,
+    accent,
+    accentForeground,
+    accentSoft,
+    accentSofter,
+    accentBorder,
+    vars: {
+      "--student-accent": accent,
+      "--student-accent-foreground": accentForeground,
+      "--student-accent-soft": accentSoft,
+      "--student-accent-softer": accentSofter,
+      "--student-accent-border": accentBorder,
+    } as React.CSSProperties,
+  };
+}
+
+
+
 /** Persist the student's own hero colour. Scoped to auth.uid() by RLS. */
 export function useSaveHeroColor() {
   const { user } = useAuth();
