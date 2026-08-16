@@ -114,7 +114,10 @@ export function StudentClassCarousel({ items, label }: Props) {
               "shrink-0 grow-0 snap-start",
               // One large card on phones, two large cards from tablet up — and
               // deliberately still two at 1600px+ so cards stay immersive.
-              "w-[84%] max-w-[420px] sm:w-[calc((100%-1.25rem)/2)] sm:max-w-none",
+              "w-[84%] max-w-[420px]",
+              items.length > 1
+                ? "sm:w-[calc((100%-1.25rem)/2)] sm:max-w-none"
+                : "sm:w-full sm:max-w-[520px]",
             )}
           >
             {item.node}
