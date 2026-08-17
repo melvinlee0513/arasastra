@@ -414,7 +414,7 @@ export function GuestDesktopCTA({
       ) : null}
       <div
         className={cn(
-          "flex items-center gap-8 px-[10%]",
+          "flex items-center gap-8 px-[12.5%]",
           banner ? "absolute inset-0" : "relative py-8",
         )}
       >
@@ -422,7 +422,7 @@ export function GuestDesktopCTA({
           <h2 className="text-[26px] font-extrabold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
             {title}
           </h2>
-          <p className="mt-1.5 max-w-[52ch] text-[15px] leading-snug text-white/80 drop-shadow-[0_2px_8px_rgba(2,6,23,0.5)]">
+          <p className="mt-1.5 max-w-[44ch] text-[15px] leading-snug text-white/80 drop-shadow-[0_2px_8px_rgba(2,6,23,0.5)]">
             {body}
           </p>
         </div>
