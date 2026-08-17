@@ -414,7 +414,7 @@ export function GuestDesktopCTA({
       ) : null}
       <div
         className={cn(
-          "flex items-center gap-8 px-[12.5%]",
+          "flex items-center gap-8 px-[14%]",
           banner ? "absolute inset-0" : "relative py-8",
         )}
       >
