@@ -101,6 +101,17 @@ export function guestSubjectArt(name: string | null | undefined): string {
   return GUEST_ART.subjectFallback;
 }
 
+/**
+ * Per-subject presentation tuning for the mobile guest class-preview thumbnail.
+ * Composite artwork is contained (never cropped); `scale` trims breathing room.
+ */
+export interface GuestPreviewArt {
+  art: string;
+  /** Fraction of the thumbnail box the artwork may occupy (0–1). */
+  scale: number;
+  objectPosition: string;
+}
+
 /** Subject-matched public class preview cover. */
 export function guestSubjectPreview(name: string | null | undefined): string {
   const n = (name ?? "").toLowerCase();
@@ -118,4 +129,21 @@ export function guestSubjectPreview(name: string | null | undefined): string {
   if (n.includes("sejarah") || n.includes("history"))
     return cover("subjects/sejarah/class-card-preview-sejarah.webp");
   return cover("subjects/science/class-card-preview-science.webp");
+}
+
+/**
+ * Centralised mobile guest preview art config. Subject compositions differ in
+ * density, so each gets its own contained scale instead of scattered CSS.
+ */
+export function guestPreviewArt(name: string | null | undefined): GuestPreviewArt {
+  const n = (name ?? "").toLowerCase();
+  const art = guestSubjectPreview(name);
+  if (n.includes("bio")) return { art, scale: 0.88, objectPosition: "center" };
+  if (n.includes("chem")) return { art, scale: 0.89, objectPosition: "center" };
+  if (n.includes("physic")) return { art, scale: 0.94, objectPosition: "center" };
+  if (n.includes("math") || n.includes("matemat")) return { art, scale: 0.9, objectPosition: "center" };
+  if (n.includes("english") || n.includes("bahasa") || n.includes("melayu") || n.includes("language"))
+    return { art, scale: 0.9, objectPosition: "center" };
+  if (n.includes("sejarah") || n.includes("history")) return { art, scale: 0.9, objectPosition: "center" };
+  return { art, scale: 0.9, objectPosition: "center" };
 }
