@@ -73,9 +73,11 @@ export const GUEST_ART = {
   contactPhone: asset("ui/contact-centre-phone-icon.webp"),
   privacyShield: asset("ui/privacy-policy-shield-icon.webp"),
 
-  // CTA banners
+  // CTA banners (mobile = tall composition, desktop = wide shallow composition)
   bestTutorsBanner: asset("ui/best-tutors-cta-banner.webp"),
   learningJourneyBanner: asset("ui/learning-journey-cta-banner.webp"),
+  bestTutorsBannerDesktop: asset("ui/best-tutors-cta-banner-desktop.webp"),
+  learningJourneyBannerDesktop: asset("ui/learning-journey-cta-banner-desktop.webp"),
 } as const;
 
 /** Decorative artwork helper props — never announced, never draggable. */
