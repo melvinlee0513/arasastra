@@ -177,8 +177,7 @@ export function GuestStudyDesktop() {
         body="Create your account with the invite link from your centre, or sign in to access your classes and track your progress."
         ctaLabel="Create Account"
         ctaTo="/invite"
-        art={GUEST_ART.owlBookCloud}
-        banner={GUEST_ART.learningJourneyBanner}
+        banner={GUEST_ART.learningJourneyBannerDesktop}
       />
     </GuestDesktopShell>
   );
