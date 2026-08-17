@@ -100,15 +100,18 @@ export function GuestStudyDesktop() {
           <div className="grid grid-cols-3 gap-5">
             {previews.map((subject) => (
               <GuestSurface key={subject.id} className="overflow-hidden">
-                <div className="relative h-[190px] bg-[hsl(213_100%_96%)]">
+                <div className="relative flex h-[186px] items-center justify-center overflow-hidden bg-[hsl(213_100%_96%)]">
                   <img
-                    src={guestSubjectPreview(subject.name)}
+                    src={guestPreviewArt(subject.name).art}
                     alt=""
                     aria-hidden="true"
                     draggable={false}
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className="h-[90%] w-[90%] object-contain"
                   />
+                </div>
+                <div className="relative">
+                  {null}
                   <span className="absolute left-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
                     <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                     Preview
