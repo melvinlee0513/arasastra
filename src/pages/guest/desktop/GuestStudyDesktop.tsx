@@ -102,16 +102,13 @@ export function GuestStudyDesktop() {
               <GuestSurface key={subject.id} className="overflow-hidden">
                 <div className="relative flex h-[186px] items-center justify-center overflow-hidden bg-[hsl(213_100%_96%)]">
                   <img
-                    src={guestPreviewArt(subject.name).art}
+                    src={guestSubjectPreview(subject.name)}
                     alt=""
                     aria-hidden="true"
                     draggable={false}
                     loading="lazy"
                     className="h-[90%] w-[90%] object-contain"
                   />
-                </div>
-                <div className="relative">
-                  {null}
                   <span className="absolute left-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
                     <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                     Preview
