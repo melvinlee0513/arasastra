@@ -34,12 +34,13 @@ const TOOLS = [
 export function GuestStudyDesktop() {
   const subjects = usePublicSubjects();
   const tutors = usePublicTutors();
-  // Exactly three previews on desktop, de-duplicated by subject name.
+  // Exactly three previews on desktop, one per subject family so the same
+  // artwork never repeats (e.g. "Biology" and "Biology Form 4").
   const previews = (() => {
     const seen = new Set<string>();
     const unique = (subjects.data ?? []).filter((subject) => {
-      const key = (subject.name ?? "").trim().toLowerCase();
-      if (!key || seen.has(key)) return false;
+      const key = guestSubjectPreview(subject.name);
+      if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
