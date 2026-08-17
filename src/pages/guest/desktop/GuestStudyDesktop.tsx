@@ -34,7 +34,17 @@ const TOOLS = [
 export function GuestStudyDesktop() {
   const subjects = usePublicSubjects();
   const tutors = usePublicTutors();
-  const previews = (subjects.data ?? []).slice(0, 3);
+  // Exactly three previews on desktop, de-duplicated by subject name.
+  const previews = (() => {
+    const seen = new Set<string>();
+    const unique = (subjects.data ?? []).filter((subject) => {
+      const key = (subject.name ?? "").trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return unique.slice(0, 3);
+  })();
 
   return (
     <GuestDesktopShell>
