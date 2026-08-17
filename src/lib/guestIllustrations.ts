@@ -101,6 +101,17 @@ export function guestSubjectArt(name: string | null | undefined): string {
   return GUEST_ART.subjectFallback;
 }
 
+/**
+ * Per-subject presentation tuning for the mobile guest class-preview thumbnail.
+ * Composite artwork is contained (never cropped); `scale` trims breathing room.
+ */
+export interface GuestPreviewArt {
+  art: string;
+  /** Fraction of the thumbnail box the artwork may occupy (0–1). */
+  scale: number;
+  objectPosition: string;
+}
+
 /** Subject-matched public class preview cover. */
 export function guestSubjectPreview(name: string | null | undefined): string {
   const n = (name ?? "").toLowerCase();
