@@ -278,19 +278,19 @@ export function GuestCTA({
   banner?: string;
 }) {
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.28)]">
+    <section className="relative isolate min-h-[168px] overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] px-4 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.28)]">
       {banner && (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60"
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain object-center"
           {...GUEST_DECOR_IMG_PROPS}
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-r from-[hsl(222_47%_13%)] via-[hsl(222_47%_13%)/0.88] to-transparent" />
-      <div className="relative space-y-2">
-        <h2 className="text-[19px] font-extrabold leading-tight text-white">{title}</h2>
-        <p className="max-w-[74%] text-[12.5px] leading-snug text-white/75">{body}</p>
-        <GuestAccentButton to={ctaTo} className="mt-1">
+      <div className="pointer-events-none absolute inset-0 bg-[hsl(222_47%_13%)]/45" />
+      <div className="relative flex min-h-[136px] flex-col justify-center gap-2">
+        <h2 className="max-w-[86%] text-[17px] font-extrabold leading-tight text-white">{title}</h2>
+        <p className="max-w-[80%] text-[12.5px] leading-snug text-white/80">{body}</p>
+        <GuestAccentButton to={ctaTo} className="mt-0.5 self-start">
           {ctaLabel}
         </GuestAccentButton>
       </div>
