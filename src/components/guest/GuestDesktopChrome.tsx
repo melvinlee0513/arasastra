@@ -394,44 +394,37 @@ export function GuestDesktopCTA({
   body,
   ctaLabel,
   ctaTo,
-  art,
   banner,
 }: {
   title: string;
   body: ReactNode;
   ctaLabel: string;
   ctaTo: string;
-  /** Optional left-side illustration (owl). */
-  art?: string;
+  /** Wide desktop banner artwork — rendered at its natural aspect ratio. */
   banner?: string;
 }) {
   return (
     <section className="relative isolate overflow-hidden rounded-[28px] bg-[hsl(222_50%_12%)] shadow-[0_18px_44px_rgba(15,23,42,0.3)]">
-      {banner && (
+      {banner ? (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-70"
+          className="pointer-events-none block h-auto w-full select-none"
           {...GUEST_DECOR_IMG_PROPS}
         />
-      )}
+      ) : null}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-[hsl(222_50%_12%)] via-[hsl(222_50%_12%)]/85 to-transparent"
-      />
-      <div className="relative flex items-center gap-6 px-8 py-7">
-        {art && (
-          <img
-            src={art}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            loading="lazy"
-            className="h-[128px] w-[128px] shrink-0 object-contain"
-          />
+        className={cn(
+          "flex items-center gap-8 px-[7%]",
+          banner ? "absolute inset-0" : "relative py-8",
         )}
+      >
         <div className="min-w-0 flex-1">
-          <h2 className="text-[27px] font-extrabold leading-tight text-white">{title}</h2>
-          <p className="mt-1.5 max-w-[46ch] text-[15px] leading-snug text-white/75">{body}</p>
+          <h2 className="text-[26px] font-extrabold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
+            {title}
+          </h2>
+          <p className="mt-1.5 max-w-[52ch] text-[15px] leading-snug text-white/80 drop-shadow-[0_2px_8px_rgba(2,6,23,0.5)]">
+            {body}
+          </p>
         </div>
         <GuestGoldButton to={ctaTo} size="lg" className="shrink-0">
           {ctaLabel}
