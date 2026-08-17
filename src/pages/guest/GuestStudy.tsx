@@ -9,7 +9,7 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART, guestSubjectArt, guestSubjectPreview } from "@/lib/guestIllustrations";
+import { GUEST_ART, guestPreviewArt, guestSubjectArt } from "@/lib/guestIllustrations";
 import { usePublicSubjects } from "@/lib/guestPublicContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
