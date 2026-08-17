@@ -34,7 +34,18 @@ const TOOLS = [
 export function GuestStudyDesktop() {
   const subjects = usePublicSubjects();
   const tutors = usePublicTutors();
-  const previews = (subjects.data ?? []).slice(0, 3);
+  // Exactly three previews on desktop, one per subject family so the same
+  // artwork never repeats (e.g. "Biology" and "Biology Form 4").
+  const previews = (() => {
+    const seen = new Set<string>();
+    const unique = (subjects.data ?? []).filter((subject) => {
+      const key = guestSubjectPreview(subject.name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return unique.slice(0, 3);
+  })();
 
   return (
     <GuestDesktopShell>
@@ -90,14 +101,14 @@ export function GuestStudyDesktop() {
           <div className="grid grid-cols-3 gap-5">
             {previews.map((subject) => (
               <GuestSurface key={subject.id} className="overflow-hidden">
-                <div className="relative h-[190px] bg-[hsl(213_100%_96%)]">
+                <div className="relative flex h-[186px] items-center justify-center overflow-hidden bg-[hsl(213_100%_96%)]">
                   <img
                     src={guestSubjectPreview(subject.name)}
                     alt=""
                     aria-hidden="true"
                     draggable={false}
                     loading="lazy"
-                    className="h-full w-full object-cover"
+                    className="h-[90%] w-[90%] object-contain"
                   />
                   <span className="absolute left-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[12px] font-bold text-primary-foreground shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
                     <Eye className="h-3.5 w-3.5" aria-hidden="true" />
@@ -177,8 +188,7 @@ export function GuestStudyDesktop() {
         body="Create your account with the invite link from your centre, or sign in to access your classes and track your progress."
         ctaLabel="Create Account"
         ctaTo="/invite"
-        art={GUEST_ART.owlBookCloud}
-        banner={GUEST_ART.learningJourneyBanner}
+        banner={GUEST_ART.learningJourneyBannerDesktop}
       />
     </GuestDesktopShell>
   );

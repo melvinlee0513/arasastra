@@ -128,41 +128,27 @@ export function GuestDesktopHero({
 }: GuestDesktopHeroProps) {
   return (
     <section className="relative isolate overflow-hidden rounded-[32px] border border-white/80 bg-gradient-to-r from-[hsl(213_100%_95%)] via-[hsl(212_100%_97%)] to-white shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
-      {/* Ambient art */}
+      {/* Ambient art — clouds, orbs and stars only. */}
       <img
         src={GUEST_ART.cloudCluster}
-        className="pointer-events-none absolute -right-4 top-2 w-56 opacity-95"
+        className="pointer-events-none absolute -right-4 top-1 w-48 opacity-95"
         {...GUEST_DECOR_IMG_PROPS}
       />
       <img
         src={GUEST_ART.orb}
-        className="pointer-events-none absolute bottom-4 right-[16%] w-12 opacity-80"
+        className="pointer-events-none absolute bottom-5 right-[10%] w-10 opacity-75"
         {...GUEST_DECOR_IMG_PROPS}
       />
       <img
         src={GUEST_ART.star}
-        className="pointer-events-none absolute left-[46%] top-8 w-9 opacity-95"
+        className="pointer-events-none absolute right-[24%] top-7 w-8 opacity-90"
         {...GUEST_DECOR_IMG_PROPS}
       />
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-10 right-6 h-16 w-[46%] text-primary/25"
-        viewBox="0 0 400 60"
-        fill="none"
-      >
-        <path
-          d="M2 52C70 8 140 8 200 32c60 24 130 20 198-24"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeDasharray="5 8"
-          strokeLinecap="round"
-        />
-      </svg>
 
       <div
         className={cn(
-          "relative flex items-center gap-8 px-8",
-          compact ? "min-h-[188px] py-8" : "min-h-[236px] py-6",
+          "relative flex items-center gap-7 px-9",
+          compact ? "min-h-[150px] py-7" : "min-h-[176px] py-6",
         )}
       >
         {!compact && art && (
@@ -171,16 +157,16 @@ export function GuestDesktopHero({
             alt=""
             aria-hidden="true"
             draggable={false}
-            className="h-[212px] w-[248px] shrink-0 object-contain drop-shadow-[0_18px_28px_rgba(15,23,42,0.14)]"
+            className="h-[136px] w-[164px] shrink-0 object-contain drop-shadow-[0_14px_24px_rgba(15,23,42,0.14)]"
           />
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[54px] font-extrabold leading-[1.03] tracking-tight text-slate-900">
+          <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight text-slate-900">
             {title}
           </h1>
-          <p className="mt-2 max-w-[26ch] text-[19px] leading-snug text-slate-500">{subtitle}</p>
+          <p className="mt-1.5 max-w-[30ch] text-[17px] leading-snug text-slate-500">{subtitle}</p>
         </div>
-        {action && <div className="relative shrink-0 pr-6">{action}</div>}
+        {action && <div className="relative shrink-0 pr-4">{action}</div>}
       </div>
     </section>
   );
@@ -408,44 +394,37 @@ export function GuestDesktopCTA({
   body,
   ctaLabel,
   ctaTo,
-  art,
   banner,
 }: {
   title: string;
   body: ReactNode;
   ctaLabel: string;
   ctaTo: string;
-  /** Optional left-side illustration (owl). */
-  art?: string;
+  /** Wide desktop banner artwork — rendered at its natural aspect ratio. */
   banner?: string;
 }) {
   return (
     <section className="relative isolate overflow-hidden rounded-[28px] bg-[hsl(222_50%_12%)] shadow-[0_18px_44px_rgba(15,23,42,0.3)]">
-      {banner && (
+      {banner ? (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-70"
+          className="pointer-events-none block h-auto w-full select-none"
           {...GUEST_DECOR_IMG_PROPS}
         />
-      )}
+      ) : null}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-r from-[hsl(222_50%_12%)] via-[hsl(222_50%_12%)]/85 to-transparent"
-      />
-      <div className="relative flex items-center gap-6 px-8 py-7">
-        {art && (
-          <img
-            src={art}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            loading="lazy"
-            className="h-[128px] w-[128px] shrink-0 object-contain"
-          />
+        className={cn(
+          "flex items-center gap-8 px-[14%]",
+          banner ? "absolute inset-0" : "relative py-8",
         )}
+      >
         <div className="min-w-0 flex-1">
-          <h2 className="text-[27px] font-extrabold leading-tight text-white">{title}</h2>
-          <p className="mt-1.5 max-w-[46ch] text-[15px] leading-snug text-white/75">{body}</p>
+          <h2 className="text-[26px] font-extrabold leading-tight text-white drop-shadow-[0_2px_10px_rgba(2,6,23,0.55)]">
+            {title}
+          </h2>
+          <p className="mt-1.5 max-w-[44ch] text-[15px] leading-snug text-white/80 drop-shadow-[0_2px_8px_rgba(2,6,23,0.5)]">
+            {body}
+          </p>
         </div>
         <GuestGoldButton to={ctaTo} size="lg" className="shrink-0">
           {ctaLabel}

@@ -91,7 +91,7 @@ export function GuestMoreDesktop() {
         body="Open the invite link from your centre to create your account and access all features."
         ctaLabel="Create Free Account"
         ctaTo="/invite"
-        banner={GUEST_ART.learningJourneyBanner}
+        banner={GUEST_ART.learningJourneyBannerDesktop}
       />
     </GuestDesktopShell>
   );

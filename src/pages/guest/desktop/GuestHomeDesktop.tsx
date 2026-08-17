@@ -138,7 +138,7 @@ export function GuestHomeDesktop() {
         }
         ctaLabel="Create Free Account"
         ctaTo="/invite"
-        banner={GUEST_ART.bestTutorsBanner}
+        banner={GUEST_ART.bestTutorsBannerDesktop}
       />
     </GuestDesktopShell>
   );
