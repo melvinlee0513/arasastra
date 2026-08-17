@@ -278,19 +278,22 @@ export function GuestCTA({
   banner?: string;
 }) {
   return (
-    <section className="relative isolate min-h-[168px] overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] px-4 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.28)]">
+    <section className="relative isolate overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] shadow-[0_14px_34px_rgba(15,23,42,0.28)]">
+      {/* Decorative artwork keeps its 3:1 proportion and is anchored to the
+          bottom of the card so the star, clouds and trophy stay complete. */}
       {banner && (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full object-contain object-center"
+          className="pointer-events-none absolute inset-x-0 bottom-0 w-full object-contain object-bottom"
           {...GUEST_DECOR_IMG_PROPS}
         />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-[hsl(222_47%_13%)]/45" />
-      <div className="relative flex min-h-[136px] flex-col justify-center gap-2">
-        <h2 className="max-w-[86%] text-[17px] font-extrabold leading-tight text-white">{title}</h2>
-        <p className="max-w-[80%] text-[12.5px] leading-snug text-white/80">{body}</p>
-        <GuestAccentButton to={ctaTo} className="mt-0.5 self-start">
+      <div className="relative flex flex-col gap-2 px-4 pb-[86px] pt-4">
+        <h2 className="max-w-[88%] text-[17px] font-extrabold leading-tight text-white sm:text-[19px]">
+          {title}
+        </h2>
+        <p className="max-w-[86%] text-[12.5px] leading-snug text-white/80 sm:text-[13.5px]">{body}</p>
+        <GuestAccentButton to={ctaTo} className="mt-1 self-start">
           {ctaLabel}
         </GuestAccentButton>
       </div>
