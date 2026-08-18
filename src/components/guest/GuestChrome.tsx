@@ -284,7 +284,7 @@ export function GuestCTA({
       {banner && (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full scale-[1.12] select-none object-cover object-center"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
           {...GUEST_DECOR_IMG_PROPS}
         />
       )}
