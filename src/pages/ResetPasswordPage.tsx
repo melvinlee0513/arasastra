@@ -285,8 +285,13 @@ export function ResetPasswordPage() {
                 placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
-                  setFieldError(null);
+                  const nextPassword = e.target.value;
+                  setPassword(nextPassword);
+                  setFieldError(
+                    confirmPassword && nextPassword !== confirmPassword
+                      ? "Passwords do not match."
+                      : null,
+                  );
                 }}
                 disabled={isSubmitting}
                 aria-invalid={Boolean(fieldError)}
@@ -314,8 +319,13 @@ export function ResetPasswordPage() {
                 placeholder="Re-enter your new password"
                 value={confirmPassword}
                 onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setFieldError(null);
+                  const nextConfirmation = e.target.value;
+                  setConfirmPassword(nextConfirmation);
+                  setFieldError(
+                    nextConfirmation && password !== nextConfirmation
+                      ? "Passwords do not match."
+                      : null,
+                  );
                 }}
                 disabled={isSubmitting}
                 aria-invalid={Boolean(fieldError)}
