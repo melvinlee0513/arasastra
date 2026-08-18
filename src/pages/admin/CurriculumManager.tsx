@@ -21,6 +21,8 @@ import {
   UserCog,
   MoreHorizontal,
   Pencil,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +31,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SUBJECT_OPTIONS, subjectLabel } from "@/lib/subjectConfig";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 type Subject = {
@@ -70,6 +82,8 @@ export default function CurriculumManager() {
   const [assignTutorsOpen, setAssignTutorsOpen] = useState(false);
   const [editSubject, setEditSubject] = useState<Subject | null>(null);
   const [editClass, setEditClass] = useState<Class | null>(null);
+  const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+  const [deleteClass, setDeleteClass] = useState<Class | null>(null);
 
   useEffect(() => {
     if (!currentTenantId) return;
@@ -141,6 +155,7 @@ export default function CurriculumManager() {
       .select("id, title, description, subject_id, tutor_id, scheduled_at, cohort_label")
       .eq("center_id", currentTenantId)
       .eq("subject_id", subjectId)
+      .neq("status", "archived")
       .order("scheduled_at", { ascending: false });
     const list = (data ?? []) as Class[];
     setClasses(list);
@@ -272,19 +287,33 @@ export default function CurriculumManager() {
                             )}
                           />
                         </button>
-                        <button
-                          type="button"
-                          aria-label={`Edit ${subjectLabel(s.subject_key, s.name)}`}
-                          onClick={() => setEditSubject(s)}
-                          className={cn(
-                            "mr-2 rounded-full p-1.5 transition-colors",
-                            active
-                              ? "text-white/80 hover:bg-white/20 hover:text-white"
-                              : "text-slate-400 hover:bg-slate-200/70 hover:text-slate-700",
-                          )}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Actions for ${subjectLabel(s.subject_key, s.name)}`}
+                              className={cn(
+                                "mr-2 rounded-full p-1.5 transition-colors",
+                                active
+                                  ? "text-white/80 hover:bg-white/20 hover:text-white"
+                                  : "text-slate-400 hover:bg-slate-200/70 hover:text-slate-700",
+                              )}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onSelect={() => setEditSubject(s)}>
+                              <Pencil className="h-4 w-4 mr-2" /> Edit subject
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setDeleteSubject(s)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete subject
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </li>
                   );
@@ -441,6 +470,12 @@ export default function CurriculumManager() {
                             >
                               Enroll students
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setDeleteClass(c)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete class
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -454,6 +489,28 @@ export default function CurriculumManager() {
       </div>
 
       {/* Modals */}
+      {deleteSubject && (
+        <DeleteSubjectDialog
+          subject={deleteSubject}
+          onClose={() => setDeleteSubject(null)}
+          onDeleted={(deletedId) => {
+            setDeleteSubject(null);
+            if (selectedSubjectId === deletedId) setSelectedSubjectId(null);
+            void loadAll();
+          }}
+        />
+      )}
+      {deleteClass && (
+        <DeleteClassDialog
+          klass={deleteClass}
+          onClose={() => setDeleteClass(null)}
+          onDeleted={(deletedId) => {
+            setDeleteClass(null);
+            if (selectedClassId === deletedId) setSelectedClassId(null);
+            if (selectedSubjectId) void loadClasses(selectedSubjectId);
+          }}
+        />
+      )}
       {editSubject && (
         <EditSubjectModal
           subject={editSubject}
@@ -1317,5 +1374,255 @@ function EditClassModal({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ─── Delete Subject ───
+   Tenant-scoped and class-safe: `admin_delete_subject` blocks the delete while
+   any class still references the subject, so nothing cascades away silently.
+   Only the tenant-owned subject row is removed — the canonical subject_key
+   stays globally available and other tenants are untouched. */
+function DeleteSubjectDialog({
+  subject,
+  onClose,
+  onDeleted,
+}: {
+  subject: Subject;
+  onClose: () => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [blockedCount, setBlockedCount] = useState<number | null>(null);
+  const label = subjectLabel(subject.subject_key, subject.name);
+
+  async function run() {
+    setBusy(true);
+    const { data, error } = await supabase.rpc("admin_delete_subject", {
+      p_subject_id: subject.id,
+    });
+    setBusy(false);
+    if (error) {
+      showSupabaseError(error, "Unable to delete subject");
+      return;
+    }
+    const result = (data ?? {}) as { mode?: string; class_count?: number };
+    if (result.mode === "blocked") {
+      setBlockedCount(result.class_count ?? 0);
+      return;
+    }
+    toast.success(`${label} deleted`);
+    onDeleted(subject.id);
+  }
+
+  if (blockedCount !== null) {
+    return (
+      <AlertDialog open onOpenChange={(v) => !v && onClose()}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot delete {label}</AlertDialogTitle>
+            <AlertDialogDescription>
+              This subject still contains {blockedCount}{" "}
+              {blockedCount === 1 ? "class" : "classes"}. Delete or move these classes
+              before deleting the subject.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  return (
+    <AlertDialog open onOpenChange={(v) => !v && onClose()}>
+      <AlertDialogContent className="rounded-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {label}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deleting this subject may also affect classes and learning content associated
+            with it. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-full" disabled={busy}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={busy}
+            onClick={(e) => {
+              e.preventDefault();
+              void run();
+            }}
+            className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {busy ? "Deleting…" : "Delete subject"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+const IMPACT_LABELS: Array<{ key: string; singular: string; plural: string }> = [
+  { key: "enrolled_students", singular: "enrolled student", plural: "enrolled students" },
+  { key: "tutors", singular: "assigned tutor", plural: "assigned tutors" },
+  { key: "resources", singular: "learning resource", plural: "learning resources" },
+  { key: "folders", singular: "content folder", plural: "content folders" },
+  { key: "quizzes", singular: "quiz", plural: "quizzes" },
+  { key: "quiz_attempts", singular: "quiz attempt", plural: "quiz attempts" },
+  { key: "flashcard_decks", singular: "flashcard deck", plural: "flashcard decks" },
+  { key: "announcements", singular: "announcement", plural: "announcements" },
+  { key: "notes", singular: "note", plural: "notes" },
+  { key: "video_resources", singular: "video", plural: "videos" },
+  { key: "attendance", singular: "attendance record", plural: "attendance records" },
+];
+
+/* ─── Delete Class ───
+   Shows real dependency counts from `get_class_delete_impact`, then calls
+   `admin_delete_class`, which hard-deletes an empty class and archives one that
+   carries learning history (revoking student/tutor access while preserving
+   grades, attempts and XP records). */
+function DeleteClassDialog({
+  klass,
+  onClose,
+  onDeleted,
+}: {
+  klass: Class;
+  onClose: () => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [impact, setImpact] = useState<Record<string, number> | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("get_class_delete_impact", {
+        p_class_id: klass.id,
+      });
+      if (cancelled) return;
+      if (error) {
+        setLoadError(true);
+        return;
+      }
+      setImpact((data ?? {}) as Record<string, number>);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [klass.id]);
+
+  const rows = useMemo(
+    () =>
+      IMPACT_LABELS.map((l) => ({ ...l, count: Number(impact?.[l.key] ?? 0) })).filter(
+        (r) => r.count > 0,
+      ),
+    [impact],
+  );
+  const enrolled = Number(impact?.enrolled_students ?? 0);
+  // Strong confirmation only when real dependent data exists.
+  const needsTypedConfirm = rows.length > 0;
+  const ready = impact !== null || loadError;
+  const canDelete =
+    ready && !busy && (!needsTypedConfirm || confirmText.trim().toUpperCase() === "DELETE");
+
+  async function run() {
+    setBusy(true);
+    const { data, error } = await supabase.rpc("admin_delete_class", {
+      p_class_id: klass.id,
+    });
+    setBusy(false);
+    if (error) {
+      showSupabaseError(error, "Unable to delete class. Please try again.");
+      return;
+    }
+    const mode = (data as { mode?: string } | null)?.mode;
+    toast.success(
+      mode === "archived"
+        ? `“${klass.title}” removed from active classes`
+        : `“${klass.title}” deleted`,
+    );
+    onDeleted(klass.id);
+  }
+
+  return (
+    <AlertDialog open onOpenChange={(v) => !v && onClose()}>
+      <AlertDialogContent className="rounded-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete “{klass.title}”?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deleting this class removes it from active student and tutor workspaces. This
+            action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        {!ready ? (
+          <div className="text-sm text-slate-500">Checking related data…</div>
+        ) : rows.length > 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1">
+            <p className="text-sm font-semibold text-slate-800">This class contains:</p>
+            <ul className="text-sm text-slate-600 space-y-0.5">
+              {rows.map((r) => (
+                <li key={r.key}>
+                  {r.count} {r.count === 1 ? r.singular : r.plural}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-slate-500 pt-2">
+              Grades, quiz attempts and activity history are preserved for reporting; the
+              class itself is retired from active views.
+            </p>
+          </div>
+        ) : (
+          <div className="text-sm text-slate-500">
+            This class has no students, tutors or content attached.
+          </div>
+        )}
+
+        {enrolled > 0 && (
+          <div className="flex gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>
+              This class currently has {enrolled} enrolled{" "}
+              {enrolled === 1 ? "student" : "students"}. Deleting it will remove the class
+              from their active learning workspace.
+            </p>
+          </div>
+        )}
+
+        {needsTypedConfirm && (
+          <div className="space-y-2">
+            <Label>
+              Type <span className="font-semibold">DELETE</span> to confirm
+            </Label>
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE"
+              className="rounded-full"
+            />
+          </div>
+        )}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel className="rounded-full" disabled={busy}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={!canDelete}
+            onClick={(e) => {
+              e.preventDefault();
+              void run();
+            }}
+            className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-40"
+          >
+            {busy ? "Deleting…" : "Delete class"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
