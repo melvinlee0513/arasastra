@@ -10,7 +10,7 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART, guestSubjectArt } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_CTA_MOBILE, guestSubjectArt } from "@/lib/guestIllustrations";
 import { usePublicSubjects, uniqueSubjectFamilies } from "@/lib/guestPublicContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
