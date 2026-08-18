@@ -11,7 +11,7 @@ import {
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
 import { GUEST_ART, guestSubjectArt } from "@/lib/guestIllustrations";
-import { usePublicSubjects } from "@/lib/guestPublicContent";
+import { usePublicSubjects, uniqueSubjectFamilies } from "@/lib/guestPublicContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PROGRESS_PREVIEWS = [
@@ -38,7 +38,9 @@ const PROGRESS_PREVIEWS = [
  */
 function GuestHomeMobile() {
   const subjects = usePublicSubjects();
-  const list = (subjects.data ?? []).slice(0, 6);
+  // Exactly four entries, one per subject family (no Form-level duplicates).
+  const list = uniqueSubjectFamilies(subjects.data, 4);
+
 
   return (
     <GuestPage>
