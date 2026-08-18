@@ -131,7 +131,7 @@ export function ClassShell({
   const canManageCover = !!data?.canManage && !!k?.center_id;
   const list = classListRoute(role);
   const classTitle = k?.title || "Class";
-  const heroArt = subjectArt(k?.subject?.name);
+  const heroArt = subjectArt(k?.subject?.name, k?.subject?.subject_key);
 
   // Mobile back bar defaults: sections return to class home, class home returns
   // to the class list. Always a resolved route, never history-only.

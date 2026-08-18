@@ -19,6 +19,8 @@ export interface StudentClassCardData {
   id: string;
   title: string;
   subject_name: string | null;
+  /** Canonical subject key — drives the subject artwork. */
+  subject_key?: string | null;
   cohort_label: string | null;
   schedule_label: string | null;
   /** Next real occurrence of the class, expanded from its recurrence server-side. */
@@ -62,7 +64,7 @@ export function StudentClassCard({
   accentColor,
 }: StudentClassCardProps) {
   const navigate = useNavigate();
-  const art = classTileArt(klass.subject_name, klass.title);
+  const art = classTileArt(klass.subject_name, klass.title, klass.subject_key);
   const tutor = klass.tutors[0];
   const tutorName = tutor ? bestDisplayName(tutor) : null;
   const extraTutors = Math.max(0, klass.tutors.length - 1);
