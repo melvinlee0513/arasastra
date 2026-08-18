@@ -62,7 +62,6 @@ export function ResetPasswordPage() {
   const recoveryIntentRef = useRef<RecoveryIntent>(readRecoveryIntent());
   const recoveryIntent = recoveryIntentRef.current;
   const tokenHash = recoveryIntent.tokenHash;
-  const urlError = params.get("error") ?? params.get("error_code");
 
   const [mode, setMode] = useState<Mode>(() => {
     if (recoveryIntent.hasUrlError || recoveryIntent.hasInvalidRecoveryQuery) return "expired";
