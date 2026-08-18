@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { guestSubjectPreview } from "@/lib/guestIllustrations";
+
 
 export interface PublicSubject {
   id: string;

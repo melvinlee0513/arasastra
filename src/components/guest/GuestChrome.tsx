@@ -278,21 +278,26 @@ export function GuestCTA({
   banner?: string;
 }) {
   return (
-    <section className="relative isolate overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] shadow-[0_14px_34px_rgba(15,23,42,0.28)]">
-      {/* Decorative artwork keeps its 3:1 proportion and is anchored to the
-          bottom of the card so the star, clouds and trophy stay complete. */}
+    <section className="relative isolate min-h-[180px] overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] shadow-[0_14px_34px_rgba(15,23,42,0.28)] sm:min-h-[196px]">
+      {/* The WebP already contains the navy composition — it is the full-bleed
+          background layer of the whole CTA, never an inset banner. */}
       {banner && (
         <img
           src={banner}
-          className="pointer-events-none absolute inset-x-0 bottom-0 w-full object-contain object-bottom"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
           {...GUEST_DECOR_IMG_PROPS}
         />
       )}
-      <div className="relative flex flex-col gap-2 px-4 pb-[86px] pt-4">
-        <h2 className="max-w-[88%] text-[17px] font-extrabold leading-tight text-white sm:text-[19px]">
+      {/* Readability scrim over the artwork, left-weighted. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[hsl(222_47%_10%)]/85 via-[hsl(222_47%_10%)]/55 to-transparent"
+      />
+      <div className="relative flex min-h-[180px] flex-col justify-center gap-2 p-5 sm:min-h-[196px]">
+        <h2 className="max-w-[74%] text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
           {title}
         </h2>
-        <p className="max-w-[86%] text-[12.5px] leading-snug text-white/80 sm:text-[13.5px]">{body}</p>
+        <p className="max-w-[72%] text-[12.5px] leading-snug text-white/85 sm:text-[13.5px]">{body}</p>
         <GuestAccentButton to={ctaTo} className="mt-1 self-start">
           {ctaLabel}
         </GuestAccentButton>
@@ -300,6 +305,7 @@ export function GuestCTA({
     </section>
   );
 }
+
 
 /* ------------------------------------------------------------ bottom nav */
 
