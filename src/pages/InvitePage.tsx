@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { ShieldAlert, Mail, Lock, User, Loader2 } from "lucide-react";
+import { ShieldAlert, Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getTenantSubdomain, tenantHrefFor } from "@/lib/tenantSubdomain";
+import { validatePasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/passwordRules";
 
 interface Invitation {
   id: string;
@@ -26,6 +27,10 @@ export default function InvitePage() {
   const [error, setError] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -72,11 +77,13 @@ export default function InvitePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invitation) return;
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+    if (!invitation || submitting) return;
+    const invalid = validatePasswordPair(password, confirmPassword);
+    if (invalid) {
+      setPasswordError(invalid);
       return;
     }
+    setPasswordError(null);
     setSubmitting(true);
     try {
       const { error: signUpErr } = await supabase.auth.signUp({
@@ -172,19 +179,71 @@ export default function InvitePage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="invite-password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    className="pl-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setPasswordError(null);
+                    }}
+                    disabled={submitting}
+                    aria-invalid={Boolean(passwordError)}
+                    aria-describedby={passwordError ? "invite-password-error" : undefined}
+                    placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
+                    className="pl-10 pr-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="invite-confirm-password" className="text-[color:var(--brand-midnight)] font-medium">Confirm password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    id="invite-confirm-password"
+                    type={showConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setPasswordError(null);
+                    }}
+                    disabled={submitting}
+                    aria-invalid={Boolean(passwordError)}
+                    aria-describedby={passwordError ? "invite-password-error" : undefined}
+                    placeholder="Re-enter your password"
+                    className="pl-10 pr-10 rounded-full h-11 border-slate-200 focus-visible:ring-[color:var(--brand-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {passwordError && (
+                <p id="invite-password-error" role="alert" className="text-sm text-red-500">
+                  {passwordError}
+                </p>
+              )}
+
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !password || !confirmPassword}
                 className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]"
               >
                 {submitting ? "Creating account…" : "Complete Registration"}
