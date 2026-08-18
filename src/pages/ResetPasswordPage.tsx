@@ -16,15 +16,17 @@ interface RecoveryIntent {
   tokenHash: string | null;
   hasLegacyRecoveryHash: boolean;
   hasUrlError: boolean;
+  hasInvalidRecoveryQuery: boolean;
 }
 
 function readRecoveryIntent(): RecoveryIntent {
   const query = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const linkType = query.get("type") ?? hash.get("type");
+  const rawTokenHash = query.get("token_hash");
 
   return {
-    tokenHash: query.get("token_hash"),
+    tokenHash: rawTokenHash && linkType === "recovery" ? rawTokenHash : null,
     hasLegacyRecoveryHash:
       linkType === "recovery" &&
       (hash.has("access_token") || hash.has("refresh_token")),
@@ -34,6 +36,7 @@ function readRecoveryIntent(): RecoveryIntent {
         hash.get("error") ??
         hash.get("error_code"),
     ),
+    hasInvalidRecoveryQuery: Boolean(rawTokenHash && linkType !== "recovery"),
   };
 }
 
@@ -62,7 +65,7 @@ export function ResetPasswordPage() {
   const urlError = params.get("error") ?? params.get("error_code");
 
   const [mode, setMode] = useState<Mode>(() => {
-    if (recoveryIntent.hasUrlError) return "expired";
+    if (recoveryIntent.hasUrlError || recoveryIntent.hasInvalidRecoveryQuery) return "expired";
     if (tokenHash || recoveryIntent.hasLegacyRecoveryHash) return "recover";
     return "request";
   });
@@ -81,16 +84,21 @@ export function ResetPasswordPage() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1) Strip technical error params from the visible URL after reading them,
-  //    and detect a recovery session arriving via the URL hash (legacy links).
+  // Strip technical error params only after this tab has captured the recovery
+  // intent. Keep token_hash intact until deliberate form submission.
   useEffect(() => {
-    if (urlError) {
-      const next = new URLSearchParams(params);
-      ["error", "error_code", "error_description"].forEach((k) => next.delete(k));
-      setParams(next, { replace: true });
-    }
+    if (!recoveryIntent.hasUrlError) return;
+
+    const next = new URLSearchParams(params);
+    ["error", "error_code", "error_description"].forEach((k) => next.delete(k));
+    const search = next.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${search ? `?${search}` : ""}`,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlError]);
+  }, [recoveryIntent.hasUrlError]);
 
   useEffect(() => {
     if (!recoveryIntent.hasLegacyRecoveryHash) return;
