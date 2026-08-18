@@ -9,7 +9,7 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_CTA_MOBILE } from "@/lib/guestIllustrations";
 
 const WHY_JOIN = [
   {
