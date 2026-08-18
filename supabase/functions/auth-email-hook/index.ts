@@ -331,9 +331,24 @@ async function handleWebhook(req: Request): Promise<Response> {
   // correct Aras A+ tenant callback. Rewriting the host here would break token
   // validation and drop users on the SPA 404.
   const tenantHost = await resolveTenantHost(supabase, emailType, payload.data.email)
-  const confirmationUrl = payload.data.url
-    ? withApprovedRedirect(payload.data.url, tenantHost, emailType)
-    : payload.data.url
+  const safeHost = isApprovedTenantHost(tenantHost) ? tenantHost : ROOT_DOMAIN
+  // Recovery uses the token-hash pattern: the email links straight to the
+  // Aras A+ reset screen carrying `token_hash`, which the SPA verifies only
+  // when the student deliberately submits a new password. This keeps email
+  // prefetch scanners from consuming the single-use recovery token (the cause
+  // of premature `otp_expired` errors with plain /auth/v1/verify links).
+  const recoveryTokenHash =
+    (payload.data as { token_hash?: string; tokenHash?: string }).token_hash ??
+    (payload.data as { tokenHash?: string }).tokenHash ??
+    null
+  const confirmationUrl =
+    emailType === 'recovery' && recoveryTokenHash
+      ? `https://${safeHost}/auth/reset-password?token_hash=${encodeURIComponent(
+          recoveryTokenHash,
+        )}&type=recovery`
+      : payload.data.url
+        ? withApprovedRedirect(payload.data.url, tenantHost, emailType)
+        : payload.data.url
 
   const templateProps = {
     siteName: SITE_NAME,
