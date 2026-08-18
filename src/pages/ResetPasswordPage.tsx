@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Loader2, ArrowLeft, Mail, Eye, EyeOff, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,34 @@ import { validatePasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/passwordRules";
 import owlMascot from "@/assets/owl-mascot.png";
 
 type Mode = "request" | "recover" | "expired" | "done";
+
+interface RecoveryIntent {
+  tokenHash: string | null;
+  hasLegacyRecoveryHash: boolean;
+  hasUrlError: boolean;
+  hasInvalidRecoveryQuery: boolean;
+}
+
+function readRecoveryIntent(): RecoveryIntent {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const linkType = query.get("type") ?? hash.get("type");
+  const rawTokenHash = query.get("token_hash");
+
+  return {
+    tokenHash: rawTokenHash && linkType === "recovery" ? rawTokenHash : null,
+    hasLegacyRecoveryHash:
+      linkType === "recovery" &&
+      (hash.has("access_token") || hash.has("refresh_token")),
+    hasUrlError: Boolean(
+      query.get("error") ??
+        query.get("error_code") ??
+        hash.get("error") ??
+        hash.get("error_code"),
+    ),
+    hasInvalidRecoveryQuery: Boolean(rawTokenHash && linkType !== "recovery"),
+  };
+}
 
 /**
  * Password recovery + reset-request screen.
@@ -28,14 +56,16 @@ export function ResetPasswordPage() {
   const [params, setParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const tokenHash = params.get("token_hash");
-  const linkType = params.get("type");
-  const urlError = params.get("error") ?? params.get("error_code");
+  // Capture recovery intent once, from THIS tab's URL. Auth sessions are
+  // shared through localStorage, but a reset page must never be switched into
+  // recovery mode by an event broadcast from a different tab.
+  const recoveryIntentRef = useRef<RecoveryIntent>(readRecoveryIntent());
+  const recoveryIntent = recoveryIntentRef.current;
+  const tokenHash = recoveryIntent.tokenHash;
 
   const [mode, setMode] = useState<Mode>(() => {
-    if (urlError) return "expired";
-    if (tokenHash && (!linkType || linkType === "recovery")) return "recover";
+    if (recoveryIntent.hasUrlError || recoveryIntent.hasInvalidRecoveryQuery) return "expired";
+    if (tokenHash || recoveryIntent.hasLegacyRecoveryHash) return "recover";
     return "request";
   });
 
@@ -53,49 +83,44 @@ export function ResetPasswordPage() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1) Strip technical error params from the visible URL after reading them,
-  //    and detect a recovery session arriving via the URL hash (legacy links).
+  // Strip technical error params only after this tab has captured the recovery
+  // intent. Keep token_hash intact until deliberate form submission.
   useEffect(() => {
-    if (urlError) {
-      const next = new URLSearchParams(params);
-      ["error", "error_code", "error_description"].forEach((k) => next.delete(k));
-      setParams(next, { replace: true });
-    }
+    if (!recoveryIntent.hasUrlError) return;
+
+    const next = new URLSearchParams(params);
+    ["error", "error_code", "error_description"].forEach((k) => next.delete(k));
+    const search = next.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${search ? `?${search}` : ""}`,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlError]);
+  }, [recoveryIntent.hasUrlError]);
 
   useEffect(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash : "";
-    if (hash.includes("error")) {
-      const hp = new URLSearchParams(hash.replace(/^#/, ""));
-      if (hp.get("error") || hp.get("error_code")) {
-        setMode("expired");
-        window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        return;
-      }
-    }
+    if (!recoveryIntent.hasLegacyRecoveryHash) return;
 
+    let isActive = true;
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" && session) {
+      if (isActive && event === "PASSWORD_RECOVERY" && session) {
         setHasRecoverySession(true);
-        setMode("recover");
       }
     });
 
-    if (hash.includes("access_token")) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) {
-          setHasRecoverySession(true);
-          setMode("recover");
-        }
-      });
-    }
+    supabase.auth.getSession().then(({ data }) => {
+      if (isActive && data.session) setHasRecoverySession(true);
+    });
 
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    return () => {
+      isActive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [recoveryIntent.hasLegacyRecoveryHash]);
 
   const canSubmitNewPassword = useMemo(
-    () => password.length > 0 && confirmPassword.length > 0 && !isSubmitting,
+    () => validatePasswordPair(password, confirmPassword) === null && !isSubmitting,
     [password, confirmPassword, isSubmitting],
   );
 
@@ -267,8 +292,13 @@ export function ResetPasswordPage() {
                 placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
-                  setFieldError(null);
+                  const nextPassword = e.target.value;
+                  setPassword(nextPassword);
+                  setFieldError(
+                    confirmPassword && nextPassword !== confirmPassword
+                      ? "Passwords do not match."
+                      : null,
+                  );
                 }}
                 disabled={isSubmitting}
                 aria-invalid={Boolean(fieldError)}
@@ -296,8 +326,13 @@ export function ResetPasswordPage() {
                 placeholder="Re-enter your new password"
                 value={confirmPassword}
                 onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setFieldError(null);
+                  const nextConfirmation = e.target.value;
+                  setConfirmPassword(nextConfirmation);
+                  setFieldError(
+                    nextConfirmation && password !== nextConfirmation
+                      ? "Passwords do not match."
+                      : null,
+                  );
                 }}
                 disabled={isSubmitting}
                 aria-invalid={Boolean(fieldError)}
