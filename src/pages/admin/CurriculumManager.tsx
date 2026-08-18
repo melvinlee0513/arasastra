@@ -12,10 +12,31 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 
-import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Plus,
+  Users,
+  ChevronRight,
+  UserCog,
+  MoreHorizontal,
+  Pencil,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SUBJECT_OPTIONS, subjectLabel } from "@/lib/subjectConfig";
 import { cn } from "@/lib/utils";
 
-type Subject = { id: string; name: string; description: string | null };
+type Subject = {
+  id: string;
+  name: string;
+  description: string | null;
+  subject_key: string | null;
+};
 type Class = {
   id: string;
   title: string;
@@ -47,6 +68,8 @@ export default function CurriculumManager() {
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [assignTutorsOpen, setAssignTutorsOpen] = useState(false);
+  const [editSubject, setEditSubject] = useState<Subject | null>(null);
+  const [editClass, setEditClass] = useState<Class | null>(null);
 
   useEffect(() => {
     if (!currentTenantId) return;
@@ -69,8 +92,9 @@ export default function CurriculumManager() {
     const [subsRes, tutorsRes] = await Promise.all([
       supabase
         .from("subjects")
-        .select("id, name, description")
+        .select("id, name, description, subject_key")
         .eq("center_id", currentTenantId)
+        .neq("status", "archived")
         .order("name"),
       // Canonical assignable-tutor list via SECURITY DEFINER RPC. Avoids
       // depending on a PostgREST embed between user_roles and profiles
