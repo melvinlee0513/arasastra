@@ -533,30 +533,40 @@ function SubjectModal({
   open,
   onOpenChange,
   centerId,
+  existingKeys,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   centerId: string;
+  /** Canonical keys already present in this centre — blocked from re-adding. */
+  existingKeys: string[];
   onCreated: () => void;
 }) {
-  const [name, setName] = useState("");
+  const [subjectKey, setSubjectKey] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const taken = useMemo(() => new Set(existingKeys), [existingKeys]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    const option = SUBJECT_OPTIONS.find((o) => o.key === subjectKey);
+    if (!option || taken.has(option.key)) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("subjects")
-      .insert({ name: name.trim(), description: description.trim() || null, center_id: centerId, is_active: true });
+    // Identity is the canonical key; the label is derived, never user-typed.
+    const { error } = await supabase.from("subjects").insert({
+      name: option.label,
+      subject_key: option.key,
+      description: description.trim() || null,
+      center_id: centerId,
+      is_active: true,
+    });
     setSaving(false);
     if (error) {
       showSupabaseError(error, "Could not create subject");
       return;
     }
-    setName("");
+    setSubjectKey("");
     setDescription("");
     toast.success("Subject created");
     onCreated();
@@ -570,14 +580,20 @@ function SubjectModal({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Physics"
-              className="rounded-full"
-              required
-            />
+            <Label>Subject</Label>
+            <Select value={subjectKey} onValueChange={setSubjectKey}>
+              <SelectTrigger className="rounded-full">
+                <SelectValue placeholder="Select subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBJECT_OPTIONS.map((o) => (
+                  <SelectItem key={o.key} value={o.key} disabled={taken.has(o.key)}>
+                    {o.label}
+                    {taken.has(o.key) ? " · Already added" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Description</Label>
@@ -599,8 +615,8 @@ function SubjectModal({
             </Button>
             <Button
               type="submit"
-              disabled={saving}
-              className="rounded-full text-white hover:opacity-90"
+              disabled={saving || !subjectKey}
+              className="rounded-full text-white hover:opacity-90 disabled:opacity-40"
               style={{ backgroundColor: ELECTRIC_BLUE }}
             >
               {saving ? "Saving…" : "Create"}
@@ -629,6 +645,7 @@ function ClassModal({
   onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [cohort, setCohort] = useState("");
   const [tutorId, setTutorId] = useState<string>("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -636,12 +653,13 @@ function ClassModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!subject) return;
+    if (!subject || !title.trim()) return;
     setSaving(true);
     const { data: created, error } = await supabase
       .from("classes")
       .insert({
         title: title.trim(),
+        description: description.trim() || null,
         cohort_label: cohort.trim() || null,
         subject_id: subject.id,
         // classes.tutor_id is legacy. Assignments are written to class_tutors below.
@@ -681,6 +699,7 @@ function ClassModal({
     setSaving(false);
 
     setTitle("");
+    setDescription("");
     setCohort("");
     setTutorId("");
     setScheduledAt("");
@@ -703,6 +722,15 @@ function ClassModal({
               placeholder="e.g. Form 5 Physics - Friday Cohort"
               className="rounded-full"
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Class description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional — e.g. Friday 2 PM SPM Physics, Form 5 syllabus."
+              className="rounded-2xl"
             />
           </div>
           <div className="space-y-2">
@@ -1119,6 +1147,174 @@ function AssignTutorsModal({
             {saving ? "Saving…" : "Save assignments"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Edit Subject Modal ───
+   Canonical subject identity (`subject_key`) is locked after creation so a
+   subject can never silently change academic category — and with it the
+   artwork of every attached class. Only the description is editable. */
+function EditSubjectModal({
+  subject,
+  centerId,
+  onClose,
+  onSaved,
+}: {
+  subject: Subject;
+  centerId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [description, setDescription] = useState(subject.description ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase
+      .from("subjects")
+      .update({ description: description.trim() || null })
+      .eq("id", subject.id)
+      .eq("center_id", centerId);
+    setSaving(false);
+    if (error) {
+      showSupabaseError(error, "Could not update subject");
+      return;
+    }
+    toast.success("Subject updated");
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit subject</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Subject</Label>
+            <Input
+              value={subjectLabel(subject.subject_key, subject.name)}
+              readOnly
+              disabled
+              className="rounded-full bg-slate-50"
+            />
+            <p className="text-xs text-slate-500">
+              Subject identity is locked after creation. Create a new subject instead of
+              re-categorising this one.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short summary of the subject"
+              className="rounded-2xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="rounded-full text-white hover:opacity-90"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Edit Class Modal ───
+   Updates the existing class record in place: id, center_id, subject_id,
+   tutors, enrolments, resources and schedules are untouched. */
+function EditClassModal({
+  klass,
+  centerId,
+  onClose,
+  onSaved,
+}: {
+  klass: Class;
+  centerId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(klass.title);
+  const [description, setDescription] = useState(klass.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const trimmed = title.trim();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!trimmed) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("classes")
+      .update({ title: trimmed, description: description.trim() || null })
+      .eq("id", klass.id)
+      .eq("center_id", centerId);
+    setSaving(false);
+    if (error) {
+      showSupabaseError(error, "Could not update class");
+      return;
+    }
+    toast.success("Class updated");
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit class</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Class name</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. SPM Physics 2026"
+              className="rounded-full"
+              required
+            />
+            {!trimmed && (
+              <p className="text-xs text-rose-600">Class name is required.</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional — schedule, syllabus focus, notes for students."
+              className="rounded-2xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !trimmed}
+              className="rounded-full text-white hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
