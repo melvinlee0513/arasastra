@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Loader2, ArrowLeft, Mail, Eye, EyeOff, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,31 @@ import { validatePasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/passwordRules";
 import owlMascot from "@/assets/owl-mascot.png";
 
 type Mode = "request" | "recover" | "expired" | "done";
+
+interface RecoveryIntent {
+  tokenHash: string | null;
+  hasLegacyRecoveryHash: boolean;
+  hasUrlError: boolean;
+}
+
+function readRecoveryIntent(): RecoveryIntent {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const linkType = query.get("type") ?? hash.get("type");
+
+  return {
+    tokenHash: query.get("token_hash"),
+    hasLegacyRecoveryHash:
+      linkType === "recovery" &&
+      (hash.has("access_token") || hash.has("refresh_token")),
+    hasUrlError: Boolean(
+      query.get("error") ??
+        query.get("error_code") ??
+        hash.get("error") ??
+        hash.get("error_code"),
+    ),
+  };
+}
 
 /**
  * Password recovery + reset-request screen.
@@ -28,14 +53,17 @@ export function ResetPasswordPage() {
   const [params, setParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const tokenHash = params.get("token_hash");
-  const linkType = params.get("type");
+  // Capture recovery intent once, from THIS tab's URL. Auth sessions are
+  // shared through localStorage, but a reset page must never be switched into
+  // recovery mode by an event broadcast from a different tab.
+  const recoveryIntentRef = useRef<RecoveryIntent>(readRecoveryIntent());
+  const recoveryIntent = recoveryIntentRef.current;
+  const tokenHash = recoveryIntent.tokenHash;
   const urlError = params.get("error") ?? params.get("error_code");
 
   const [mode, setMode] = useState<Mode>(() => {
-    if (urlError) return "expired";
-    if (tokenHash && (!linkType || linkType === "recovery")) return "recover";
+    if (recoveryIntent.hasUrlError) return "expired";
+    if (tokenHash || recoveryIntent.hasLegacyRecoveryHash) return "recover";
     return "request";
   });
 
@@ -65,37 +93,27 @@ export function ResetPasswordPage() {
   }, [urlError]);
 
   useEffect(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash : "";
-    if (hash.includes("error")) {
-      const hp = new URLSearchParams(hash.replace(/^#/, ""));
-      if (hp.get("error") || hp.get("error_code")) {
-        setMode("expired");
-        window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        return;
-      }
-    }
+    if (!recoveryIntent.hasLegacyRecoveryHash) return;
 
+    let isActive = true;
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" && session) {
+      if (isActive && event === "PASSWORD_RECOVERY" && session) {
         setHasRecoverySession(true);
-        setMode("recover");
       }
     });
 
-    if (hash.includes("access_token")) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) {
-          setHasRecoverySession(true);
-          setMode("recover");
-        }
-      });
-    }
+    supabase.auth.getSession().then(({ data }) => {
+      if (isActive && data.session) setHasRecoverySession(true);
+    });
 
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    return () => {
+      isActive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [recoveryIntent.hasLegacyRecoveryHash]);
 
   const canSubmitNewPassword = useMemo(
-    () => password.length > 0 && confirmPassword.length > 0 && !isSubmitting,
+    () => validatePasswordPair(password, confirmPassword) === null && !isSubmitting,
     [password, confirmPassword, isSubmitting],
   );
 
