@@ -2191,6 +2191,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           status: string
+          subject_key: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -2203,6 +2204,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           status?: string
+          subject_key?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -2215,6 +2217,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           status?: string
+          subject_key?: string | null
         }
         Relationships: [
           {

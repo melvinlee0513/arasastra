@@ -9,6 +9,8 @@
  * the JS graph and can be lazily fetched by the browser.
  */
 
+import { subjectArtFamily } from "@/lib/subjectConfig";
+
 const BASE = "/assets/illustrations";
 
 /** Encodes path segments (the "additional mathematics" folder contains a space). */
@@ -57,34 +59,33 @@ export const STATE_ART = {
   about: asset("ui/glossy_blue_3d_information_bubble.webp"),
 } as const;
 
-const SUBJECT_ART: { match: RegExp; src: string }[] = [
-  { match: /physic/i, src: asset("subjects/physics/atom-variant.webp") },
-  { match: /chem/i, src: asset("subjects/chemistry/chemistry-flask-blue.webp") },
-  { match: /bio/i, src: asset("subjects/biology/dna-helix.webp") },
-  {
-    match: /(add(itional)?[\s-]*math|matematik tambahan)/i,
-    src: asset("subjects/additional mathematics/glossy_3d_graph_board_icon.webp"),
-  },
-  {
-    match: /(math|matematik)/i,
-    src: asset("subjects/mathematics/glossy_blue_3d_calculator_icon.webp"),
-  },
-  { match: /(science|sains)/i, src: asset("learning/glossy_pastel_atom_icon.webp") },
-  { match: /(sejarah|history)/i, src: asset("learning/glossy_pastel_stack_of_books.webp") },
-];
+const SUBJECT_ICON_ART: Record<string, string> = {
+  physics: asset("subjects/physics/atom-variant.webp"),
+  chemistry: asset("subjects/chemistry/chemistry-flask-blue.webp"),
+  biology: asset("subjects/biology/dna-helix.webp"),
+  "additional-mathematics": asset(
+    "subjects/additional mathematics/glossy_3d_graph_board_icon.webp",
+  ),
+  mathematics: asset("subjects/mathematics/glossy_blue_3d_calculator_icon.webp"),
+  science: asset("learning/glossy_pastel_atom_icon.webp"),
+  sejarah: asset("learning/glossy_pastel_stack_of_books.webp"),
+  english: asset("subjects/languages/english-book.webp"),
+  "bahasa-melayu": asset("subjects/languages/bahasa-melayu-notebook.webp"),
+};
 
 /**
- * Contextual soft-3D artwork for a subject. Used only as a branded fallback
- * when a class has no tutor-uploaded cover image — never as a replacement for
- * a real cover.
+ * Contextual soft-3D artwork for a subject. Resolution is driven by the
+ * canonical subject key (see `src/lib/subjectConfig.ts`); the stored subject
+ * name is only an alias fallback for legacy rows without a key.
  */
-export function subjectArt(subjectName?: string | null): string {
-  if (subjectName) {
-    const hit = SUBJECT_ART.find((s) => s.match.test(subjectName));
-    if (hit) return hit.src;
-  }
-  return asset("learning/glossy_pastel_stack_of_books.webp");
+export function subjectArt(
+  subjectName?: string | null,
+  subjectKey?: string | null,
+): string {
+  const family = subjectArtFamily(subjectKey, subjectName);
+  return (family && SUBJECT_ICON_ART[family]) || asset("learning/glossy_pastel_stack_of_books.webp");
 }
+
 
 // ------------------------------------------------------------------
 // Subject art families (Study / My Classes premium class cards)
@@ -225,12 +226,11 @@ const GENERIC_ART: Omit<SubjectArtSet, "key"> = {
 export function subjectArtSet(
   subjectName?: string | null,
   classTitle?: string | null,
+  subjectKey?: string | null,
 ): SubjectArtSet {
-  for (const candidate of [subjectName, classTitle]) {
-    if (!candidate) continue;
-    const hit = SUBJECT_FAMILIES.find((f) => f.match.test(candidate));
-    if (hit) return { key: hit.key, ...hit.art };
-  }
+  const family = subjectArtFamily(subjectKey, subjectName, classTitle);
+  const hit = family ? SUBJECT_FAMILIES.find((f) => f.key === family) : undefined;
+  if (hit) return { key: hit.key, ...hit.art };
   return { key: "generic", ...GENERIC_ART };
 }
 
@@ -290,8 +290,9 @@ export interface ClassTileArt {
 export function classTileArt(
   subjectName?: string | null,
   classTitle?: string | null,
+  subjectKey?: string | null,
 ): ClassTileArt {
-  const { key } = subjectArtSet(subjectName, classTitle);
+  const { key } = subjectArtSet(subjectName, classTitle, subjectKey);
   return {
     key,
     src: CLASS_TILE_ART[key] ?? null,

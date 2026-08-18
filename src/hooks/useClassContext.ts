@@ -16,7 +16,7 @@ export type ClassContextData = {
     center_id: string | null;
     cover_image_path: string | null;
     cover_image_updated_at: string | null;
-    subject: { name: string } | null;
+    subject: { name: string; subject_key: string | null } | null;
   } | null;
   tutors: {
     id: string;
@@ -43,7 +43,7 @@ export function useClassContext(classId: string | undefined) {
       const { data: klass, error } = await supabase
         .from("classes")
         .select(
-          "id,title,description,scheduled_at,duration_minutes,cohort_label,schedule_label,status,center_id,cover_image_path,cover_image_updated_at,subject:subjects(name)",
+          "id,title,description,scheduled_at,duration_minutes,cohort_label,schedule_label,status,center_id,cover_image_path,cover_image_updated_at,subject:subjects(name,subject_key)",
         )
         .eq("id", classId!)
         .maybeSingle();

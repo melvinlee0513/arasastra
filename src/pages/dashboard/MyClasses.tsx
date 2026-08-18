@@ -93,14 +93,18 @@ export function MyClasses() {
       const subjectIds = Array.from(
         new Set((classRows || []).map((c) => c.subject_id).filter(Boolean) as string[]),
       );
-      const subjectMap = new Map<string, string>();
+      const subjectMap = new Map<string, { name: string; key: string | null }>();
       if (subjectIds.length) {
         const { data: subs, error: subErr } = await supabase
           .from("subjects")
-          .select("id,name")
+          .select("id,name,subject_key")
           .in("id", subjectIds);
         if (subErr) throw subErr;
-        for (const s of subs || []) subjectMap.set(s.id as string, s.name as string);
+        for (const s of subs || [])
+          subjectMap.set(s.id as string, {
+            name: s.name as string,
+            key: (s.subject_key as string | null) ?? null,
+          });
       }
 
       // Step 4 — canonical tutor identity (class_tutors → profiles via safe RPC).
@@ -114,7 +118,8 @@ export function MyClasses() {
         cohort_label: (c.cohort_label as string | null) ?? null,
         schedule_label: (c.schedule_label as string | null) ?? null,
         scheduled_at: (c.scheduled_at as string | null) ?? null,
-        subject_name: c.subject_id ? subjectMap.get(c.subject_id as string) || null : null,
+        subject_name: c.subject_id ? subjectMap.get(c.subject_id as string)?.name ?? null : null,
+        subject_key: c.subject_id ? subjectMap.get(c.subject_id as string)?.key ?? null : null,
         tutors: (tutorsByClass.get(c.id as string) || []) as TutorIdentity[],
       }));
     },

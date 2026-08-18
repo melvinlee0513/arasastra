@@ -12,10 +12,31 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 
-import { BookOpen, GraduationCap, Plus, Users, ChevronRight, UserCog } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Plus,
+  Users,
+  ChevronRight,
+  UserCog,
+  MoreHorizontal,
+  Pencil,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SUBJECT_OPTIONS, subjectLabel } from "@/lib/subjectConfig";
 import { cn } from "@/lib/utils";
 
-type Subject = { id: string; name: string; description: string | null };
+type Subject = {
+  id: string;
+  name: string;
+  description: string | null;
+  subject_key: string | null;
+};
 type Class = {
   id: string;
   title: string;
@@ -47,6 +68,8 @@ export default function CurriculumManager() {
   const [classModalOpen, setClassModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [assignTutorsOpen, setAssignTutorsOpen] = useState(false);
+  const [editSubject, setEditSubject] = useState<Subject | null>(null);
+  const [editClass, setEditClass] = useState<Class | null>(null);
 
   useEffect(() => {
     if (!currentTenantId) return;
@@ -69,8 +92,9 @@ export default function CurriculumManager() {
     const [subsRes, tutorsRes] = await Promise.all([
       supabase
         .from("subjects")
-        .select("id, name, description")
+        .select("id, name, description, subject_key")
         .eq("center_id", currentTenantId)
+        .neq("status", "archived")
         .order("name"),
       // Canonical assignable-tutor list via SECURITY DEFINER RPC. Avoids
       // depending on a PostgREST embed between user_roles and profiles
@@ -209,39 +233,59 @@ export default function CurriculumManager() {
                   const active = s.id === selectedSubjectId;
                   return (
                     <li key={s.id}>
-                      <button
-                        onClick={() => {
-                          setSelectedSubjectId(s.id);
-                          setSelectedClassId(null);
-                        }}
+                      <div
                         className={cn(
-                          "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
-                          active
-                            ? "text-white shadow-sm"
-                            : "text-slate-700 hover:bg-slate-100/70",
+                          "flex items-center gap-1 rounded-xl transition-all",
+                          active ? "shadow-sm" : "hover:bg-slate-100/70",
                         )}
                         style={active ? { backgroundColor: ELECTRIC_BLUE } : undefined}
                       >
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{s.name}</div>
-                          {s.description && (
-                            <div
-                              className={cn(
-                                "text-xs truncate",
-                                active ? "text-white/80" : "text-slate-500",
-                              )}
-                            >
-                              {s.description}
-                            </div>
-                          )}
-                        </div>
-                        <ChevronRight
+                        <button
+                          onClick={() => {
+                            setSelectedSubjectId(s.id);
+                            setSelectedClassId(null);
+                          }}
                           className={cn(
-                            "h-4 w-4 shrink-0",
-                            active ? "text-white" : "text-slate-400",
+                            "min-w-0 flex-1 flex items-center justify-between gap-3 px-3 py-2.5 text-left",
+                            active ? "text-white" : "text-slate-700",
                           )}
-                        />
-                      </button>
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {subjectLabel(s.subject_key, s.name)}
+                            </div>
+                            {s.description && (
+                              <div
+                                className={cn(
+                                  "text-xs truncate",
+                                  active ? "text-white/80" : "text-slate-500",
+                                )}
+                              >
+                                {s.description}
+                              </div>
+                            )}
+                          </div>
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              active ? "text-white" : "text-slate-400",
+                            )}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Edit ${subjectLabel(s.subject_key, s.name)}`}
+                          onClick={() => setEditSubject(s)}
+                          className={cn(
+                            "mr-2 rounded-full p-1.5 transition-colors",
+                            active
+                              ? "text-white/80 hover:bg-white/20 hover:text-white"
+                              : "text-slate-400 hover:bg-slate-200/70 hover:text-slate-700",
+                          )}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -256,7 +300,9 @@ export default function CurriculumManager() {
             <div className="flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-slate-600" />
               <h2 className="text-sm font-semibold text-slate-800">
-                {selectedSubject ? `Classes · ${selectedSubject.name}` : "Classes"}
+                {selectedSubject
+                  ? `Classes · ${subjectLabel(selectedSubject.subject_key, selectedSubject.name)}`
+                  : "Classes"}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -298,8 +344,21 @@ export default function CurriculumManager() {
                 Select a subject to see its classes.
               </div>
             ) : classes.length === 0 ? (
-              <div className="p-10 text-center text-sm text-slate-400">
-                No cohorts yet for {selectedSubject.name}.
+              <div className="p-10 flex flex-col items-center gap-2 text-center">
+                <GraduationCap className="h-8 w-8 text-slate-300" />
+                <p className="text-sm font-semibold text-slate-700">No classes yet</p>
+                <p className="text-sm text-slate-500">
+                  Create your first class under{" "}
+                  {subjectLabel(selectedSubject.subject_key, selectedSubject.name)}.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setClassModalOpen(true)}
+                  className="mt-2 rounded-full h-8 px-4 text-white shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: ELECTRIC_BLUE }}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Spawn class
+                </Button>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -316,11 +375,11 @@ export default function CurriculumManager() {
                         ? assignedNames.join(", ")
                         : `${assignedNames.length} tutors assigned`;
                   return (
-                    <li key={c.id}>
+                    <li key={c.id} className="relative">
                       <button
                         onClick={() => setSelectedClassId(c.id)}
                         className={cn(
-                          "w-full flex items-center justify-between gap-4 p-4 rounded-xl border text-left transition-all",
+                          "w-full flex items-center justify-between gap-4 p-4 pr-14 rounded-xl border text-left transition-all",
                           active
                             ? "border-transparent shadow-md ring-2"
                             : "border-slate-200 hover:border-slate-300 bg-white/60",
@@ -350,6 +409,41 @@ export default function CurriculumManager() {
                           {enrollmentCounts[c.id] ?? 0} enrolled
                         </Badge>
                       </button>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Actions for ${c.title}`}
+                              className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onSelect={() => setEditClass(c)}>
+                              Edit class
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setSelectedClassId(c.id);
+                                setAssignTutorsOpen(true);
+                              }}
+                            >
+                              Assign tutors
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setSelectedClassId(c.id);
+                                setEnrollModalOpen(true);
+                              }}
+                            >
+                              Enroll students
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </li>
                   );
                 })}
@@ -360,10 +454,35 @@ export default function CurriculumManager() {
       </div>
 
       {/* Modals */}
+      {editSubject && (
+        <EditSubjectModal
+          subject={editSubject}
+          centerId={currentTenantId}
+          onClose={() => setEditSubject(null)}
+          onSaved={() => {
+            setEditSubject(null);
+            void loadAll();
+          }}
+        />
+      )}
+      {editClass && (
+        <EditClassModal
+          klass={editClass}
+          centerId={currentTenantId}
+          onClose={() => setEditClass(null)}
+          onSaved={() => {
+            setEditClass(null);
+            if (selectedSubjectId) void loadClasses(selectedSubjectId);
+          }}
+        />
+      )}
       <SubjectModal
         open={subjectModalOpen}
         onOpenChange={setSubjectModalOpen}
         centerId={currentTenantId}
+        existingKeys={subjects
+          .map((s) => s.subject_key)
+          .filter((k): k is string => Boolean(k))}
         onCreated={() => {
           setSubjectModalOpen(false);
           void loadAll();
@@ -414,30 +533,40 @@ function SubjectModal({
   open,
   onOpenChange,
   centerId,
+  existingKeys,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   centerId: string;
+  /** Canonical keys already present in this centre — blocked from re-adding. */
+  existingKeys: string[];
   onCreated: () => void;
 }) {
-  const [name, setName] = useState("");
+  const [subjectKey, setSubjectKey] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const taken = useMemo(() => new Set(existingKeys), [existingKeys]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    const option = SUBJECT_OPTIONS.find((o) => o.key === subjectKey);
+    if (!option || taken.has(option.key)) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("subjects")
-      .insert({ name: name.trim(), description: description.trim() || null, center_id: centerId, is_active: true });
+    // Identity is the canonical key; the label is derived, never user-typed.
+    const { error } = await supabase.from("subjects").insert({
+      name: option.label,
+      subject_key: option.key,
+      description: description.trim() || null,
+      center_id: centerId,
+      is_active: true,
+    });
     setSaving(false);
     if (error) {
       showSupabaseError(error, "Could not create subject");
       return;
     }
-    setName("");
+    setSubjectKey("");
     setDescription("");
     toast.success("Subject created");
     onCreated();
@@ -451,14 +580,20 @@ function SubjectModal({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Physics"
-              className="rounded-full"
-              required
-            />
+            <Label>Subject</Label>
+            <Select value={subjectKey} onValueChange={setSubjectKey}>
+              <SelectTrigger className="rounded-full">
+                <SelectValue placeholder="Select subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBJECT_OPTIONS.map((o) => (
+                  <SelectItem key={o.key} value={o.key} disabled={taken.has(o.key)}>
+                    {o.label}
+                    {taken.has(o.key) ? " · Already added" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Description</Label>
@@ -480,8 +615,8 @@ function SubjectModal({
             </Button>
             <Button
               type="submit"
-              disabled={saving}
-              className="rounded-full text-white hover:opacity-90"
+              disabled={saving || !subjectKey}
+              className="rounded-full text-white hover:opacity-90 disabled:opacity-40"
               style={{ backgroundColor: ELECTRIC_BLUE }}
             >
               {saving ? "Saving…" : "Create"}
@@ -510,6 +645,7 @@ function ClassModal({
   onCreated: () => void;
 }) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [cohort, setCohort] = useState("");
   const [tutorId, setTutorId] = useState<string>("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -517,12 +653,13 @@ function ClassModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!subject) return;
+    if (!subject || !title.trim()) return;
     setSaving(true);
     const { data: created, error } = await supabase
       .from("classes")
       .insert({
         title: title.trim(),
+        description: description.trim() || null,
         cohort_label: cohort.trim() || null,
         subject_id: subject.id,
         // classes.tutor_id is legacy. Assignments are written to class_tutors below.
@@ -562,6 +699,7 @@ function ClassModal({
     setSaving(false);
 
     setTitle("");
+    setDescription("");
     setCohort("");
     setTutorId("");
     setScheduledAt("");
@@ -584,6 +722,15 @@ function ClassModal({
               placeholder="e.g. Form 5 Physics - Friday Cohort"
               className="rounded-full"
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Class description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional — e.g. Friday 2 PM SPM Physics, Form 5 syllabus."
+              className="rounded-2xl"
             />
           </div>
           <div className="space-y-2">
@@ -1000,6 +1147,174 @@ function AssignTutorsModal({
             {saving ? "Saving…" : "Save assignments"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Edit Subject Modal ───
+   Canonical subject identity (`subject_key`) is locked after creation so a
+   subject can never silently change academic category — and with it the
+   artwork of every attached class. Only the description is editable. */
+function EditSubjectModal({
+  subject,
+  centerId,
+  onClose,
+  onSaved,
+}: {
+  subject: Subject;
+  centerId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [description, setDescription] = useState(subject.description ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase
+      .from("subjects")
+      .update({ description: description.trim() || null })
+      .eq("id", subject.id)
+      .eq("center_id", centerId);
+    setSaving(false);
+    if (error) {
+      showSupabaseError(error, "Could not update subject");
+      return;
+    }
+    toast.success("Subject updated");
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit subject</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Subject</Label>
+            <Input
+              value={subjectLabel(subject.subject_key, subject.name)}
+              readOnly
+              disabled
+              className="rounded-full bg-slate-50"
+            />
+            <p className="text-xs text-slate-500">
+              Subject identity is locked after creation. Create a new subject instead of
+              re-categorising this one.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short summary of the subject"
+              className="rounded-2xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="rounded-full text-white hover:opacity-90"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Edit Class Modal ───
+   Updates the existing class record in place: id, center_id, subject_id,
+   tutors, enrolments, resources and schedules are untouched. */
+function EditClassModal({
+  klass,
+  centerId,
+  onClose,
+  onSaved,
+}: {
+  klass: Class;
+  centerId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(klass.title);
+  const [description, setDescription] = useState(klass.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const trimmed = title.trim();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!trimmed) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("classes")
+      .update({ title: trimmed, description: description.trim() || null })
+      .eq("id", klass.id)
+      .eq("center_id", centerId);
+    setSaving(false);
+    if (error) {
+      showSupabaseError(error, "Could not update class");
+      return;
+    }
+    toast.success("Class updated");
+    onSaved();
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-white/95 backdrop-blur-md border-slate-200 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit class</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Class name</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. SPM Physics 2026"
+              className="rounded-full"
+              required
+            />
+            {!trimmed && (
+              <p className="text-xs text-rose-600">Class name is required.</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional — schedule, syllabus focus, notes for students."
+              className="rounded-2xl"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="rounded-full" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !trimmed}
+              className="rounded-full text-white hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: ELECTRIC_BLUE }}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
