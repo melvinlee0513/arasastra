@@ -46,6 +46,7 @@ export function useTutorScope() {
         const { data: classes } = await (supabase as any)
           .from("classes")
           .select("id,title,subject_id,standard_id,cohort_label,tutor_id")
+          .neq("status", "archived")
           .order("scheduled_at", { ascending: false });
         return {
           isAdmin: true,

@@ -89,6 +89,7 @@ export function ScheduleManager() {
         supabase
           .from("classes")
           .select("*, subject:subjects(name, color), tutor:tutors(name)")
+          .neq("status", "archived")
           .order("scheduled_at", { ascending: true }),
         supabase.from("subjects").select("id, name, color").eq("is_active", true),
         supabase.from("tutors").select("id, name").eq("is_active", true),
