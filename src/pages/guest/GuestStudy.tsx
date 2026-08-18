@@ -154,7 +154,7 @@ function GuestStudyMobile() {
         title="Ready to start your learning journey?"
         body="Sign in with the account your centre created for you."
         ctaLabel="Sign in"
-        banner={GUEST_ART.learningJourneyBanner}
+        banner={GUEST_CTA_MOBILE.study}
       />
     </GuestPage>
   );
