@@ -88,22 +88,32 @@ export function StudentHomeHero({
       <div
         
         className={cn(
-          "relative isolate overflow-hidden px-5 pb-5 pt-5 [border-radius:28px] sm:px-6 sm:pb-6 md:px-7 md:pb-6 md:pt-6 md:[border-radius:36px]",
-          isLoading && "bg-[linear-gradient(135deg,#f4f7fc_0%,#eef2f9_100%)]",
+          "relative isolate overflow-hidden px-5 pb-5 pt-5 [border-radius:28px] sm:px-6 sm:pb-6 md:aspect-[3/1] md:px-0 md:pb-0 md:pt-0 md:[border-radius:36px]",
+          isLoading && "bg-[linear-gradient(135deg,#f4f7fc_0%,#eef2f9_100%)] md:bg-transparent",
         )}
       >
         {!isLoading && (
-          <img
-            src={heroBackgroundFor(profile?.home_header_color)}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            fetchPriority="high"
-            decoding="async"
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[112%] w-[112%] -translate-x-1/2 -translate-y-1/2 select-none object-cover object-center"
-          />
+          <picture>
+            {/* Desktop breakpoints get the dedicated wide artwork; the mobile
+                asset is untouched. The <source> switch happens in CSS, so no
+                colour/asset flash is introduced. */}
+            <source
+              media="(min-width: 768px)"
+              srcSet={heroBackgroundFor(profile?.home_header_color, "desktop")}
+            />
+            <img
+              src={heroBackgroundFor(profile?.home_header_color)}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              fetchPriority="high"
+              decoding="async"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[112%] w-[112%] -translate-x-1/2 -translate-y-1/2 select-none object-cover object-center md:h-full md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:object-contain"
+            />
+          </picture>
         )}
 
+      <div className="md:absolute md:inset-0 md:z-10 md:flex md:flex-col md:justify-center md:px-10 md:py-7 lg:px-12">
       <div className="relative z-10 flex items-start gap-3">
 
 
@@ -206,6 +216,7 @@ export function StudentHomeHero({
           </ul>
         ) : null
       )}
+      </div>
       </div>
     </section>
 
