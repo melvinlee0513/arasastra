@@ -172,6 +172,7 @@ export function UsersManagement() {
     const classQuery = (supabase as any)
       .from("classes")
       .select("id,title,subject_id,standard_id,cohort_label,center_id")
+      .neq("status", "archived")
       .order("scheduled_at", { ascending: false });
     if (currentTenantId) classQuery.eq("center_id", currentTenantId);
 
