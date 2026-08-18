@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -7,6 +8,8 @@ import {
   Layers,
   ArrowRight,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatRelative } from "@/lib/quizzes";
@@ -20,6 +23,7 @@ import {
   HOME_ART,
   HomeDecorArt,
 } from "./StudentHomeShared";
+import { useStudentAccent } from "@/lib/studentProfile";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -70,6 +74,59 @@ function StudyCardArt({ src }: { src: string }) {
  */
 export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry }: Props) {
   const visible = items.slice(0, 3);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const accent = useStudentAccent();
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(true);
+  /** True only when the track can actually scroll (more cards than fit). */
+  const [scrollable, setScrollable] = useState(false);
+
+  const sync = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setScrollable(max > 8);
+    setAtStart(el.scrollLeft <= 8);
+    setAtEnd(el.scrollLeft >= max - 8);
+  }, []);
+
+  useEffect(() => {
+    sync();
+    const el = trackRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => ro.disconnect();
+  }, [sync, visible.length]);
+
+  /** Advance approximately one card per activation. */
+  const step = useCallback((dir: -1 | 1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const first = el.firstElementChild as HTMLElement | null;
+    const gap = 12;
+    const amount = first ? first.offsetWidth + gap : el.clientWidth * 0.8;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollBy({ left: dir * amount, behavior: reduce ? "auto" : "smooth" });
+  }, []);
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        step(1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        step(-1);
+      }
+    },
+    [step],
+  );
+
+  /** Soft circular control, desktop/tablet only — mobile keeps pure swiping. */
+  const arrowClass =
+    "absolute top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border bg-white/95 shadow-[0_10px_26px_rgba(15,23,42,0.14)] backdrop-blur transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-95 disabled:cursor-default disabled:opacity-35 disabled:shadow-none motion-reduce:transition-none motion-reduce:active:scale-100 md:inline-flex";
 
   return (
     <HomeSection
@@ -98,11 +155,49 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
           accentClassName="bg-home-learning text-home-learning-accent"
         />
       ) : (
+        <div className="relative" style={accent.vars}>
+          {scrollable && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous learning item"
+                onClick={() => step(-1)}
+                disabled={atStart}
+                style={{
+                  color: "var(--student-accent)",
+                  borderColor: "var(--student-accent-border)",
+                }}
+                className={cn(arrowClass, "left-0 md:-left-2 lg:-left-4")}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next learning item"
+                onClick={() => step(1)}
+                disabled={atEnd}
+                style={{
+                  color: "var(--student-accent)",
+                  borderColor: "var(--student-accent-border)",
+                }}
+                className={cn(arrowClass, "right-0 md:-right-2 lg:-right-4")}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </>
+          )}
+
         <div
+          ref={trackRef}
+          onScroll={sync}
+          onKeyDown={onKeyDown}
+          role="group"
+          aria-label="Continue learning items"
+          tabIndex={visible.length > 1 ? 0 : -1}
           className={cn(
-            "flex gap-3 pb-1",
+            "flex gap-3 pb-1 focus-visible:outline-none",
             visible.length > 1 &&
-              "-mx-4 snap-x snap-mandatory overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+              "-mx-4 snap-x snap-mandatory flex-nowrap overflow-x-auto overscroll-x-contain px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0",
           )}
         >
           {visible.map((item) => {
@@ -111,8 +206,10 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
               <div
                 key={`${item.category}-${item.item_id}`}
                 className={cn(
-                  "relative shrink-0 snap-start pb-3 pr-3",
-                  visible.length > 1 ? "w-[88%]" : "w-full",
+                  "relative shrink-0 grow-0 snap-start pb-3 pr-3",
+                  visible.length > 1
+                    ? "w-[88%] md:w-[calc((100%-0.75rem)/2)]"
+                    : "w-full",
                 )}
               >
                 {/* Backing deck layers — restrained offsets, decorative only. */}
@@ -166,6 +263,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </HomeSection>
