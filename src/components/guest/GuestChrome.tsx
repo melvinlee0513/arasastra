@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ChevronRight, Eye, Home, LayoutGrid, Lock, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GUEST_ART, GUEST_DECOR_IMG_PROPS } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_DECOR_IMG_PROPS, type GuestCtaBanner } from "@/lib/guestIllustrations";
 
 /* ------------------------------------------------------------------ page */
 
@@ -264,6 +264,12 @@ export function GuestLockedServiceRow({
 
 /* -------------------------------------------------------------------- CTA */
 
+/**
+ * Mobile guest CTA — the WebP asset *is* the banner. The wrapper adopts the
+ * asset's natural aspect ratio and stays transparent, so there is no second
+ * navy card, no stretching and no letterboxing. HTML text and the pill button
+ * are layered inside the artwork-free zone declared by the asset config.
+ */
 export function GuestCTA({
   title,
   body,
@@ -275,36 +281,36 @@ export function GuestCTA({
   body: string;
   ctaLabel: string;
   ctaTo?: string;
-  banner?: string;
+  banner: GuestCtaBanner;
 }) {
   return (
-    <section className="relative isolate min-h-[180px] overflow-hidden rounded-3xl bg-[hsl(222_47%_13%)] shadow-[0_14px_34px_rgba(15,23,42,0.28)] sm:min-h-[196px]">
-      {/* The WebP already contains the navy composition — it is the full-bleed
-          background layer of the whole CTA, never an inset banner. */}
-      {banner && (
-        <img
-          src={banner}
-          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-center"
-          {...GUEST_DECOR_IMG_PROPS}
-        />
-      )}
-      {/* Readability scrim over the artwork, left-weighted. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[hsl(222_47%_10%)]/85 via-[hsl(222_47%_10%)]/55 to-transparent"
+    <Link
+      to={ctaTo}
+      className="relative block w-full overflow-hidden bg-transparent transition-transform active:scale-[0.99] motion-reduce:transition-none"
+      style={{ aspectRatio: `${banner.ratio}` }}
+    >
+      <img
+        src={banner.url}
+        className="absolute inset-0 h-full w-full select-none object-contain"
+        {...GUEST_DECOR_IMG_PROPS}
+        loading="lazy"
       />
-      <div className="relative flex min-h-[180px] flex-col justify-center gap-2 p-5 sm:min-h-[196px]">
-        <h2 className="max-w-[74%] text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
-          {title}
-        </h2>
-        <p className="max-w-[72%] text-[12.5px] leading-snug text-white/85 sm:text-[13.5px]">{body}</p>
-        <GuestAccentButton to={ctaTo} className="mt-1 self-start">
+      <div
+        className="absolute inset-0 flex flex-col justify-center gap-[2px] py-1.5"
+        style={{ paddingLeft: banner.insetLeft, paddingRight: banner.insetRight }}
+      >
+        <p className="text-[11px] font-extrabold leading-[1.1] text-white">{title}</p>
+        <p className="line-clamp-1 text-[9px] leading-[1.2] text-white/85">{body}</p>
+        <span className="mt-[2px] inline-flex w-fit items-center gap-1 rounded-full bg-[hsl(43_96%_56%)] px-2.5 py-[4px] text-[9.5px] font-bold text-[hsl(222_47%_13%)] shadow-[0_4px_12px_rgba(15,23,42,0.28)]">
           {ctaLabel}
-        </GuestAccentButton>
+          <ChevronRight className="h-3 w-3" aria-hidden="true" />
+        </span>
       </div>
-    </section>
+
+    </Link>
   );
 }
+
 
 
 /* ------------------------------------------------------------ bottom nav */

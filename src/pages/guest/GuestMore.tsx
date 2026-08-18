@@ -9,7 +9,7 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_CTA_MOBILE } from "@/lib/guestIllustrations";
 
 const WHY_JOIN = [
   {
@@ -95,7 +95,7 @@ function GuestMoreMobile() {
         title="Unlock your student tools"
         body="Sign in to open your inbox, timetable and class announcements."
         ctaLabel="Sign in"
-        banner={GUEST_ART.learningJourneyBanner}
+        banner={GUEST_CTA_MOBILE.more}
       />
     </GuestPage>
   );

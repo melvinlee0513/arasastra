@@ -10,7 +10,7 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART, guestSubjectArt } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_CTA_MOBILE, guestSubjectArt } from "@/lib/guestIllustrations";
 import { usePublicSubjects, uniqueSubjectFamilies } from "@/lib/guestPublicContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -137,7 +137,7 @@ function GuestHomeMobile() {
         title="Learn from the best tutors"
         body="Sign in with your Aras A+ account to join your classes, quizzes and replays."
         ctaLabel="Sign in"
-        banner={GUEST_ART.bestTutorsBanner}
+        banner={GUEST_CTA_MOBILE.home}
       />
     </GuestPage>
   );

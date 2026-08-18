@@ -80,6 +80,44 @@ export const GUEST_ART = {
   learningJourneyBannerDesktop: asset("ui/learning-journey-cta-banner-desktop.webp"),
 } as const;
 
+/**
+ * Mobile guest CTA banner artwork. Each WebP already contains the navy rounded
+ * CTA surface, so the asset — not an arbitrary container height — defines the
+ * banner geometry. `ratio` is the asset's real aspect ratio and the inset
+ * percentages mark the artwork-free zone where HTML text may sit.
+ */
+export interface GuestCtaBanner {
+  url: string;
+  /** Natural width / height of the trimmed asset. */
+  ratio: number;
+  /** Left artwork inset as a percentage of banner width. */
+  insetLeft: string;
+  /** Right artwork inset as a percentage of banner width. */
+  insetRight: string;
+}
+
+export const GUEST_CTA_MOBILE: Record<"home" | "more" | "study", GuestCtaBanner> = {
+  home: {
+    url: asset("ui/cta/guest-home-best-tutors-cta-mobile.webp"),
+    ratio: 2143 / 479,
+    insetLeft: "16%",
+    insetRight: "23%",
+  },
+  more: {
+    url: asset("ui/cta/guest-more-student-tools-cta-mobile.webp"),
+    ratio: 2106 / 511,
+    insetLeft: "28%",
+    insetRight: "23%",
+  },
+  study: {
+    url: asset("ui/cta/guest-study-learning-journey-cta-mobile.webp"),
+    ratio: 2112 / 493,
+    insetLeft: "27%",
+    insetRight: "22%",
+  },
+};
+
+
 /** Decorative artwork helper props — never announced, never draggable. */
 export const GUEST_DECOR_IMG_PROPS = {
   alt: "",
