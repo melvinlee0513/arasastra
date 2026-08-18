@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { guestSubjectPreview } from "@/lib/guestIllustrations";
+
 
 export interface PublicSubject {
   id: string;
@@ -60,4 +62,29 @@ export function tutorNameForSubject(
     (t) => t.specialization && n.includes(t.specialization.toLowerCase()),
   );
   return match?.name ?? "Expert Tutor";
+}
+
+/**
+ * One entry per subject family for the guest catalogue, so generic and
+ * Form-specific rows (e.g. "Biology" and "Biology Form 4") never both appear.
+ * `preferred` names are surfaced first when the centre publishes them.
+ */
+export function uniqueSubjectFamilies(
+  subjects: PublicSubject[] | undefined,
+  limit: number,
+  preferred: string[] = [],
+): PublicSubject[] {
+  const seen = new Set<string>();
+  const unique = (subjects ?? []).filter((subject) => {
+    const key = guestSubjectPreview(subject.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const rank = (name: string) => {
+    const n = name.toLowerCase();
+    const i = preferred.findIndex((p) => n.includes(p.toLowerCase()));
+    return i === -1 ? preferred.length : i;
+  };
+  return [...unique].sort((a, b) => rank(a.name) - rank(b.name)).slice(0, limit);
 }

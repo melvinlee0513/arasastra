@@ -9,8 +9,9 @@ import {
   GuestPage,
   GuestSectionHeader,
 } from "@/components/guest/GuestChrome";
-import { GUEST_ART, guestPreviewArt, guestSubjectArt } from "@/lib/guestIllustrations";
-import { usePublicSubjects } from "@/lib/guestPublicContent";
+import { GUEST_ART, guestSubjectPreview, guestSubjectArt } from "@/lib/guestIllustrations";
+import { usePublicSubjects, uniqueSubjectFamilies } from "@/lib/guestPublicContent";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 const LEARNING_TOOLS = [
@@ -26,7 +27,9 @@ const LEARNING_TOOLS = [
  */
 function GuestStudyMobile() {
   const subjects = usePublicSubjects();
-  const previews = (subjects.data ?? []).slice(0, 6);
+  // Exactly three previews — Physics, Biology, Chemistry when published.
+  const previews = uniqueSubjectFamilies(subjects.data, 3, ["physic", "bio", "chem"]);
+
 
   return (
     <GuestPage>
@@ -85,30 +88,21 @@ function GuestStudyMobile() {
                 key={subject.id}
                 className="w-[228px] shrink-0 snap-start overflow-hidden"
               >
-                <div className="relative flex h-[124px] items-center justify-center overflow-hidden bg-[hsl(214_100%_96%)] p-2">
-                  {(() => {
-                    const preview = guestPreviewArt(subject.name);
-                    return (
-                      <img
-                        src={preview.art}
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        loading="lazy"
-                        className="object-contain"
-                        style={{
-                          width: `${preview.scale * 100}%`,
-                          height: `${preview.scale * 100}%`,
-                          objectPosition: preview.objectPosition,
-                        }}
-                      />
-                    );
-                  })()}
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-3xl bg-[hsl(214_100%_96%)]">
+                  <img
+                    src={guestSubjectPreview(subject.name)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    loading="lazy"
+                    className="h-full w-full object-cover object-center"
+                  />
                   <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10.5px] font-bold text-slate-700 backdrop-blur">
                     <Eye className="h-3 w-3" aria-hidden="true" />
                     Class preview
                   </span>
                 </div>
+
                 <div className="flex items-center gap-2.5 p-3">
                   <img
                     src={guestSubjectArt(subject.name)}
