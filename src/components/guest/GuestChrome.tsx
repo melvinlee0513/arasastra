@@ -296,16 +296,17 @@ export function GuestCTA({
         loading="lazy"
       />
       <div
-        className="absolute inset-0 flex flex-col justify-center gap-[3px] py-2"
+        className="absolute inset-0 flex flex-col justify-center gap-[2px] py-1.5"
         style={{ paddingLeft: banner.insetLeft, paddingRight: banner.insetRight }}
       >
-        <p className="text-[12.5px] font-extrabold leading-[1.15] text-white">{title}</p>
-        <p className="line-clamp-2 text-[9.5px] leading-[1.25] text-white/85">{body}</p>
-        <span className="mt-[3px] inline-flex w-fit items-center gap-1 rounded-full bg-[hsl(43_96%_56%)] px-2.5 py-[5px] text-[10px] font-bold text-[hsl(222_47%_13%)] shadow-[0_4px_12px_rgba(15,23,42,0.28)]">
+        <p className="text-[11px] font-extrabold leading-[1.1] text-white">{title}</p>
+        <p className="line-clamp-1 text-[9px] leading-[1.2] text-white/85">{body}</p>
+        <span className="mt-[2px] inline-flex w-fit items-center gap-1 rounded-full bg-[hsl(43_96%_56%)] px-2.5 py-[4px] text-[9.5px] font-bold text-[hsl(222_47%_13%)] shadow-[0_4px_12px_rgba(15,23,42,0.28)]">
           {ctaLabel}
           <ChevronRight className="h-3 w-3" aria-hidden="true" />
         </span>
       </div>
+
     </Link>
   );
 }
