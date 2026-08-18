@@ -2776,6 +2776,8 @@ export type Database = {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json
       }
+      admin_delete_class: { Args: { p_class_id: string }; Returns: Json }
+      admin_delete_subject: { Args: { p_subject_id: string }; Returns: Json }
       admin_delete_user_account: { Args: { _target: string }; Returns: Json }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       bulk_enroll_students: {
@@ -2827,6 +2829,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_class_delete_impact: { Args: { p_class_id: string }; Returns: Json }
       get_flashcard_deck_for_manager: {
         Args: { _deck_id: string }
         Returns: Json
