@@ -80,6 +80,8 @@ export interface HeroColorPreset {
   background: string;
   /** Canonical illustrated Home hero background (WebP in /public). */
   image: string;
+  /** Wider desktop variant of the same illustrated hero card. */
+  imageDesktop: string;
   /**
    * Accessible darker shade of the same hue, used for text/labels on a very
    * light tinted background (bright hues like yellow need this).
@@ -100,6 +102,7 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Red",
     background: "#EF4444",
     image: "/assets/illustrations/ui/student-home-hero-background-red.webp",
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-red-desktop.webp",
     foreground: "#B91C1C",
     icon: "#DC2626",
   },
@@ -108,6 +111,7 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Blue",
     background: "#2563EB",
     image: "/assets/illustrations/ui/student-home-hero-background-blue.webp",
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-blue-desktop.webp",
     foreground: "#1D4ED8",
     icon: "#2563EB",
   },
@@ -116,6 +120,8 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Purple",
     background: "#7C3AED",
     image: "/assets/illustrations/ui/student-home-hero-background-purple.webp",
+    // NOTE: the uploaded purple desktop asset ships with this filename spelling.
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-purplse-desktop.webp",
     foreground: "#6D28D9",
     icon: "#7C3AED",
   },
@@ -124,6 +130,7 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Green",
     background: "#16A34A",
     image: "/assets/illustrations/ui/student-home-hero-background-green.webp",
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-green-desktop.webp",
     foreground: "#15803D",
     icon: "#16A34A",
   },
@@ -132,6 +139,7 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Yellow",
     background: "#FACC15",
     image: "/assets/illustrations/ui/student-home-hero-background-yellow.webp",
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-yellow-desktop.webp",
     // Bright hue: text and icon need a much darker amber to stay readable.
     foreground: "#92400E",
     icon: "#B45309",
@@ -141,6 +149,7 @@ export const HERO_COLOR_PRESETS: HeroColorPreset[] = [
     label: "Orange",
     background: "#F97316",
     image: "/assets/illustrations/ui/student-home-hero-background-orange.webp",
+    imageDesktop: "/assets/illustrations/ui/student-home-hero-background-orange-desktop.webp",
     foreground: "#C2410C",
     icon: "#EA580C",
   },
@@ -158,8 +167,12 @@ export function heroPresetFor(key: string | null | undefined): HeroColorPreset {
 }
 
 /** Background illustration for a stored preference value. */
-export function heroBackgroundFor(key: string | null | undefined): string {
-  return heroPresetFor(key).image;
+export function heroBackgroundFor(
+  key: string | null | undefined,
+  variant: "mobile" | "desktop" = "mobile",
+): string {
+  const preset = heroPresetFor(key);
+  return variant === "desktop" ? preset.imageDesktop : preset.image;
 }
 
 /* ------------------------- personal accent tokens ------------------------- */
