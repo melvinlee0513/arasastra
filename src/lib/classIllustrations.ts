@@ -9,6 +9,8 @@
  * the JS graph and can be lazily fetched by the browser.
  */
 
+import { subjectArtFamily } from "@/lib/subjectConfig";
+
 const BASE = "/assets/illustrations";
 
 /** Encodes path segments (the "additional mathematics" folder contains a space). */
@@ -224,12 +226,11 @@ const GENERIC_ART: Omit<SubjectArtSet, "key"> = {
 export function subjectArtSet(
   subjectName?: string | null,
   classTitle?: string | null,
+  subjectKey?: string | null,
 ): SubjectArtSet {
-  for (const candidate of [subjectName, classTitle]) {
-    if (!candidate) continue;
-    const hit = SUBJECT_FAMILIES.find((f) => f.match.test(candidate));
-    if (hit) return { key: hit.key, ...hit.art };
-  }
+  const family = subjectArtFamily(subjectKey, subjectName, classTitle);
+  const hit = family ? SUBJECT_FAMILIES.find((f) => f.key === family) : undefined;
+  if (hit) return { key: hit.key, ...hit.art };
   return { key: "generic", ...GENERIC_ART };
 }
 
@@ -289,8 +290,9 @@ export interface ClassTileArt {
 export function classTileArt(
   subjectName?: string | null,
   classTitle?: string | null,
+  subjectKey?: string | null,
 ): ClassTileArt {
-  const { key } = subjectArtSet(subjectName, classTitle);
+  const { key } = subjectArtSet(subjectName, classTitle, subjectKey);
   return {
     key,
     src: CLASS_TILE_ART[key] ?? null,
