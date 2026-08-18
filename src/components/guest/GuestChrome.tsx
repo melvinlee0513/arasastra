@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { ChevronRight, Eye, Home, LayoutGrid, Lock, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GUEST_ART, GUEST_DECOR_IMG_PROPS } from "@/lib/guestIllustrations";
+import { GUEST_ART, GUEST_DECOR_IMG_PROPS, type GuestCtaBanner } from "@/lib/guestIllustrations";
 
 /* ------------------------------------------------------------------ page */
 
