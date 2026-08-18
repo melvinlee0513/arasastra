@@ -233,39 +233,59 @@ export default function CurriculumManager() {
                   const active = s.id === selectedSubjectId;
                   return (
                     <li key={s.id}>
-                      <button
-                        onClick={() => {
-                          setSelectedSubjectId(s.id);
-                          setSelectedClassId(null);
-                        }}
+                      <div
                         className={cn(
-                          "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
-                          active
-                            ? "text-white shadow-sm"
-                            : "text-slate-700 hover:bg-slate-100/70",
+                          "flex items-center gap-1 rounded-xl transition-all",
+                          active ? "shadow-sm" : "hover:bg-slate-100/70",
                         )}
                         style={active ? { backgroundColor: ELECTRIC_BLUE } : undefined}
                       >
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{s.name}</div>
-                          {s.description && (
-                            <div
-                              className={cn(
-                                "text-xs truncate",
-                                active ? "text-white/80" : "text-slate-500",
-                              )}
-                            >
-                              {s.description}
-                            </div>
-                          )}
-                        </div>
-                        <ChevronRight
+                        <button
+                          onClick={() => {
+                            setSelectedSubjectId(s.id);
+                            setSelectedClassId(null);
+                          }}
                           className={cn(
-                            "h-4 w-4 shrink-0",
-                            active ? "text-white" : "text-slate-400",
+                            "min-w-0 flex-1 flex items-center justify-between gap-3 px-3 py-2.5 text-left",
+                            active ? "text-white" : "text-slate-700",
                           )}
-                        />
-                      </button>
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {subjectLabel(s.subject_key, s.name)}
+                            </div>
+                            {s.description && (
+                              <div
+                                className={cn(
+                                  "text-xs truncate",
+                                  active ? "text-white/80" : "text-slate-500",
+                                )}
+                              >
+                                {s.description}
+                              </div>
+                            )}
+                          </div>
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 shrink-0",
+                              active ? "text-white" : "text-slate-400",
+                            )}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Edit ${subjectLabel(s.subject_key, s.name)}`}
+                          onClick={() => setEditSubject(s)}
+                          className={cn(
+                            "mr-2 rounded-full p-1.5 transition-colors",
+                            active
+                              ? "text-white/80 hover:bg-white/20 hover:text-white"
+                              : "text-slate-400 hover:bg-slate-200/70 hover:text-slate-700",
+                          )}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -280,7 +300,9 @@ export default function CurriculumManager() {
             <div className="flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-slate-600" />
               <h2 className="text-sm font-semibold text-slate-800">
-                {selectedSubject ? `Classes · ${selectedSubject.name}` : "Classes"}
+                {selectedSubject
+                  ? `Classes · ${subjectLabel(selectedSubject.subject_key, selectedSubject.name)}`
+                  : "Classes"}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -322,8 +344,21 @@ export default function CurriculumManager() {
                 Select a subject to see its classes.
               </div>
             ) : classes.length === 0 ? (
-              <div className="p-10 text-center text-sm text-slate-400">
-                No cohorts yet for {selectedSubject.name}.
+              <div className="p-10 flex flex-col items-center gap-2 text-center">
+                <GraduationCap className="h-8 w-8 text-slate-300" />
+                <p className="text-sm font-semibold text-slate-700">No classes yet</p>
+                <p className="text-sm text-slate-500">
+                  Create your first class under{" "}
+                  {subjectLabel(selectedSubject.subject_key, selectedSubject.name)}.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setClassModalOpen(true)}
+                  className="mt-2 rounded-full h-8 px-4 text-white shadow-sm hover:opacity-90"
+                  style={{ backgroundColor: ELECTRIC_BLUE }}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Spawn class
+                </Button>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -340,11 +375,11 @@ export default function CurriculumManager() {
                         ? assignedNames.join(", ")
                         : `${assignedNames.length} tutors assigned`;
                   return (
-                    <li key={c.id}>
+                    <li key={c.id} className="relative">
                       <button
                         onClick={() => setSelectedClassId(c.id)}
                         className={cn(
-                          "w-full flex items-center justify-between gap-4 p-4 rounded-xl border text-left transition-all",
+                          "w-full flex items-center justify-between gap-4 p-4 pr-14 rounded-xl border text-left transition-all",
                           active
                             ? "border-transparent shadow-md ring-2"
                             : "border-slate-200 hover:border-slate-300 bg-white/60",
@@ -374,6 +409,41 @@ export default function CurriculumManager() {
                           {enrollmentCounts[c.id] ?? 0} enrolled
                         </Badge>
                       </button>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Actions for ${c.title}`}
+                              className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onSelect={() => setEditClass(c)}>
+                              Edit class
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setSelectedClassId(c.id);
+                                setAssignTutorsOpen(true);
+                              }}
+                            >
+                              Assign tutors
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setSelectedClassId(c.id);
+                                setEnrollModalOpen(true);
+                              }}
+                            >
+                              Enroll students
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </li>
                   );
                 })}
@@ -384,10 +454,35 @@ export default function CurriculumManager() {
       </div>
 
       {/* Modals */}
+      {editSubject && (
+        <EditSubjectModal
+          subject={editSubject}
+          centerId={currentTenantId}
+          onClose={() => setEditSubject(null)}
+          onSaved={() => {
+            setEditSubject(null);
+            void loadAll();
+          }}
+        />
+      )}
+      {editClass && (
+        <EditClassModal
+          klass={editClass}
+          centerId={currentTenantId}
+          onClose={() => setEditClass(null)}
+          onSaved={() => {
+            setEditClass(null);
+            if (selectedSubjectId) void loadClasses(selectedSubjectId);
+          }}
+        />
+      )}
       <SubjectModal
         open={subjectModalOpen}
         onOpenChange={setSubjectModalOpen}
         centerId={currentTenantId}
+        existingKeys={subjects
+          .map((s) => s.subject_key)
+          .filter((k): k is string => Boolean(k))}
         onCreated={() => {
           setSubjectModalOpen(false);
           void loadAll();
