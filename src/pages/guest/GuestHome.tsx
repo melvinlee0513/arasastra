@@ -137,7 +137,7 @@ function GuestHomeMobile() {
         title="Learn from the best tutors"
         body="Sign in with your Aras A+ account to join your classes, quizzes and replays."
         ctaLabel="Sign in"
-        banner={GUEST_ART.bestTutorsBanner}
+        banner={GUEST_CTA_MOBILE.home}
       />
     </GuestPage>
   );
