@@ -611,21 +611,27 @@ function SubjectModal({
     if (!option || taken.has(option.key)) return;
     setSaving(true);
     // Identity is the canonical key; the label is derived, never user-typed.
-    const { error } = await supabase.from("subjects").insert({
-      name: option.label,
-      subject_key: option.key,
-      description: description.trim() || null,
-      center_id: centerId,
-      is_active: true,
+    // The RPC restores a previously removed (archived) tenant subject with the
+    // same canonical key instead of creating a duplicate row.
+    const { data, error } = await supabase.rpc("admin_create_or_restore_subject", {
+      p_center_id: centerId,
+      p_subject_key: option.key,
+      p_name: option.label,
+      p_description: description.trim() || null,
     });
     setSaving(false);
     if (error) {
       showSupabaseError(error, "Could not create subject");
       return;
     }
+    const action = ((data ?? {}) as Record<string, unknown>).action as string | undefined;
     setSubjectKey("");
     setDescription("");
-    toast.success("Subject created");
+    toast.success(
+      action === "restored"
+        ? `${option.label} restored with its previous records`
+        : "Subject created",
+    );
     onCreated();
   }
 
