@@ -2776,6 +2776,15 @@ export type Database = {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json
       }
+      admin_create_or_restore_subject: {
+        Args: {
+          p_center_id: string
+          p_description?: string
+          p_name: string
+          p_subject_key: string
+        }
+        Returns: Json
+      }
       admin_delete_class: { Args: { p_class_id: string }; Returns: Json }
       admin_delete_subject: { Args: { p_subject_id: string }; Returns: Json }
       admin_delete_user_account: { Args: { _target: string }; Returns: Json }
@@ -2907,6 +2916,10 @@ export type Database = {
       }
       get_student_xp_leaderboard: {
         Args: { _limit?: number; _period?: string }
+        Returns: Json
+      }
+      get_subject_delete_impact: {
+        Args: { p_subject_id: string }
         Returns: Json
       }
       get_user_center: { Args: { _user_id?: string }; Returns: string }

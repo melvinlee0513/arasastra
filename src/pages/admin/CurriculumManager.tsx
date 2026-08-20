@@ -611,21 +611,27 @@ function SubjectModal({
     if (!option || taken.has(option.key)) return;
     setSaving(true);
     // Identity is the canonical key; the label is derived, never user-typed.
-    const { error } = await supabase.from("subjects").insert({
-      name: option.label,
-      subject_key: option.key,
-      description: description.trim() || null,
-      center_id: centerId,
-      is_active: true,
+    // The RPC restores a previously removed (archived) tenant subject with the
+    // same canonical key instead of creating a duplicate row.
+    const { data, error } = await supabase.rpc("admin_create_or_restore_subject", {
+      p_center_id: centerId,
+      p_subject_key: option.key,
+      p_name: option.label,
+      p_description: description.trim() || null,
     });
     setSaving(false);
     if (error) {
       showSupabaseError(error, "Could not create subject");
       return;
     }
+    const action = ((data ?? {}) as Record<string, unknown>).action as string | undefined;
     setSubjectKey("");
     setDescription("");
-    toast.success("Subject created");
+    toast.success(
+      action === "restored"
+        ? `${option.label} restored with its previous records`
+        : "Subject created",
+    );
     onCreated();
   }
 
@@ -1378,10 +1384,14 @@ function EditClassModal({
 }
 
 /* ─── Delete Subject ───
-   Tenant-scoped and class-safe: `admin_delete_subject` blocks the delete while
-   any class still references the subject, so nothing cascades away silently.
-   Only the tenant-owned subject row is removed — the canonical subject_key
-   stays globally available and other tenants are untouched. */
+   Tenant-scoped and lifecycle aware. `get_subject_delete_impact` reports the
+   active vs archived class counts, then `admin_delete_subject`:
+     • blocks while any ACTIVE class references the subject,
+     • hard-deletes when nothing (active, archived or historical) references it,
+     • otherwise removes it from the active curriculum but keeps the row so
+       archived classes and historical records retain their subject identity.
+   The canonical subject_key stays globally available and other tenants are
+   untouched; re-adding the same subject restores this row. */
 function DeleteSubjectDialog({
   subject,
   onClose,
@@ -1392,8 +1402,37 @@ function DeleteSubjectDialog({
   onDeleted: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [blockedCount, setBlockedCount] = useState<number | null>(null);
+  const [impact, setImpact] = useState<{
+    action: "blocked" | "archived" | "deleted";
+    active_classes: number;
+    archived_classes: number;
+  } | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const label = subjectLabel(subject.subject_key, subject.name);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("get_subject_delete_impact", {
+        p_subject_id: subject.id,
+      });
+      if (cancelled) return;
+      if (error) {
+        showSupabaseError(error, "Couldn't check this subject");
+        setLoadError(true);
+        return;
+      }
+      const r = (data ?? {}) as Record<string, unknown>;
+      setImpact({
+        action: (r.action as "blocked" | "archived" | "deleted") ?? "deleted",
+        active_classes: Number(r.active_classes ?? 0),
+        archived_classes: Number(r.archived_classes ?? 0),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [subject.id]);
 
   async function run() {
     setBusy(true);
@@ -1402,28 +1441,54 @@ function DeleteSubjectDialog({
     });
     setBusy(false);
     if (error) {
-      showSupabaseError(error, "Unable to delete subject");
+      showSupabaseError(error, "Unable to remove subject");
       return;
     }
-    const result = (data ?? {}) as { mode?: string; class_count?: number };
-    if (result.mode === "blocked") {
-      setBlockedCount(result.class_count ?? 0);
+    const result = (data ?? {}) as Record<string, unknown>;
+    const action = (result.action as string) ?? "deleted";
+    if (action === "blocked") {
+      setImpact({
+        action: "blocked",
+        active_classes: Number(result.active_classes ?? 0),
+        archived_classes: Number(result.archived_classes ?? 0),
+      });
       return;
     }
-    toast.success(`${label} deleted`);
+    toast.success(
+      action === "archived"
+        ? `${label} removed from your curriculum`
+        : `${label} deleted`,
+    );
     onDeleted(subject.id);
   }
 
-  if (blockedCount !== null) {
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+  if (loadError) {
     return (
       <AlertDialog open onOpenChange={(v) => !v && onClose()}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cannot delete {label}</AlertDialogTitle>
+            <AlertDialogTitle>Couldn't check {label}</AlertDialogTitle>
+            <AlertDialogDescription>Please try again in a moment.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  if (impact?.action === "blocked") {
+    return (
+      <AlertDialog open onOpenChange={(v) => !v && onClose()}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot remove {label}</AlertDialogTitle>
             <AlertDialogDescription>
-              This subject still contains {blockedCount}{" "}
-              {blockedCount === 1 ? "class" : "classes"}. Delete or move these classes
-              before deleting the subject.
+              This subject still contains {plural(impact.active_classes, "active class", "active classes")}.
+              Delete or archive those classes before removing this subject.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1434,14 +1499,35 @@ function DeleteSubjectDialog({
     );
   }
 
+  const keepsHistory = impact?.action === "archived";
+
   return (
     <AlertDialog open onOpenChange={(v) => !v && onClose()}>
       <AlertDialogContent className="rounded-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {label}?</AlertDialogTitle>
+          <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Deleting this subject may also affect classes and learning content associated
-            with it. This action cannot be undone.
+            {!impact ? (
+              "Checking this subject…"
+            ) : keepsHistory ? (
+              <>
+                {label} has no active classes
+                {impact.archived_classes > 0
+                  ? `, but historical records from ${plural(
+                      impact.archived_classes,
+                      "archived class",
+                      "archived classes",
+                    )} are retained`
+                  : ", but earlier learning records still reference it"}
+                . {label} will be removed from your active curriculum while its historical
+                learning records are preserved. You can add it back later.
+              </>
+            ) : (
+              <>
+                {label} has no classes or learning records, so it will be removed permanently.
+                You can add it again at any time.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -1449,14 +1535,14 @@ function DeleteSubjectDialog({
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            disabled={busy}
+            disabled={busy || !impact}
             onClick={(e) => {
               e.preventDefault();
               void run();
             }}
             className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {busy ? "Deleting…" : "Delete subject"}
+            {busy ? "Removing…" : "Remove subject"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
