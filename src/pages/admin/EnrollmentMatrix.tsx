@@ -103,6 +103,7 @@ export default function EnrollmentMatrix() {
         .from("classes")
         .select("id, title, class_name, schedule_label, academic_year, status, subjects(name)")
         .eq("center_id", currentTenantId!)
+        .neq("status", "archived")
         .order("status", { ascending: true })
         .order("class_name", { ascending: true, nullsFirst: false });
       if (error) throw error;
