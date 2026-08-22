@@ -286,8 +286,10 @@ export function ClassShell({
                       </Badge>
                     )}
                     {/* Next-session timestamp is desktop-only — the mobile
-                        header keeps title, schedule, subject and tutor. */}
-                    {k.scheduled_at && (
+                        header keeps title, schedule, subject and tutor. A past
+                        one-off `scheduled_at` is never shown as "Next"; the
+                        recurring pattern in `schedule_label` covers that case. */}
+                    {k.scheduled_at && new Date(k.scheduled_at).getTime() > Date.now() && (
                       <Badge variant="secondary" className="rounded-full hidden md:inline-flex">
                         <Calendar className="w-3 h-3 mr-1" /> Next:{" "}
                         {new Date(k.scheduled_at).toLocaleString()}
