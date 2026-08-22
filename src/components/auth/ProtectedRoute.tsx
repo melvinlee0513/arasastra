@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { workspaceHomePath } from "@/lib/roleRoutes";
 
 type RequiredRole = "admin" | "student" | "tutor" | "authenticated";
 
@@ -23,6 +24,9 @@ export function ProtectedRoute({
   const location = useLocation();
   const { toast } = useToast();
   const hasToasted = useRef(false);
+  // Canonical workspace for this account, so an unauthorized visit never bounces
+  // a tutor through the student shell on its way to /tutor.
+  const homePath = workspaceHomePath({ isAdmin, isTutor });
 
   // Show loading spinner while checking auth
   if (isLoading) {
@@ -51,7 +55,7 @@ export function ProtectedRoute({
         variant: "destructive",
       });
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={homePath} replace />;
   }
 
   // Tutor-only route check (admins have full access)
@@ -64,7 +68,7 @@ export function ProtectedRoute({
         variant: "destructive",
       });
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={homePath} replace />;
   }
 
   // Role-specific checks
@@ -77,7 +81,7 @@ export function ProtectedRoute({
         variant: "destructive",
       });
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={homePath} replace />;
   }
 
   return <>{children}</>;
