@@ -5,20 +5,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-
-interface UpcomingClass {
-  id: string;
-  title: string;
-  scheduled_at: string;
-  subject_name: string;
-}
+import { useTutorNextClasses } from "@/lib/tutorSchedule";
 
 interface TutorStats {
   totalStudents: number;
   activeReplays: number;
   pendingQuestions: number;
   assignedClassCount: number;
-  upcomingClasses: UpcomingClass[];
+  /** Class identity only — schedule comes from the canonical recurrence RPC. */
+  classMeta: Record<string, { title: string; subject_name: string }>;
 }
 
 export function TutorDashboard() {
@@ -26,6 +21,9 @@ export function TutorDashboard() {
   const [stats, setStats] = useState<TutorStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasTutorAccess, setHasTutorAccess] = useState(true);
+  // Canonical recurring schedule — identical source to Tutor My Classes and the
+  // student timetable surfaces.
+  const nextClasses = useTutorNextClasses();
 
   useEffect(() => {
     if (user?.id) fetchTutorData();
@@ -59,7 +57,7 @@ export function TutorDashboard() {
           activeReplays: 0,
           pendingQuestions: 0,
           assignedClassCount: 0,
-          upcomingClasses: [],
+          classMeta: {},
         });
         setIsLoading(false);
         return;
@@ -72,16 +70,13 @@ export function TutorDashboard() {
         .in("id", classIds)
         .order("scheduled_at", { ascending: true });
 
-      const now = new Date();
-      const upcoming: UpcomingClass[] = (classes || [])
-        .filter((c) => c.scheduled_at && new Date(c.scheduled_at) > now)
-        .slice(0, 5)
-        .map((c) => ({
-          id: c.id,
+      const classMeta: TutorStats["classMeta"] = {};
+      (classes || []).forEach((c) => {
+        classMeta[c.id] = {
           title: c.title,
-          scheduled_at: c.scheduled_at as string,
           subject_name: (c.subject as { name?: string } | null)?.name || "General",
-        }));
+        };
+      });
 
       const activeReplays = (classes || []).filter((c) => c.video_url).length;
 
@@ -101,7 +96,7 @@ export function TutorDashboard() {
         activeReplays,
         pendingQuestions: commentsRes.count ?? 0,
         assignedClassCount: classIds.length,
-        upcomingClasses: upcoming,
+        classMeta,
       });
     } catch (error) {
       console.error("Error fetching tutor data:", error);
@@ -137,6 +132,10 @@ export function TutorDashboard() {
       </div>
     );
   }
+
+  const upcoming = nextClasses.upcoming
+    .filter((n) => stats?.classMeta[n.class_id])
+    .slice(0, 5);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -193,33 +192,45 @@ export function TutorDashboard() {
               No classes assigned yet. Contact your centre administrator.
             </p>
           </Card>
-        ) : stats?.upcomingClasses.length === 0 ? (
+        ) : nextClasses.isLoading ? (
+          <Skeleton className="h-24 rounded-2xl" />
+        ) : upcoming.length === 0 ? (
           <Card className="p-6 bg-card border-border rounded-3xl text-center">
-            <p className="text-muted-foreground">No upcoming classes scheduled</p>
+            <p className="text-muted-foreground">No upcoming class scheduled</p>
           </Card>
         ) : (
           <div className="space-y-2">
-            {stats?.upcomingClasses.map((c) => (
-              <Card key={c.id} className="p-4 bg-card border-border rounded-2xl hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-primary" />
+            {upcoming.map((c) => {
+              const meta = stats?.classMeta[c.class_id];
+              return (
+                <Card
+                  key={c.class_id}
+                  className="p-4 bg-card border-border rounded-2xl hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-foreground truncate">
+                        {meta?.title ?? "Class"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {meta?.subject_name ?? "General"}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-medium text-primary">
+                        {format(new Date(c.starts_at), "EEE, MMM d")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(c.starts_at), "h:mm a")}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{c.title}</h3>
-                    <p className="text-sm text-muted-foreground">{c.subject_name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-primary">
-                      {format(new Date(c.scheduled_at), "MMM d")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(c.scheduled_at), "h:mm a")}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
