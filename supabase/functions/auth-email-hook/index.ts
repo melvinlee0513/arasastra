@@ -340,7 +340,22 @@ async function handleWebhook(req: Request): Promise<Response> {
   const recoveryTokenHash =
     (payload.data as { token_hash?: string; tokenHash?: string }).token_hash ??
     (payload.data as { tokenHash?: string }).tokenHash ??
-    null
+    // Fallback: the auth backend action URL is /auth/v1/verify?token=<hashed
+    // token>&type=recovery. That `token` value IS the token hash, so we can
+    // always build a direct link to the Aras A+ reset screen instead of letting
+    // the backend redirect with a hash-fragment session (which supabase-js
+    // consumes before the reset screen can read it).
+    (() => {
+      try {
+        const raw = payload.data.url ? new URL(payload.data.url) : null
+        const t = raw?.searchParams.get('token')
+        const kind = raw?.searchParams.get('type')
+        return t && kind === 'recovery' ? t : null
+      } catch {
+        return null
+      }
+    })()
+
   const confirmationUrl =
     emailType === 'recovery' && recoveryTokenHash
       ? `https://${safeHost}/auth/reset-password?token_hash=${encodeURIComponent(

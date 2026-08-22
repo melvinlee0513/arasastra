@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { validatePasswordPair, MIN_PASSWORD_LENGTH } from "@/lib/passwordRules";
+import { initialUrlHashParams, initialUrlSearchParams } from "@/lib/authUrlSnapshot";
 import owlMascot from "@/assets/owl-mascot.png";
 
 type Mode = "request" | "recover" | "expired" | "done";
@@ -20,16 +21,20 @@ interface RecoveryIntent {
 }
 
 function readRecoveryIntent(): RecoveryIntent {
-  const query = new URLSearchParams(window.location.search);
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const linkType = query.get("type") ?? hash.get("type");
-  const rawTokenHash = query.get("token_hash");
+  // Read the URL as it was originally delivered — supabase-js may already have
+  // consumed hash tokens and rewritten the address bar to a bare `#`.
+  const query = initialUrlSearchParams();
+  const hash = initialUrlHashParams();
+  const liveQuery = new URLSearchParams(window.location.search);
+  const linkType = query.get("type") ?? hash.get("type") ?? liveQuery.get("type");
+  const rawTokenHash = query.get("token_hash") ?? liveQuery.get("token_hash");
 
   return {
     tokenHash: rawTokenHash && linkType === "recovery" ? rawTokenHash : null,
-    hasLegacyRecoveryHash:
-      linkType === "recovery" &&
-      (hash.has("access_token") || hash.has("refresh_token")),
+    // A recovery redirect from the auth backend arrives with a session in the
+    // hash. `type` is not always present, so treat any access/refresh token in
+    // the original hash as a recovery hand-off on this screen.
+    hasLegacyRecoveryHash: hash.has("access_token") || hash.has("refresh_token"),
     hasUrlError: Boolean(
       query.get("error") ??
         query.get("error_code") ??
@@ -39,6 +44,7 @@ function readRecoveryIntent(): RecoveryIntent {
     hasInvalidRecoveryQuery: Boolean(rawTokenHash && linkType !== "recovery"),
   };
 }
+
 
 /**
  * Password recovery + reset-request screen.

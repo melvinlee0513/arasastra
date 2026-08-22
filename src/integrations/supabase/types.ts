@@ -2789,6 +2789,7 @@ export type Database = {
       admin_delete_subject: { Args: { p_subject_id: string }; Returns: Json }
       admin_delete_user_account: { Args: { _target: string }; Returns: Json }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
+      auth_user_exists: { Args: { _email: string }; Returns: boolean }
       bulk_enroll_students: {
         Args: {
           requested_class_id: string
@@ -2804,6 +2805,15 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      claim_invitation_for_signup: {
+        Args: { _token: string }
+        Returns: {
+          center_id: string
+          email: string
+          id: string
+          role: string
+        }[]
+      }
       class_occurrences: {
         Args: {
           _from: string
@@ -2813,6 +2823,17 @@ export type Database = {
           _until: string
         }
         Returns: string[]
+      }
+      create_center_invitations: {
+        Args: { _center_id: string; _invites: Json; _ttl_hours?: number }
+        Returns: {
+          email: string
+          expires_at: string
+          invitation_id: string
+          result: string
+          role: string
+          token: string
+        }[]
       }
       delete_class_about_section: {
         Args: { p_section_id: string }
@@ -2948,6 +2969,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_center_account_status: {
+        Args: { _center_id: string }
+        Returns: {
+          email: string
+          email_verified: boolean
+          last_sign_in_at: string
+          user_id: string
+        }[]
+      }
       list_center_invitations: {
         Args: { _center_id: string }
         Returns: {
@@ -3078,6 +3108,10 @@ export type Database = {
           expires_at: string
           token: string
         }[]
+      }
+      release_invitation_claim: {
+        Args: { _invitation_id: string }
+        Returns: boolean
       }
       release_quiz_results: { Args: { _quiz_id: string }; Returns: string }
       reorder_class_about_sections: {
