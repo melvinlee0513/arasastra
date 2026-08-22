@@ -262,7 +262,7 @@ export function ResetPasswordPage() {
         <div className="text-center space-y-3">
           <div className="relative w-20 h-20 mx-auto">
             <img src={owlMascot} alt="Aras A+" className="w-20 h-20 object-contain" />
-            <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-card">
+            <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-success text-success-foreground flex items-center justify-center ring-4 ring-card">
               <Check className="w-4 h-4" strokeWidth={3} />
             </span>
           </div>
