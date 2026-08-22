@@ -47,6 +47,10 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Success (confirmation states — never used for brand accents) */
+    --success: 152 68% 40%;
+    --success-foreground: 0 0% 100%;
+
     --radius: 1rem;
 
     /* Aras A+ brand tokens (overridable per tenant via theme_config).
@@ -182,6 +186,9 @@
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
+
+    --success: 152 62% 38%;
+    --success-foreground: 0 0% 100%;
 
     --sidebar-background: 220 50% 6%;
     --sidebar-foreground: 40 25% 92%;

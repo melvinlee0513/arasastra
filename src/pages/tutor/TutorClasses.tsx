@@ -10,6 +10,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { format } from "date-fns";
+import { useTutorNextClasses } from "@/lib/tutorSchedule";
 
 type AssignedClass = {
   id: string;
@@ -22,15 +23,6 @@ type AssignedClass = {
   center_id: string | null;
   subject: { name: string | null; icon: string | null } | null;
 };
-
-/** One row of `get_tutor_next_classes` — next real occurrence per class. */
-interface TutorNextClass {
-  class_id: string;
-  starts_at: string;
-  ends_at: string;
-  duration_minutes: number;
-  in_progress: boolean;
-}
 
 export function TutorClasses() {
   const { user, hasRole } = useAuth();
@@ -65,18 +57,7 @@ export function TutorClasses() {
   // Canonical schedule source — the same recurrence expansion the student
   // Timetable and Study cards use, so "next session" never shows a stale
   // one-off date.
-  const nextQuery = useQuery({
-    queryKey: ["tutor-next-classes", currentTenantId ?? null, user?.id ?? null],
-    enabled,
-    staleTime: 60_000,
-    queryFn: async (): Promise<TutorNextClass[]> => {
-      const { data, error } = await supabase.rpc("get_tutor_next_classes", {
-        _horizon_days: 60,
-      });
-      if (error) throw error;
-      return Array.isArray(data) ? (data as unknown as TutorNextClass[]) : [];
-    },
-  });
+  const nextQuery = useTutorNextClasses();
 
   if (classesQuery.error) showSupabaseError(classesQuery.error, "Could not load your classes");
 
@@ -91,13 +72,9 @@ export function TutorClasses() {
     );
   }
 
-  const nextByClass = new Map<string, TutorNextClass>(
-    (nextQuery.data ?? []).map((n) => [n.class_id, n]),
-  );
-
   const classes = (classesQuery.data ?? []).slice().sort((a, b) => {
-    const an = nextByClass.get(a.id)?.starts_at;
-    const bn = nextByClass.get(b.id)?.starts_at;
+    const an = nextQuery.byClass.get(a.id)?.starts_at;
+    const bn = nextQuery.byClass.get(b.id)?.starts_at;
     if (an && bn) return new Date(an).getTime() - new Date(bn).getTime();
     if (an) return -1;
     if (bn) return 1;
@@ -120,7 +97,7 @@ export function TutorClasses() {
       ) : (
         <div className="space-y-3">
           {classes.map((cls) => {
-            const next = nextByClass.get(cls.id);
+            const next = nextQuery.byClass.get(cls.id);
             // Status is derived from the canonical class record, never from a
             // single past `scheduled_at` value.
             const isArchived = cls.status !== "active";

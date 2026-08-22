@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { Loader2, ArrowLeft, Mail, Eye, EyeOff, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Eye, EyeOff, ShieldAlert, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -260,16 +260,24 @@ export function ResetPasswordPage() {
     return shell(
       <>
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto rounded-full bg-accent/10 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-accent" />
+          <div className="relative w-20 h-20 mx-auto">
+            <img src={owlMascot} alt="Aras A+" className="w-20 h-20 object-contain" />
+            <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-success text-success-foreground flex items-center justify-center ring-4 ring-card">
+              <Check className="w-4 h-4" strokeWidth={3} />
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Password updated</h1>
+          <h1 className="text-2xl font-bold text-foreground">Password updated!</h1>
           <p className="text-muted-foreground text-sm">
-            Your password has been changed successfully. You can now sign in using your new password.
+            Your password has been changed successfully. You can now sign in using your new
+            password.
           </p>
+          <p className="text-xs text-muted-foreground">Your old password will no longer work.</p>
         </div>
-        <Button className="w-full" onClick={() => navigate("/auth", { replace: true })}>
-          Back to login
+        <Button
+          className="w-full h-11 rounded-full"
+          onClick={() => navigate("/auth", { replace: true })}
+        >
+          Proceed to Login
         </Button>
       </>,
     );
