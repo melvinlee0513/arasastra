@@ -50,7 +50,9 @@ export function EditProfileSheet({
   const [state, setState] = useState<ProfileEditorState>(INITIAL_STATE);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  useHideBottomNav(open);
+  const isMobile = useIsMobile();
+
+  useHideBottomNav(open && isMobile);
 
   const handleStateChange = useCallback((next: ProfileEditorState) => setState(next), []);
 
