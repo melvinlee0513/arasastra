@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Calendar, Video } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +9,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { showSupabaseError } from "@/lib/supabaseErrors";
-import { format, isAfter, isBefore, addMinutes } from "date-fns";
+import { format } from "date-fns";
 
 type AssignedClass = {
   id: string;
   title: string;
-  scheduled_at: string;
+  status: string;
+  scheduled_at: string | null;
   duration_minutes: number | null;
   is_live: boolean | null;
   zoom_link: string | null;
@@ -22,32 +23,31 @@ type AssignedClass = {
   subject: { name: string | null; icon: string | null } | null;
 };
 
+/** One row of `get_tutor_next_classes` — next real occurrence per class. */
+interface TutorNextClass {
+  class_id: string;
+  starts_at: string;
+  ends_at: string;
+  duration_minutes: number;
+  in_progress: boolean;
+}
+
 export function TutorClasses() {
   const { user, hasRole } = useAuth();
   const { currentTenantId } = useTenant();
-  const [classes, setClasses] = useState<AssignedClass[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   const isTutor = hasRole("tutor");
+  const enabled = !!user?.id && !!currentTenantId && isTutor;
 
-  useEffect(() => {
-    if (!user?.id || !currentTenantId || !isTutor) {
-      setIsLoading(false);
-      return;
-    }
-    void fetchClasses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, currentTenantId, isTutor]);
-
-  const fetchClasses = async () => {
-    setIsLoading(true);
-    try {
+  const classesQuery = useQuery({
+    queryKey: ["tutor-assigned-classes", currentTenantId ?? null, user?.id ?? null],
+    enabled,
+    queryFn: async (): Promise<AssignedClass[]> => {
       // Canonical assignment source: class_tutors, scoped to auth user + tenant.
       const { data, error } = await supabase
         .from("class_tutors")
         .select(
           `class:classes!class_tutors_class_id_fkey(
-            id, title, scheduled_at, duration_minutes, is_live, zoom_link, center_id,
+            id, title, status, scheduled_at, duration_minutes, is_live, zoom_link, center_id,
             subject:subjects(name, icon)
           )`,
         )
@@ -56,23 +56,31 @@ export function TutorClasses() {
 
       if (error) throw error;
 
-      const rows = ((data ?? []) as Array<{ class: AssignedClass | null }>)
+      return ((data ?? []) as Array<{ class: AssignedClass | null }>)
         .map((r) => r.class)
-        .filter((c): c is AssignedClass => !!c && c.center_id === currentTenantId)
-        .sort(
-          (a, b) =>
-            new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),
-        );
+        .filter((c): c is AssignedClass => !!c && c.center_id === currentTenantId);
+    },
+  });
 
-      setClasses(rows);
-    } catch (error) {
-      showSupabaseError(error, "Could not load your classes");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Canonical schedule source — the same recurrence expansion the student
+  // Timetable and Study cards use, so "next session" never shows a stale
+  // one-off date.
+  const nextQuery = useQuery({
+    queryKey: ["tutor-next-classes", currentTenantId ?? null, user?.id ?? null],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async (): Promise<TutorNextClass[]> => {
+      const { data, error } = await supabase.rpc("get_tutor_next_classes", {
+        _horizon_days: 60,
+      });
+      if (error) throw error;
+      return Array.isArray(data) ? (data as unknown as TutorNextClass[]) : [];
+    },
+  });
 
-  if (isLoading) {
+  if (classesQuery.error) showSupabaseError(classesQuery.error, "Could not load your classes");
+
+  if (classesQuery.isLoading) {
     return (
       <div className="p-4 md:p-6 space-y-4">
         <Skeleton className="h-10 w-48" />
@@ -83,7 +91,18 @@ export function TutorClasses() {
     );
   }
 
-  const now = new Date();
+  const nextByClass = new Map<string, TutorNextClass>(
+    (nextQuery.data ?? []).map((n) => [n.class_id, n]),
+  );
+
+  const classes = (classesQuery.data ?? []).slice().sort((a, b) => {
+    const an = nextByClass.get(a.id)?.starts_at;
+    const bn = nextByClass.get(b.id)?.starts_at;
+    if (an && bn) return new Date(an).getTime() - new Date(bn).getTime();
+    if (an) return -1;
+    if (bn) return 1;
+    return a.title.localeCompare(b.title);
+  });
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -101,41 +120,52 @@ export function TutorClasses() {
       ) : (
         <div className="space-y-3">
           {classes.map((cls) => {
-            const start = new Date(cls.scheduled_at);
-            const end = addMinutes(start, cls.duration_minutes || 60);
-            const isLive = cls.is_live || (isAfter(now, start) && isBefore(now, end));
-            const isPast = isAfter(now, end);
+            const next = nextByClass.get(cls.id);
+            // Status is derived from the canonical class record, never from a
+            // single past `scheduled_at` value.
+            const isArchived = cls.status !== "active";
+            const isLive = !!cls.is_live || !!next?.in_progress;
 
             return (
               <Card
                 key={cls.id}
                 className="p-4 bg-card border-border hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
                     {cls.subject?.icon || "📚"}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-[12rem]">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground truncate">{cls.title}</h3>
                       {isLive && (
-                        <Badge
-                          variant="destructive"
-                          className="gap-1 animate-pulse text-xs"
-                        >
+                        <Badge variant="destructive" className="gap-1 animate-pulse text-xs">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
                           LIVE
                         </Badge>
                       )}
-                      {isPast && (
+                      {isArchived ? (
                         <Badge variant="secondary" className="text-xs">
-                          Completed
+                          Archived
                         </Badge>
+                      ) : (
+                        !isLive && (
+                          <Badge variant="outline" className="text-xs">
+                            Active
+                          </Badge>
+                        )
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {cls.subject?.name ?? "Class"} • {format(start, "MMM d, h:mm a")} •{" "}
-                      {cls.duration_minutes ?? 60}min
+                      {cls.subject?.name ?? "Class"} •{" "}
+                      {isArchived
+                        ? "Archived class"
+                        : next
+                          ? `Next: ${format(new Date(next.starts_at), "EEE, MMM d • h:mm a")}`
+                          : nextQuery.isLoading
+                            ? "Loading schedule…"
+                            : "No upcoming session scheduled"}{" "}
+                      • {cls.duration_minutes ?? 60}min
                     </p>
                   </div>
                   {cls.zoom_link && (
