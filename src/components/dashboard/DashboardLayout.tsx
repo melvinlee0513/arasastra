@@ -45,6 +45,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return <Navigate to="/auth" replace />;
   }
 
+  // Canonical role resolution: /dashboard/* is the STUDENT workspace only.
+  // Staff accounts are sent to their own workspace instead of rendering the
+  // student shell with staff data gaps.
+  if (isAdmin) return <Navigate to="/admin" replace />;
+  if (hasRole("tutor")) return <Navigate to="/tutor" replace />;
+
+
   return (
     <div className="min-h-screen bg-background">
       {showSidebar &&
