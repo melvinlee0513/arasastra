@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { StudentWorkspaceRoute } from "@/components/auth/StudentWorkspaceRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
