@@ -110,10 +110,39 @@ Deno.serve(async (req) => {
     return json({ error: 'server_error' }, 500)
   }
 
+  // The admin createUser call above never sends mail, so the new account would
+  // otherwise sit unconfirmed with no verification email ever delivered.
+  // Trigger the standard signup confirmation email (branded auth email hook)
+  // with an anon client — failures must not undo a successful redemption.
+  let verificationEmailSent = false
+  if (!created.user.email_confirmed_at) {
+    const anonKey =
+      Deno.env.get('SUPABASE_ANON_KEY') ??
+      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
+      ''
+    if (anonKey) {
+      const publicClient = createClient(Deno.env.get('SUPABASE_URL')!, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const { error: resendErr } = await publicClient.auth.resend({
+        type: 'signup',
+        email: claim.email,
+      })
+      if (resendErr) {
+        console.error('verification email resend failed', resendErr)
+      } else {
+        verificationEmailSent = true
+      }
+    } else {
+      console.error('no anon key available to send verification email')
+    }
+  }
+
   return json({
     ok: true,
     email: claim.email,
     role: claim.role,
     requiresEmailVerification: !created.user.email_confirmed_at,
+    verificationEmailSent,
   })
 })
