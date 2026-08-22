@@ -36,6 +36,7 @@ interface UserProfile {
   id: string;
   user_id: string;
   email: string | null;
+
   full_name: string;
   avatar_url: string | null;
   form_year: string | null;
@@ -43,6 +44,12 @@ interface UserProfile {
   center_id: string | null;
   created_at: string;
   role?: "admin" | "superadmin" | "tutor" | "student";
+}
+
+/** Login-account facts that live in auth, surfaced via an admin-gated RPC. */
+interface AccountStatus {
+  email: string | null;
+  email_verified: boolean;
 }
 
 interface Subject { id: string; name: string }
@@ -77,6 +84,7 @@ export function UsersManagement() {
 
   const [activeTab, setActiveTab] = useState<"admin" | "tutor" | "student" | "invitations">("student");
   const [searchQuery, setSearchQuery] = useState("");
+  const [accountStatus, setAccountStatus] = useState<Map<string, AccountStatus>>(new Map());
   const [roleFilter, setRoleFilter] = useState("all");
   const [standardFilter, setStandardFilter] = useState("all");
   const [subjectFilter, setSubjectFilter] = useState("all");
@@ -160,6 +168,27 @@ export function UsersManagement() {
       }));
 
       setUsers(mergedUsers);
+
+      // Step 5: Account status (login email + email verification) for this centre.
+      if (currentTenantId) {
+        const { data: statusRows, error: statusError } = await (supabase as any).rpc(
+          "list_center_account_status",
+          { _center_id: currentTenantId },
+        );
+        if (statusError) {
+          console.warn("[users] account status unavailable", statusError);
+        } else {
+          const next = new Map<string, AccountStatus>();
+          (statusRows ?? []).forEach((row: any) => {
+            next.set(row.user_id, {
+              email: row.email ?? null,
+              email_verified: Boolean(row.email_verified),
+            });
+          });
+          setAccountStatus(next);
+        }
+      }
+
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: "Error", description: "Failed to load users", variant: "destructive" });
@@ -336,10 +365,12 @@ export function UsersManagement() {
       if (!q) return true;
       return u.full_name.toLowerCase().includes(q)
         || (u.email || "").toLowerCase().includes(q)
+        || (accountStatus.get(u.user_id)?.email || "").toLowerCase().includes(q)
         || (u.form_year || "").toLowerCase().includes(q)
         || (u.phone || "").toLowerCase().includes(q);
     });
-  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes, classTutors]);
+  }, [users, searchQuery, roleFilter, standardFilter, subjectFilter, classFilter, assignments, enrollments, tutors, classes, classTutors, accountStatus]);
+
 
   const clearFilters = () => {
     setSearchQuery(""); setRoleFilter("all"); setStandardFilter("all");
@@ -417,7 +448,7 @@ export function UsersManagement() {
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search by name, phone, or form…"
+                placeholder="Search by name, email, phone, or form…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-11 rounded-full"
@@ -467,6 +498,7 @@ export function UsersManagement() {
               <TableHeader>
                 <TableRow className="bg-slate-50/80">
                   <TableHead>Name</TableHead>
+                  <TableHead className="hidden lg:table-cell">Email</TableHead>
                   <TableHead>Form/Year</TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead>Role</TableHead>
@@ -480,10 +512,11 @@ export function UsersManagement() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isSuperadmin ? 9 : 8} className="text-center py-10 text-slate-500">Loading users…</TableCell></TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isSuperadmin ? 8 : 7} className="text-center py-12">
+                    <TableCell colSpan={isSuperadmin ? 9 : 8} className="text-center py-12">
+
                       <div className="flex flex-col items-center gap-2 text-slate-500">
                         <User className="w-10 h-10 text-slate-300" />
                         <p className="font-medium">No users match your filters</p>
@@ -497,10 +530,34 @@ export function UsersManagement() {
                   ).length;
                   const studentEnrollments = enrollments.filter((e) => e.student_id === user.user_id && e.class_id);
 
+                  const status = accountStatus.get(user.user_id);
+                  const loginEmail = status?.email ?? user.email ?? null;
+
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50/60">
-                      <TableCell className="font-medium text-slate-900">{user.full_name}</TableCell>
+                      <TableCell className="font-medium text-slate-900">
+                        <span className="block">{user.full_name}</span>
+                        {/* Email is the identity admins actually recognise, so it
+                            stays visible next to the name on every breakpoint. */}
+                        <span className="mt-0.5 block break-all text-xs font-normal text-slate-500 lg:hidden">
+                          {loginEmail || "No email on record"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <span className="block break-all text-sm text-slate-600">
+                          {loginEmail || "—"}
+                        </span>
+                        {status && !status.email_verified && (
+                          <Badge
+                            variant="outline"
+                            className="mt-1 border-amber-200 bg-amber-50 text-[11px] text-amber-700"
+                          >
+                            Email unverified
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-slate-600">{user.form_year || "—"}</TableCell>
+
                       <TableCell className="hidden md:table-cell text-slate-600">{user.phone || "—"}</TableCell>
                       <TableCell>
                         <DropdownMenu>

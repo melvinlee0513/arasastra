@@ -32,6 +32,8 @@ export default function InvitePage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [accountExists, setAccountExists] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -75,6 +77,13 @@ export default function InvitePage() {
   }, [token]);
 
 
+  /**
+   * Redemption runs server-side (`redeem-invitation`) instead of
+   * `auth.signUp()`, because signUp silently "succeeds" for an email that
+   * already has an account: no user was created, no verification email was
+   * sent, and the invitation stayed Pending forever. The function claims the
+   * invitation atomically and creates the account with an unconfirmed email.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invitation || submitting) return;
@@ -86,29 +95,49 @@ export default function InvitePage() {
     setPasswordError(null);
     setSubmitting(true);
     try {
-      const { error: signUpErr } = await supabase.auth.signUp({
-        email: invitation.email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            invite_token: token,
-            full_name: fullName.trim() || invitation.email,
-            role: invitation.role,
-            center_id: invitation.center_id,
-          },
-        },
+      const { data, error: fnErr } = await supabase.functions.invoke("redeem-invitation", {
+        body: { token, password, fullName: fullName.trim() },
       });
-      if (signUpErr) throw signUpErr;
-      toast.success("Welcome aboard", { description: "Your account is ready." });
-      navigate("/dashboard", { replace: true });
+
+      const code =
+        (data as { error?: string } | null)?.error ??
+        (fnErr ? "server_error" : null);
+
+      if (code === "account_exists") {
+        toast.error("An account already uses this email", {
+          description: "Sign in instead, or reset your password if you've forgotten it.",
+        });
+        setAccountExists(true);
+        return;
+      }
+      if (code === "invitation_unavailable") {
+        setError("This invitation has already been used, revoked or expired.");
+        return;
+      }
+      if (code === "weak_password") {
+        setPasswordError(`Use at least ${MIN_PASSWORD_LENGTH} characters.`);
+        return;
+      }
+      if (code) throw new Error("We couldn't complete your registration. Please try again.");
+
+      // The account is created unconfirmed; ask the auth service to deliver the
+      // branded verification email.
+      const { error: resendErr } = await supabase.auth.resend({
+        type: "signup",
+        email: invitation.email,
+        options: { emailRedirectTo: `${window.location.origin}/auth` },
+      });
+      if (resendErr) console.warn("[invite] verification resend failed", resendErr);
+
+      setVerificationSent(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Signup failed";
+      const message = err instanceof Error ? err.message : "Registration failed";
       toast.error(message);
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50 flex items-center justify-center p-8">
@@ -118,7 +147,58 @@ export default function InvitePage() {
             <Loader2 className="w-8 h-8 animate-spin text-[color:var(--brand-primary)]" />
             <p className="text-slate-500">Verifying invitation…</p>
           </div>
+        ) : verificationSent ? (
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-6 text-center shadow-xl border border-white/20">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+              <Mail className="w-8 h-8 text-emerald-500" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h1 className="text-2xl font-semibold text-[color:var(--brand-midnight)]">
+                Confirm your email
+              </h1>
+              <p className="text-slate-500">
+                Your account is created. We've sent a confirmation link to{" "}
+                <span className="font-medium text-[color:var(--brand-midnight)]">
+                  {invitation?.email}
+                </span>
+                . Confirm it, then sign in to start learning.
+              </p>
+            </div>
+            <Link to="/auth">
+              <Button className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white px-6 h-11 shadow-[0_8px_30px_rgb(0,82,255,0.25)]">
+                Go to sign in
+              </Button>
+            </Link>
+          </div>
+        ) : accountExists ? (
+          <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-6 text-center shadow-xl border border-white/20">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center">
+              <ShieldAlert className="w-8 h-8 text-amber-500" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h1 className="text-2xl font-semibold text-[color:var(--brand-midnight)]">
+                You already have an account
+              </h1>
+              <p className="text-slate-500">
+                {invitation?.email} is already registered. Sign in with your existing
+                password, or reset it if you've forgotten it.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Link to="/auth">
+                <Button className="rounded-full bg-[color:var(--brand-primary)] hover:opacity-90 text-white px-6 h-11">
+                  Sign in
+                </Button>
+              </Link>
+              <Link to="/auth/reset-password">
+                <Button variant="outline" className="rounded-full px-6 h-11">
+                  Reset password
+                </Button>
+              </Link>
+            </div>
+          </div>
         ) : error ? (
+
           <div className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 flex flex-col items-center gap-6 text-center shadow-xl border border-white/20">
             <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
               <ShieldAlert className="w-8 h-8 text-red-500" />
