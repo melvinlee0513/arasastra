@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { StudentWorkspaceRoute } from "@/components/auth/StudentWorkspaceRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import { AppUpdatePrompt } from "@/components/pwa/AppUpdatePrompt";
 import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
@@ -170,7 +171,7 @@ const App = () => (
             <Route path="/account" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><AccountPage /></MainLayout></ProtectedRoute>} />
 
             {/* Student Dashboard Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentDashboard /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><StudentDashboard /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             {/* Retired global "My Learning" hub — students now access
                 learning materials inside their enrolled classes. All legacy
                 URLs redirect to /dashboard/classes. */}

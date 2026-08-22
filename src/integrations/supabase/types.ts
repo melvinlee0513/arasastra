@@ -2943,6 +2943,10 @@ export type Database = {
         Args: { p_subject_id: string }
         Returns: Json
       }
+      get_tutor_next_classes: {
+        Args: { _horizon_days?: number }
+        Returns: Json
+      }
       get_user_center: { Args: { _user_id?: string }; Returns: string }
       has_role: {
         Args: {
