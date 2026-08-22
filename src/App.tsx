@@ -204,9 +204,9 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/announcements" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassAnnouncements /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/about" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><ClassAboutPage variant="student" /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/flashcards" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><StudentClassFlashcards /></DashboardLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/classes/:classId/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassQuizzes /></DashboardLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><StudentQuizAttempt /></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizAttempt /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentQuizResult /></DashboardLayout></TenantGuard></ProtectedRoute>} />
 
 
