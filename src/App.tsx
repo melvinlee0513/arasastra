@@ -164,7 +164,7 @@ const App = () => (
             <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="/student" element={<Navigate to="/dashboard" replace />} />
 
-            <Route path="/timetable" element={<MainLayout><TimetablePage /></MainLayout>} />
+            <Route path="/timetable" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><TimetablePage /></MainLayout></ProtectedRoute>} />
             <Route path="/classes" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/inbox" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><InboxPage /></MainLayout></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute requiredRole="authenticated"><MainLayout><AccountPage /></MainLayout></ProtectedRoute>} />
