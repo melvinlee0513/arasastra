@@ -22,7 +22,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  DecorArt,
   ServiceArtBubble,
   ServiceHeroBanner,
   ServicePage,
@@ -36,7 +35,7 @@ import {
   PRIVACY_SUMMARY,
   PRIVACY_TOC,
 } from "@/content/privacyPolicy";
-import { DECOR_ART, PRIVACY_ART } from "@/lib/studentIllustrations";
+import { PRIVACY_ART } from "@/lib/studentIllustrations";
 import { usePageMeta } from "@/lib/pageMeta";
 import { cn } from "@/lib/utils";
 
@@ -149,10 +148,6 @@ export function PrivacyPolicyPage() {
               </button>
             )}
 
-            <DecorArt
-              src={DECOR_ART.orb}
-              className="pointer-events-none absolute -bottom-4 right-1 hidden h-16 w-16 opacity-[0.18] lg:block"
-            />
           </nav>
         </ServiceReveal>
 
