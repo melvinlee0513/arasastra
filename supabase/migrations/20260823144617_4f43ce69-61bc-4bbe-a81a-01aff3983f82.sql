@@ -1,0 +1,1 @@
+REVOKE ALL ON public.support_tickets FROM anon;

@@ -28,6 +28,8 @@ const ROOT_PATHS = new Set<string>([
   "/dashboard/achievements",
   "/dashboard/leaderboard",
   "/dashboard/resources",
+  "/support",
+  "/privacy",
 ]);
 
 const CLASS_SECTION_RE =

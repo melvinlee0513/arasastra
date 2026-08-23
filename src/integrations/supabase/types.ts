@@ -2303,6 +2303,62 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          attachment_path: string | null
+          category: string
+          center_id: string | null
+          created_at: string
+          description: string
+          id: string
+          requester_email: string | null
+          role_snapshot: string | null
+          source_page_url: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attachment_path?: string | null
+          category: string
+          center_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          requester_email?: string | null
+          role_snapshot?: string | null
+          source_page_url?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attachment_path?: string | null
+          category?: string
+          center_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          requester_email?: string | null
+          role_snapshot?: string | null
+          source_page_url?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string

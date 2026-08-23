@@ -8,7 +8,9 @@ import {
   Home,
   Inbox,
   LayoutGrid,
+  LifeBuoy,
   LogOut,
+  ShieldCheck,
   Trophy,
   User,
 } from "lucide-react";
@@ -72,6 +74,8 @@ export function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
     ...(gamificationOn && leaderboardsOn
       ? [{ path: "/dashboard/leaderboard", label: "Leaderboard", icon: BarChart3 }]
       : []),
+    { path: "/support", label: "Help & support", icon: LifeBuoy },
+    { path: "/privacy", label: "Privacy policy", icon: ShieldCheck },
   ];
 
   const isActive = (d: Dest) =>

@@ -37,8 +37,8 @@ const UNLOCKS = [
 
 const SUPPORT_ROWS = [
   { art: GUEST_ART.supportChat, title: "Help & support", to: "/support" },
-  { art: GUEST_ART.contactPhone, title: "Contact your centre", to: "/support#contact" },
-  { art: GUEST_ART.privacyShield, title: "Privacy policy", to: "/support#privacy" },
+  { art: GUEST_ART.contactPhone, title: "Contact your centre", to: "/support" },
+  { art: GUEST_ART.privacyShield, title: "Privacy policy", to: "/privacy" },
 ];
 
 /**
