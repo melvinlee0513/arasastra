@@ -236,3 +236,102 @@ export function ServiceFooterDecor() {
     </div>
   );
 }
+
+/**
+ * Plain page heading (title + subtitle) used above the illustrated hero banner
+ * on the shared informational pages.
+ */
+export function ServicePageTitle({
+  title,
+  subtitle,
+  sparkle = true,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  sparkle?: boolean;
+}) {
+  return (
+    <div className="mb-3.5 px-0.5">
+      <h1 className="flex items-center gap-2 text-[26px] font-extrabold leading-tight tracking-[-0.025em] text-slate-900 md:text-[34px]">
+        {title}
+        {sparkle && (
+          <DecorArt src={DECOR_ART.star} className="h-5 w-5 md:h-6 md:w-6" />
+        )}
+      </h1>
+      {subtitle && (
+        <p className="mt-1 max-w-xl text-[13.5px] leading-snug text-slate-500 md:text-[15px]">
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Wide illustrated hero banner: copy on the left, a large soft-3D composite
+ * anchored bottom-right. Artwork is never cropped (object-contain).
+ */
+export function ServiceHeroBanner({
+  art,
+  artAlt = "",
+  eyebrow,
+  title,
+  subtitle,
+  className,
+  artClassName,
+}: {
+  art: string;
+  artAlt?: string;
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  className?: string;
+  artClassName?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "relative isolate mb-5 overflow-hidden rounded-[26px] border border-white/80",
+        "bg-[linear-gradient(110deg,#eef4ff_0%,#f4f7ff_45%,#eaf1ff_100%)]",
+        "shadow-[0_10px_30px_rgba(15,23,42,0.06)] md:rounded-[30px]",
+        className,
+      )}
+    >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <DecorArt src={DECOR_ART.star} className="absolute left-[46%] top-3 h-5 w-5 opacity-60" />
+        <DecorArt src={DECOR_ART.orb} className="absolute -left-6 bottom-0 h-20 w-20 opacity-[0.14]" />
+      </div>
+
+      <div className="relative flex min-h-[132px] items-center gap-2 p-4 pr-[42%] md:min-h-[168px] md:p-6 md:pr-[48%]">
+        <div className="min-w-0">
+          {eyebrow && (
+            <p className="text-[17px] font-extrabold leading-tight text-slate-900 md:text-[22px]">
+              {eyebrow}
+            </p>
+          )}
+          {title && (
+            <h2 className="text-[17px] font-extrabold leading-tight text-slate-900 md:text-[22px]">
+              {title}
+            </h2>
+          )}
+          {subtitle && (
+            <p className="mt-1 text-[13px] leading-snug text-slate-600 md:text-[15px]">{subtitle}</p>
+          )}
+        </div>
+      </div>
+
+      <img
+        src={art}
+        alt={artAlt}
+        aria-hidden={artAlt ? undefined : "true"}
+        loading="eager"
+        decoding="async"
+        className={cn(
+          "pointer-events-none absolute bottom-0 right-0 h-[calc(100%-6px)] w-[46%] select-none object-contain object-right-bottom",
+          "md:w-[46%]",
+          artClassName,
+        )}
+      />
+    </section>
+  );
+}
