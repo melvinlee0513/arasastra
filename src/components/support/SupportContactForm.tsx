@@ -120,7 +120,7 @@ export function SupportContactForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn(SERVICE_CARD, "space-y-4 p-4 md:p-5")} noValidate>
+    <form onSubmit={handleSubmit} className="space-y-3.5" noValidate>
       {requireEmail && (
         <Field id="support-email" label="Your email" error={errors.email}>
           <Input
@@ -227,10 +227,10 @@ export function SupportContactForm({
       <Button
         type="submit"
         disabled={submit.isPending}
-        className="min-h-11 w-full rounded-full text-[15px] font-semibold"
+        className="min-h-12 w-full rounded-full bg-[linear-gradient(100deg,hsl(var(--primary)),#6366f1)] text-[15px] font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(79,70,229,0.28)] hover:opacity-95"
       >
         <Send className="mr-1.5 h-4 w-4" aria-hidden="true" />
-        {submit.isPending ? "Sending…" : "Send request"}
+        {submit.isPending ? "Sending…" : "Send Support Request"}
       </Button>
 
       <p className="text-[11.5px] leading-snug text-muted-foreground">
