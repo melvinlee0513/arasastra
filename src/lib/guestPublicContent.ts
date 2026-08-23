@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { guestSubjectPreview } from "@/lib/guestIllustrations";
+import { getTenantSubdomain } from "@/lib/tenantSubdomain";
 
 
 export interface PublicSubject {
@@ -10,18 +11,20 @@ export interface PublicSubject {
 }
 
 /**
- * Public, anon-readable subject catalogue used by the signed-out guest pages.
- * No enrolment, progress or member data is ever requested here.
+ * Public subject catalogue for the signed-out guest pages.
+ *
+ * Served through the tenant-scoped `get_public_subjects` RPC so anonymous
+ * visitors can only ever see the catalogue of the tuition centre bound to the
+ * current hostname — never every tenant on the platform.
  */
 export function usePublicSubjects() {
+  const { slug } = getTenantSubdomain();
   return useQuery({
-    queryKey: ["guest-public-subjects"],
+    queryKey: ["guest-public-subjects", slug],
     queryFn: async (): Promise<PublicSubject[]> => {
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("id, name, description")
-        .eq("is_active", true)
-        .order("name", { ascending: true });
+      const { data, error } = await supabase.rpc("get_public_subjects", {
+        _slug: slug,
+      });
       if (error) throw error;
       return (data ?? []) as PublicSubject[];
     },
@@ -35,22 +38,22 @@ export interface PublicTutor {
   specialization: string | null;
 }
 
-/** Public, anon-readable tutor directory (marketing profiles only). */
+/** Public tutor directory for the current tenant only (marketing profiles). */
 export function usePublicTutors() {
+  const { slug } = getTenantSubdomain();
   return useQuery({
-    queryKey: ["guest-public-tutors"],
+    queryKey: ["guest-public-tutors", slug],
     queryFn: async (): Promise<PublicTutor[]> => {
-      const { data, error } = await supabase
-        .from("tutors")
-        .select("id, name, specialization")
-        .eq("is_active", true)
-        .order("name", { ascending: true });
+      const { data, error } = await supabase.rpc("get_public_tutors", {
+        _slug: slug,
+      });
       if (error) throw error;
       return (data ?? []) as PublicTutor[];
     },
     staleTime: 5 * 60 * 1000,
   });
 }
+
 
 /** Real public tutor name for a subject, or a neutral label when unmapped. */
 export function tutorNameForSubject(
