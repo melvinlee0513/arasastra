@@ -103,19 +103,24 @@ export const DECOR_IMG_PROPS = {
  * land these keys point at verified existing assets so nothing renders broken.
  */
 export const HELP_SUPPORT_ART = {
-  hero: asset("ui/mascot/aras-guide-owl-waving.webp"),
+  /** Wide composite hero: owl + clouds + speech bubble. */
+  hero: asset("ui/help-support/help-support-hero-owl-clouds.webp"),
+  /** Quick Help section mark. */
+  lifebuoy: asset("ui/help-support/quick-help-lifebuoy-icon.webp"),
+  /** "We're here for you" composite: purple + blue chat bubbles on clouds. */
+  chat: asset("ui/help-support/support-response-chat-bubbles.webp"),
   headset: asset("ui/help-support-headset.webp"),
-  chat: asset("ui/support-chat-bubble.webp"),
   search: asset("ui/magnifying-glass.webp"),
   info: asset("ui/glossy_blue_3d_information_bubble.webp"),
   contactCentre: asset("ui/contact-centre-phone-icon.webp"),
   login: asset("ui/profile-user-badge.png"),
-  password: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
-  classes: asset("ui/glossy_blue_graduation_cap_with_gold_tassel.webp"),
-  materials: asset("ui/glossy_pastel_notebook_stack_icon.webp"),
-  timetable: asset("ui/timetable-calendar-clock.webp"),
-  technical: asset("ui/personalisation-puzzle.webp"),
+  password: asset("ui/help-support/quick-help-password-reset-icon.webp"),
+  classes: asset("ui/help-support/quick-help-classes-enrolment-icon.webp"),
+  materials: asset("ui/help-support/quick-help-learning-materials-icon.webp"),
+  timetable: asset("learning/glossy_pastel_calendar_with_checkmark.webp"),
+  technical: asset("ui/help-support/quick-help-technical-issues-icon.webp"),
 } as const;
+
 
 /** Privacy Policy artwork. */
 export const PRIVACY_ART = {
