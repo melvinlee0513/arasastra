@@ -2896,6 +2896,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_public_subjects: {
+        Args: { _slug?: string }
+        Returns: {
+          description: string
+          id: string
+          name: string
+        }[]
+      }
+      get_public_tutors: {
+        Args: { _slug?: string }
+        Returns: {
+          id: string
+          name: string
+          specialization: string
+        }[]
+      }
       get_quiz_attempt_for_manager: {
         Args: { _attempt_id: string }
         Returns: Json
