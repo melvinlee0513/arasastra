@@ -299,7 +299,7 @@ export function ServiceHeroBanner({
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <DecorArt src={DECOR_ART.star} className="absolute left-[46%] top-3 h-5 w-5 opacity-60" />
-        <DecorArt src={DECOR_ART.orb} className="absolute -left-6 bottom--4 h-20 w-20 opacity-[0.14]" />
+        <DecorArt src={DECOR_ART.orb} className="absolute -left-6 bottom-0 h-20 w-20 opacity-[0.14]" />
       </div>
 
       <div className="relative flex min-h-[132px] items-center gap-2 p-4 pr-[42%] md:min-h-[168px] md:p-6 md:pr-[48%]">
