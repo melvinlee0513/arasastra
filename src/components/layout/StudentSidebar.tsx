@@ -8,7 +8,9 @@ import {
   Home,
   Inbox,
   LayoutGrid,
+  LifeBuoy,
   LogOut,
+  ShieldCheck,
   Trophy,
   User,
 } from "lucide-react";
