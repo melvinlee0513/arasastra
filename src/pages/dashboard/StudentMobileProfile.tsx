@@ -144,7 +144,15 @@ export function StudentMobileProfile() {
             <AccountActionRow
               art={PROFILE_ART.helpBadge}
               label="Help & support"
-              onClick={() => navigate("/dashboard/more")}
+              onClick={() => navigate("/support")}
+              trailing={
+                <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
+              }
+            />
+            <AccountActionRow
+              art={PROFILE_ART.userBadge}
+              label="Privacy policy"
+              onClick={() => navigate("/privacy")}
               trailing={
                 <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
               }

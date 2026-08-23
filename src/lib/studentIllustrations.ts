@@ -93,3 +93,33 @@ export const DECOR_IMG_PROPS = {
   loading: "lazy" as const,
   decoding: "async" as const,
 };
+
+/**
+ * Help & Support artwork.
+ *
+ * `ui/help-support/` is reserved for future dedicated compositions; until those
+ * land these keys point at verified existing assets so nothing renders broken.
+ */
+export const HELP_SUPPORT_ART = {
+  hero: asset("ui/mascot/aras-guide-owl-waving.webp"),
+  headset: asset("ui/help-support-headset.webp"),
+  chat: asset("ui/support-chat-bubble.webp"),
+  search: asset("ui/magnifying-glass.webp"),
+  info: asset("ui/glossy_blue_3d_information_bubble.webp"),
+  contactCentre: asset("ui/contact-centre-phone-icon.webp"),
+  login: asset("ui/profile-user-badge.png"),
+  password: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
+  classes: asset("ui/glossy_blue_graduation_cap_with_gold_tassel.webp"),
+  materials: asset("ui/glossy_pastel_notebook_stack_icon.webp"),
+  timetable: asset("ui/timetable-calendar-clock.webp"),
+  technical: asset("ui/personalisation-puzzle.webp"),
+} as const;
+
+/** Privacy Policy artwork. */
+export const PRIVACY_ART = {
+  hero: asset("ui/privacy/privacy-policy-hero-owl-security-shield.webp"),
+  shield: asset("ui/privacy-policy-shield-icon.webp"),
+  lock: asset("ui/glossy_blue_shield_with_golden_padlock.webp"),
+  info: asset("ui/glossy_blue_3d_information_bubble.webp"),
+} as const;
+

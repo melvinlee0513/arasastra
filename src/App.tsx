@@ -41,7 +41,9 @@ import { GuestRoute } from "@/components/guest/GuestRoute";
 import { GuestMore } from "@/pages/guest/GuestMore";
 import { GuestStudy } from "@/pages/guest/GuestStudy";
 import { GuestProfile } from "@/pages/guest/GuestProfile";
-import { GuestSupport } from "@/pages/guest/GuestSupport";
+import { SupportPage } from "@/pages/SupportPage";
+import { PrivacyPolicyPage } from "@/pages/PrivacyPolicyPage";
+import { SharedInfoShell } from "@/components/layout/SharedInfoShell";
 
 
 // Student Dashboard
@@ -161,7 +163,9 @@ const App = () => (
             <Route path="/more" element={<GuestRoute authenticatedTo="/dashboard/more"><GuestMore /></GuestRoute>} />
             <Route path="/study" element={<GuestRoute authenticatedTo="/dashboard/classes"><GuestStudy /></GuestRoute>} />
             <Route path="/profile" element={<GuestRoute authenticatedTo="/dashboard/profile"><GuestProfile /></GuestRoute>} />
-            <Route path="/support" element={<GuestRoute authenticatedTo="/dashboard/profile"><GuestSupport /></GuestRoute>} />
+            {/* Shared informational pages — one implementation for guests, students, tutors and admins. */}
+            <Route path="/support" element={<SharedInfoShell><SupportPage /></SharedInfoShell>} />
+            <Route path="/privacy" element={<SharedInfoShell><PrivacyPolicyPage /></SharedInfoShell>} />
             <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="/student" element={<Navigate to="/dashboard" replace />} />
 

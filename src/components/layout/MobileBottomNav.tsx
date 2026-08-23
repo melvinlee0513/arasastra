@@ -20,7 +20,7 @@ const tabs: TabItem[] = [
     icon: LayoutGrid,
     label: "More",
     accessibleLabel: "More student services",
-    matches: ["/timetable", "/inbox", "/dashboard/leaderboard"],
+    matches: ["/timetable", "/inbox", "/dashboard/leaderboard", "/support", "/privacy"],
   },
   {
     path: "/dashboard/classes",

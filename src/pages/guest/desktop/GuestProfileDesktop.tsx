@@ -51,13 +51,13 @@ const SUPPORT_ROWS = [
     art: GUEST_ART.contactPhone,
     title: "Contact centre",
     description: "Get in touch with your tuition centre",
-    to: "/support#contact",
+    to: "/support",
   },
   {
     art: GUEST_ART.privacyShield,
     title: "Privacy policy",
     description: "Learn how we protect your data",
-    to: "/support#privacy",
+    to: "/privacy",
   },
 ];
 
