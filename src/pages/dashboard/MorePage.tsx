@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, Inbox, Trophy, BarChart3 } from "lucide-react";
+import { CalendarDays, Inbox, Trophy, BarChart3, LifeBuoy, ShieldCheck } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -57,6 +57,8 @@ export function MorePage() {
       icon: BarChart3,
       enabled: leaderboardOn,
     },
+    { to: "/support", label: "Help & Support", hint: "FAQs & contact", icon: LifeBuoy, enabled: true },
+    { to: "/privacy", label: "Privacy Policy", hint: "Your data", icon: ShieldCheck, enabled: true },
   ];
 
   const visible = studentServices.filter((s) => s.enabled);
@@ -97,6 +99,26 @@ export function MorePage() {
                 <LeaderboardCard />
               </ServiceReveal>
             )}
+            <ServiceReveal delay={200}>
+              <MoreServiceCard
+                to="/support"
+                title="Help & Support"
+                art={STUDENT_SERVICE_ART.support}
+                tone="inbox"
+                contextValue="FAQs & contact us"
+                accessibleContext="Help and support: FAQs and contact us"
+              />
+            </ServiceReveal>
+            <ServiceReveal delay={240}>
+              <MoreServiceCard
+                to="/privacy"
+                title="Privacy Policy"
+                art={STUDENT_SERVICE_ART.privacy}
+                tone="timetable"
+                contextValue="How we use your data"
+                accessibleContext="Privacy policy: how we use your data"
+              />
+            </ServiceReveal>
           </div>
         )}
         <ServiceFooterDecor />

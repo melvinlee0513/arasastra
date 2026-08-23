@@ -19,6 +19,8 @@ export const STUDENT_SERVICE_ART = {
   achievements: asset("decorative/glossy_golden_star_trophy_icon.webp"),
   leaderboard: asset("gamification/glossy_jewelled_golden_crown_icon.webp"),
   hub: asset("ui/glossy_3d_study_folder_icon.webp"),
+  support: asset("ui/help-support-headset.webp"),
+  privacy: asset("ui/privacy-policy-shield-icon.webp"),
 } as const;
 
 /** Inbox message artwork. */
