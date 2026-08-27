@@ -82,6 +82,24 @@
     --hub-purple: 258 90% 66%;
     --hub-purple-tint: 258 100% 96%;
 
+    /* Student Quiz experience.
+       Light tokens drive the Quiz Hub / Library surfaces; the "arena" tokens
+       drive the immersive gameplay + results screens (dark violet space). */
+    --quiz-accent: 262 83% 58%;
+    --quiz-accent-strong: 266 85% 48%;
+    --quiz-tint: 260 100% 97%;
+    --quiz-tint-strong: 258 96% 93%;
+    --quiz-xp: 43 96% 50%;
+    --quiz-streak: 20 92% 54%;
+    --quiz-correct: 152 62% 42%;
+    --quiz-wrong: 356 75% 55%;
+    --quiz-arena: 258 60% 12%;
+    --quiz-arena-deep: 262 70% 8%;
+    --quiz-arena-panel: 258 45% 20%;
+    --quiz-arena-foreground: 258 100% 98%;
+    --quiz-arena-muted: 258 30% 74%;
+
+
     /* Student mobile "More" utility hub — restrained per-service accents.
        Card surfaces stay white; only icon bubbles and tints use these. */
     --more-timetable: 214 100% 96%;
