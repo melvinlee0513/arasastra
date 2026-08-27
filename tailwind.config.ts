@@ -45,6 +45,22 @@ export default {
           purple: "hsl(var(--hub-purple))",
           "purple-tint": "hsl(var(--hub-purple-tint))",
         },
+        quiz: {
+          accent: "hsl(var(--quiz-accent))",
+          "accent-strong": "hsl(var(--quiz-accent-strong))",
+          tint: "hsl(var(--quiz-tint))",
+          "tint-strong": "hsl(var(--quiz-tint-strong))",
+          xp: "hsl(var(--quiz-xp))",
+          streak: "hsl(var(--quiz-streak))",
+          correct: "hsl(var(--quiz-correct))",
+          wrong: "hsl(var(--quiz-wrong))",
+          arena: "hsl(var(--quiz-arena))",
+          "arena-deep": "hsl(var(--quiz-arena-deep))",
+          "arena-panel": "hsl(var(--quiz-arena-panel))",
+          "arena-foreground": "hsl(var(--quiz-arena-foreground))",
+          "arena-muted": "hsl(var(--quiz-arena-muted))",
+        },
+
         podium: {
           DEFAULT: "hsl(var(--podium-surface))",
           border: "hsl(var(--podium-border))",
