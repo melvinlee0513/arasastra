@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Clock, Loader2, WifiOff, Save,
+  AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Loader2, WifiOff, Save, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -21,6 +19,17 @@ import {
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { QUIZ_ART } from "@/lib/quizArt";
+import {
+  ArenaAnswerGrid,
+  ArenaArt,
+  ArenaChip,
+  ArenaCountdown,
+  ArenaPanel,
+  ArenaProgress,
+  ArenaStatusCard,
+  QuizArenaShell,
+} from "@/components/quiz/QuizArena";
 
 type SaveState = "unsaved" | "saving" | "saved" | "failed" | "conflict" | "offline";
 
@@ -58,6 +67,7 @@ export function StudentQuizAttempt() {
   const savingRef = useRef(false);
   const queuedRef = useRef(false);
   const initedRef = useRef(false);
+  const totalSecondsRef = useRef<number | null>(null);
 
   // Initialise from server payload once loaded (or on refetch after conflict).
   useEffect(() => {
@@ -82,6 +92,11 @@ export function StudentQuizAttempt() {
     if (!deadline) return null;
     return Math.max(0, Math.floor((new Date(deadline).getTime() - now) / 1000));
   }, [deadline, now]);
+
+  // Remember the largest observed remaining time so the ring has a sane total.
+  if (secondsLeft !== null) {
+    totalSecondsRef.current = Math.max(totalSecondsRef.current ?? 0, secondsLeft);
+  }
 
   // ── Online tracking ──────────────────────────────────────────────────
   const [online, setOnline] = useState<boolean>(typeof navigator === "undefined" ? true : navigator.onLine);
@@ -195,14 +210,20 @@ export function StudentQuizAttempt() {
     }
   }, [attemptId, quizId, classId, navigate, answers, persist, qc, saveState, submitting, currentTenantId]);
 
+  const quizzesHref = `/dashboard/classes/${classId}/quizzes`;
+
   // ── Render ───────────────────────────────────────────────────────────
   if (attemptQ.isLoading || classCtx.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
+      <QuizArenaShell className="items-center justify-center">
+        <ArenaArt src={QUIZ_ART.owlGamingCompact} className="h-32 w-32 animate-pulse" />
+        <p className="mt-4 flex items-center gap-2 text-[13.5px] font-semibold text-quiz-arena-muted">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading your quiz…
+        </p>
+      </QuizArenaShell>
     );
   }
+
   if (attemptQ.isError || !attemptQ.data) {
     const rawMessage =
       attemptQ.error instanceof Error ? attemptQ.error.message : String(attemptQ.error ?? "");
@@ -210,192 +231,226 @@ export function StudentQuizAttempt() {
       // Safe developer diagnostics only — never rendered to students.
       console.warn("[quiz-attempt] load failed", { attemptId, quizId, classId, rawMessage });
     }
-    const knownStates: Array<{ match: string; title: string; body: string; recoverable: boolean }> = [
-      { match: "not_authenticated", title: "Please sign in again", body: "Your session expired. Sign in and reopen this quiz.", recoverable: false },
-      { match: "attempt_not_found", title: "Attempt not found", body: "This attempt doesn't exist, or it belongs to a different account.", recoverable: false },
-      { match: "quiz_unavailable", title: "Quiz unavailable", body: "This quiz is no longer published for your class.", recoverable: false },
-      { match: "quiz_not_available", title: "Not open yet", body: "This quiz hasn't opened yet. Check back later.", recoverable: false },
-      { match: "quiz_past_due", title: "Quiz closed", body: "This quiz is past its due date.", recoverable: false },
-      { match: "not enrolled", title: "No longer enrolled", body: "You're no longer enrolled in this class.", recoverable: false },
-      { match: "attempt_not_editable", title: "Already submitted", body: "This attempt has been submitted. Open your result instead.", recoverable: false },
+    const knownStates: Array<{ match: string; title: string; body: string }> = [
+      { match: "not_authenticated", title: "Please sign in again", body: "Your session expired. Sign in and reopen this quiz." },
+      { match: "attempt_not_found", title: "Attempt not found", body: "This attempt doesn't exist, or it belongs to a different account." },
+      { match: "quiz_unavailable", title: "Quiz unavailable", body: "This quiz is no longer published for your class." },
+      { match: "quiz_not_available", title: "Not open yet", body: "This quiz hasn't opened yet. Check back later." },
+      { match: "quiz_past_due", title: "Quiz closed", body: "This quiz is past its due date." },
+      { match: "not enrolled", title: "No longer enrolled", body: "You're no longer enrolled in this class." },
+      { match: "attempt_not_editable", title: "Already submitted", body: "This attempt has been submitted. Open your result instead." },
     ];
     const state = knownStates.find((s) => rawMessage.includes(s.match));
-    const title = state?.title ?? "We couldn't load this attempt";
-    const body =
-      state?.body ??
-      "Something interrupted loading. Your saved answers are safe — try again in a moment.";
     const canRetry = !state;
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <Card className="max-w-md p-8 text-center rounded-3xl">
-          <AlertCircle className="w-8 h-8 mx-auto text-destructive mb-2" />
-          <h1 className="font-semibold text-slate-900 mb-1">{title}</h1>
-          <p className="text-sm text-slate-500 mb-4">{body}</p>
-          <div className="flex flex-wrap gap-2 justify-center">
+      <ArenaStatusCard
+        art={QUIZ_ART.owlTeary}
+        title={state?.title ?? "We couldn't load this attempt"}
+        body={
+          state?.body ??
+          "Something interrupted loading. Your saved answers are safe — try again in a moment."
+        }
+        action={
+          <>
             {canRetry && (
               <Button onClick={() => void attemptQ.refetch()} className="rounded-full">
                 Try again
               </Button>
             )}
             <Button
-              variant={canRetry ? "outline" : "default"}
-              onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)}
+              variant="secondary"
+              onClick={() => navigate(quizzesHref)}
               className="rounded-full"
             >
               Back to quizzes
             </Button>
-          </div>
-        </Card>
-      </div>
+          </>
+        }
+      />
     );
   }
-
 
   const payload = attemptQ.data;
+
   if (!payload.questions.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <Card className="max-w-md p-8 text-center rounded-3xl">
-          <AlertCircle className="w-8 h-8 mx-auto text-amber-500 mb-2" />
-          <h1 className="font-semibold text-slate-900 mb-1">No questions yet</h1>
-          <p className="text-sm text-slate-500 mb-4">
-            Your tutor hasn't added any questions to this quiz. Nothing to answer right now.
-          </p>
-          <Button onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)} className="rounded-full">
+      <ArenaStatusCard
+        art={QUIZ_ART.hourglass}
+        title="No questions yet"
+        body="Your tutor hasn't added any questions to this quiz. Nothing to answer right now."
+        action={
+          <Button onClick={() => navigate(quizzesHref)} className="rounded-full">
             Back to quizzes
           </Button>
-        </Card>
-      </div>
+        }
+      />
     );
   }
-  const q = payload.questions[current];
-  const unanswered = payload.questions.filter((qq) => !answers[qq.id]).length;
-
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <Card className="max-w-md p-8 text-center rounded-3xl">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-500/15 flex items-center justify-center">
-            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-          </div>
-          <h1 className="font-semibold text-slate-900 mb-1">Quiz submitted</h1>
-          <p className="text-sm text-slate-500 mb-4">
-            Your answers have been recorded. Results will appear based on your tutor's settings.
-          </p>
-          <Button onClick={() => navigate(`/dashboard/classes/${classId}/quizzes`)} className="rounded-full">
+      <ArenaStatusCard
+        art={QUIZ_ART.owlCelebratingSparkles}
+        title="Quiz submitted!"
+        body="Your answers have been recorded. Results appear based on your tutor's settings."
+        action={
+          <Button onClick={() => navigate(quizzesHref)} className="rounded-full">
             Back to quizzes
           </Button>
-        </Card>
-      </div>
+        }
+      />
     );
   }
 
+  const q = payload.questions[current];
+  const answeredCount = payload.questions.filter((qq) => !!answers[qq.id]).length;
+  const unanswered = payload.questions.length - answeredCount;
+  const isLast = current === payload.questions.length - 1;
+
+  const gridOptions =
+    q.question_type === "true_false"
+      ? [
+          { id: "true", text: "True" },
+          { id: "false", text: "False" },
+        ]
+      : q.options.map((o) => ({ id: o.id, text: o.text }));
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs text-slate-500 truncate">Question {current + 1} of {payload.questions.length}</p>
-            <h1 className="text-base sm:text-lg font-semibold text-slate-900 truncate">{payload.quiz.title}</h1>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {secondsLeft !== null && (
-              <Badge className={cn(
-                "rounded-full gap-1 border-0",
-                secondsLeft <= 60 ? "bg-destructive/15 text-destructive" :
-                secondsLeft <= 300 ? "bg-amber-500/15 text-amber-700" :
-                "bg-primary/10 text-primary",
-              )}>
-                <Clock className="w-3.5 h-3.5" /> {fmtTime(secondsLeft)}
-              </Badge>
-            )}
+    <QuizArenaShell>
+      {/* Top bar */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(quizzesHref)}
+          aria-label="Exit quiz"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/12 backdrop-blur transition active:scale-95"
+        >
+          <X className="h-4.5 w-4.5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+            {classCtx.data?.klass?.title ?? "Quiz"}
+          </p>
+          <h1 className="truncate text-[15px] font-extrabold leading-tight">{payload.quiz.title}</h1>
+        </div>
+        {secondsLeft !== null && (
+          <ArenaCountdown
+            secondsLeft={secondsLeft}
+            totalSeconds={Math.max(1, totalSecondsRef.current ?? secondsLeft)}
+          />
+        )}
+      </div>
+
+      {/* Progress + status */}
+      <div className="mt-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <ArenaChip art={QUIZ_ART.xpHexagon}>
+            {current + 1} / {payload.questions.length}
+          </ArenaChip>
+          <ArenaChip art={QUIZ_ART.goldStar} tone="good">
+            {answeredCount} answered
+          </ArenaChip>
+          <span className="ml-auto">
             <SaveIndicator state={saveState} />
+          </span>
+        </div>
+        <ArenaProgress value={((current + 1) / payload.questions.length) * 100} />
+      </div>
+
+      {saveState === "conflict" && (
+        <ArenaPanel className="mt-4 flex items-start gap-3 border-amber-300/40 bg-amber-400/15">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-bold">Your answers were updated elsewhere</p>
+            <p className="text-[13px] text-quiz-arena-muted">
+              Reload the latest saved answers to continue safely.
+            </p>
           </div>
+          <Button size="sm" onClick={reloadServer} className="rounded-full">
+            Reload
+          </Button>
+        </ArenaPanel>
+      )}
+
+      {!online && (
+        <ArenaPanel className="mt-4 flex items-center gap-2 py-3 text-[13px]">
+          <WifiOff className="h-4 w-4" /> Offline — your answers will save when you reconnect.
+        </ArenaPanel>
+      )}
+
+      {/* Question */}
+      <ArenaPanel className="mt-4">
+        <div className="flex items-start gap-3">
+          <ArenaArt src={QUIZ_ART.crystalGem} className="h-9 w-9 shrink-0" />
+          <h2 className="whitespace-pre-wrap text-[16px] font-bold leading-snug">{q.prompt}</h2>
+        </div>
+      </ArenaPanel>
+
+      <div className="mt-4">
+        <ArenaAnswerGrid
+          options={gridOptions}
+          selectedId={answers[q.id] ?? null}
+          onSelect={(id) => setAnswers((a) => ({ ...a, [q.id]: id }))}
+          disabled={locked}
+        />
+      </div>
+
+      {/* Question navigator */}
+      <div className="mt-5">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+          Question navigator
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {payload.questions.map((qq, i) => {
+            const done = !!answers[qq.id];
+            const active = i === current;
+            return (
+              <button
+                key={qq.id}
+                type="button"
+                onClick={() => setCurrent(i)}
+                aria-label={`Question ${i + 1}${done ? " answered" : " unanswered"}`}
+                className={cn(
+                  "h-9 w-9 rounded-full text-[13px] font-bold transition active:scale-95",
+                  active
+                    ? "bg-white text-quiz-arena-deep"
+                    : done
+                    ? "bg-quiz-correct/30 text-emerald-100"
+                    : "bg-white/12 text-quiz-arena-muted",
+                )}
+              >
+                {i + 1}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-        {saveState === "conflict" && (
-          <Card className="p-4 rounded-2xl border-amber-300 bg-amber-50 text-amber-900 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="font-medium">Your answers were updated elsewhere</p>
-              <p className="text-sm">Reload the latest saved answers to continue safely.</p>
-            </div>
-            <Button size="sm" onClick={reloadServer} className="rounded-full">Reload</Button>
-          </Card>
-        )}
-        {!online && (
-          <Card className="p-3 rounded-2xl border-slate-300 bg-slate-100 text-slate-700 flex items-center gap-2 text-sm">
-            <WifiOff className="w-4 h-4" /> Offline — your answers will save when you reconnect.
-          </Card>
-        )}
-
-        {q && (
-          <Card className="p-5 sm:p-6 rounded-3xl">
-            <h2 className="text-base sm:text-lg font-medium text-slate-900 whitespace-pre-wrap">{q.prompt}</h2>
-            <div className="mt-4 space-y-2">
-              {q.question_type === "true_false"
-                ? ["true", "false"].map((val) => (
-                    <OptionButton
-                      key={val}
-                      selected={answers[q.id] === val}
-                      onClick={() => setAnswers((a) => ({ ...a, [q.id]: val }))}
-                      label={val === "true" ? "True" : "False"}
-                    />
-                  ))
-                : q.options.map((o) => (
-                    <OptionButton
-                      key={o.id}
-                      selected={answers[q.id] === o.id}
-                      onClick={() => setAnswers((a) => ({ ...a, [q.id]: o.id }))}
-                      label={o.text}
-                    />
-                  ))}
-            </div>
-          </Card>
-        )}
-
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="outline" className="rounded-full" onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0}>
-            <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+      {/* Bottom actions */}
+      <div className="sticky bottom-0 mt-auto -mx-4 flex items-center gap-2 bg-gradient-to-t from-quiz-arena-deep via-quiz-arena-deep/90 to-transparent px-4 pb-2 pt-5 sm:-mx-6 sm:px-6">
+        <Button
+          variant="secondary"
+          className="h-12 rounded-full px-5"
+          onClick={() => setCurrent((c) => Math.max(0, c - 1))}
+          disabled={current === 0}
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" /> Back
+        </Button>
+        {isLast ? (
+          <Button
+            className="h-12 flex-1 rounded-full bg-gradient-to-r from-quiz-xp to-quiz-accent text-[15px] font-extrabold text-white"
+            onClick={() => setConfirmOpen(true)}
+          >
+            Submit quiz
           </Button>
-          {current < payload.questions.length - 1 ? (
-            <Button className="rounded-full" onClick={() => setCurrent((c) => Math.min(payload.questions.length - 1, c + 1))}>
-              Next <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          ) : (
-            <Button className="rounded-full" onClick={() => setConfirmOpen(true)}>
-              Submit quiz
-            </Button>
-          )}
-        </div>
-
-        <div className="pt-2">
-          <p className="text-xs text-slate-500 mb-2">Question navigator</p>
-          <div className="flex flex-wrap gap-1.5">
-            {payload.questions.map((qq, i) => {
-              const done = !!answers[qq.id];
-              const active = i === current;
-              return (
-                <button
-                  key={qq.id}
-                  onClick={() => setCurrent(i)}
-                  className={cn(
-                    "w-9 h-9 rounded-full text-sm font-medium border transition",
-                    active ? "bg-primary text-primary-foreground border-primary" :
-                    done ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                    "bg-white text-slate-600 border-slate-200 hover:bg-slate-50",
-                  )}
-                  aria-label={`Question ${i + 1}${done ? " answered" : " unanswered"}`}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        ) : (
+          <Button
+            className="h-12 flex-1 rounded-full bg-gradient-to-r from-quiz-accent to-quiz-accent-strong text-[15px] font-extrabold text-white"
+            onClick={() => setCurrent((c) => Math.min(payload.questions.length - 1, c + 1))}
+          >
+            Next <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -416,45 +471,26 @@ export function StudentQuizAttempt() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function OptionButton({ selected, onClick, label }: { selected: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full text-left rounded-2xl border px-4 py-3 transition min-h-[52px]",
-        selected
-          ? "bg-primary text-primary-foreground border-primary shadow-sm"
-          : "bg-white border-slate-200 hover:border-primary/40 hover:bg-primary/5",
-      )}
-      aria-pressed={selected}
-    >
-      <span className="font-medium whitespace-pre-wrap break-words">{label}</span>
-    </button>
+    </QuizArenaShell>
   );
 }
 
 function SaveIndicator({ state }: { state: SaveState }) {
   const map: Record<SaveState, { label: string; cls: string; icon: React.ReactNode }> = {
-    saving:   { label: "Saving…",  cls: "text-slate-500",    icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
-    saved:    { label: "Saved",    cls: "text-emerald-600",  icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-    unsaved:  { label: "Unsaved",  cls: "text-slate-500",    icon: <Save className="w-3.5 h-3.5" /> },
-    failed:   { label: "Save failed", cls: "text-destructive", icon: <AlertCircle className="w-3.5 h-3.5" /> },
-    conflict: { label: "Conflict", cls: "text-amber-700",    icon: <AlertCircle className="w-3.5 h-3.5" /> },
-    offline:  { label: "Offline",  cls: "text-slate-500",    icon: <WifiOff className="w-3.5 h-3.5" /> },
+    saving:   { label: "Saving…",     cls: "text-quiz-arena-muted", icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+    saved:    { label: "Saved",       cls: "text-emerald-300",      icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+    unsaved:  { label: "Unsaved",     cls: "text-quiz-arena-muted", icon: <Save className="h-3.5 w-3.5" /> },
+    failed:   { label: "Save failed", cls: "text-rose-300",         icon: <AlertCircle className="h-3.5 w-3.5" /> },
+    conflict: { label: "Conflict",    cls: "text-amber-200",        icon: <AlertCircle className="h-3.5 w-3.5" /> },
+    offline:  { label: "Offline",     cls: "text-quiz-arena-muted", icon: <WifiOff className="h-3.5 w-3.5" /> },
   };
   const s = map[state];
-  return <span className={cn("inline-flex items-center gap-1 text-xs font-medium", s.cls)}>{s.icon}{s.label}</span>;
-}
-
-function fmtTime(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-[11.5px] font-bold", s.cls)}>
+      {s.icon}
+      {s.label}
+    </span>
+  );
 }
 
 export default StudentQuizAttempt;
