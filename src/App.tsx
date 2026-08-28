@@ -188,7 +188,9 @@ const App = () => (
             <Route path="/dashboard/learning/replays" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/learning/flashcards/play" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/notes" element={<Navigate to="/dashboard/classes" replace />} />
-            <Route path="/dashboard/quizzes" element={<Navigate to="/dashboard/classes" replace />} />
+            {/* Cross-class student quiz hub + library */}
+            <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizHub /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            <Route path="/dashboard/quizzes/library" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizLibrary /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
