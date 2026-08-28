@@ -27,6 +27,8 @@ const ROOT_PATHS = new Set<string>([
   "/inbox",
   "/dashboard/achievements",
   "/dashboard/leaderboard",
+  "/dashboard/quizzes",
+  "/dashboard/quizzes/library",
   "/dashboard/resources",
   "/support",
   "/privacy",

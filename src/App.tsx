@@ -63,6 +63,8 @@ const StudentClassQuizzes = lazy(() => import("@/pages/dashboard/class/StudentCl
 const StudentQuizAttempt = lazy(() => import("@/pages/dashboard/class/StudentQuizAttempt").then(m => ({ default: m.StudentQuizAttempt })));
 const StudentQuizResult = lazy(() => import("@/pages/dashboard/class/StudentQuizResult").then(m => ({ default: m.StudentQuizResult })));
 const ResourceHub = lazy(() => import("@/pages/resources/ResourceHub"));
+const QuizHub = lazy(() => import("@/pages/dashboard/quiz/QuizHub").then(m => ({ default: m.QuizHub })));
+const QuizLibrary = lazy(() => import("@/pages/dashboard/quiz/QuizLibrary").then(m => ({ default: m.QuizLibrary })));
 
 // Quiz — legacy /quiz/* URLs resolve into the canonical class quiz hub.
 const LegacyQuizRedirect = lazy(() => import("@/pages/quiz/LegacyQuizRedirect").then(m => ({ default: m.LegacyQuizRedirect })));
@@ -186,7 +188,9 @@ const App = () => (
             <Route path="/dashboard/learning/replays" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/learning/flashcards/play" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/notes" element={<Navigate to="/dashboard/classes" replace />} />
-            <Route path="/dashboard/quizzes" element={<Navigate to="/dashboard/classes" replace />} />
+            {/* Cross-class student quiz hub + library */}
+            <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizHub /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            <Route path="/dashboard/quizzes/library" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizLibrary /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
