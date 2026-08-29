@@ -325,7 +325,7 @@ export function StudentQuizAttempt() {
           aria-label="Exit quiz"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/12 backdrop-blur transition active:scale-95"
         >
-          <X className="h-4.5 w-4.5" />
+          <X className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
