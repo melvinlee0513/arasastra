@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -48,6 +49,26 @@ export type TenantCenter = {
   featureFlags?: TenantFeatureFlags;
 };
 
+/**
+ * Outcome of resolving the hostname's tenant slug against the backend.
+ *
+ * `not_found` and the two failure states are deliberately separate. Only
+ * `not_found` means the backend answered and confirmed no active centre owns
+ * this slug; `error` and `timeout` mean we never learned the answer, so the
+ * user must never be told the workspace does not exist.
+ */
+export type TenantLookupStatus =
+  | "resolving"
+  | "resolved"
+  | "not_found"
+  | "error"
+  | "timeout";
+
+/** Budget for a single tenant lookup before it is aborted. */
+const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
+/** Delay before the single automatic retry (fast failures only). */
+const TENANT_RETRY_DELAY_MS = 1_200;
+
 type TenantContextValue = {
   center: TenantCenter | null;
   currentTenantId: string | null;
@@ -59,6 +80,10 @@ type TenantContextValue = {
   refreshCenters: () => Promise<void>;
   subdomainSlug: string | null;
   subdomainTenant: TenantCenter | null;
+  /** Distinguishes "no such tenant" from "we could not reach the backend". */
+  tenantLookupStatus: TenantLookupStatus;
+  /** Re-runs the subdomain tenant lookup (used by the failure screen). */
+  retryTenantLookup: () => void;
   isTenantMismatch: boolean;
   /** Convenience flags for gating UI + auth flows. */
   isHQHost: boolean;
@@ -98,53 +123,111 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [resolvedForUserId, setResolvedForUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
-  const [subdomainResolved, setSubdomainResolved] = useState(false);
+  const [subdomainStatus, setSubdomainStatus] = useState<TenantLookupStatus>("resolving");
+  // Bumping this re-runs the lookup effect (manual retry from the failure screen).
+  const [lookupNonce, setLookupNonce] = useState(0);
 
   const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
   const subdomainSlug = subdomainInfo.slug;
   const isHQHost = subdomainInfo.isApex && !subdomainInfo.isPreview;
   const isTenantHost = !!subdomainSlug;
 
-  // Resolve tenant tied to current subdomain (works anon).
+  const retryTenantLookup = useCallback(() => setLookupNonce((n) => n + 1), []);
+
+  // Resolve the tenant bound to the current subdomain. Runs anonymously and is
+  // independent of auth, so it must be bounded on its own: without a timeout a
+  // hung request would gate the entire application indefinitely.
   useEffect(() => {
     if (!subdomainSlug) {
+      // Apex / preview host — there is no tenant to look up.
       setSubdomainTenant(null);
-      setSubdomainResolved(true);
+      setSubdomainStatus("resolved");
       return;
     }
+
     let cancelled = false;
-    setSubdomainResolved(false);
-    (async () => {
-      const { data, error: rpcErr } = await (supabase as any).rpc(
-        "resolve_tenant_by_subdomain",
-        { _slug: subdomainSlug },
-      );
-      if (cancelled) return;
-      if (rpcErr) {
-        console.error("[TenantProvider] subdomain resolve failed", rpcErr);
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    setSubdomainStatus("resolving");
+    setSubdomainTenant(null);
+
+    const settleFailure = (status: "error" | "timeout", err: unknown) => {
+      console.error("[TenantProvider] tenant lookup failed", {
+        slug: subdomainSlug,
+        status,
+        err,
+      });
+      setSubdomainTenant(null);
+      setSubdomainStatus(status);
+    };
+
+    const attempt = async (isRetry: boolean): Promise<void> => {
+      const controller = new AbortController();
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, TENANT_LOOKUP_TIMEOUT_MS);
+
+      try {
+        const { data, error: rpcErr } = await (supabase as any)
+          .rpc("resolve_tenant_by_subdomain", { _slug: subdomainSlug })
+          .abortSignal(controller.signal);
+
+        if (cancelled) return;
+        if (rpcErr) throw rpcErr;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) {
+          setSubdomainTenant({
+            id: row.id,
+            name: row.name,
+            logoUrl: row.logo_url ?? null,
+            subdomainSlug: row.subdomain_slug ?? subdomainSlug,
+            themeConfig: (row.theme_config ?? {}) as TenantThemeConfig,
+            featureFlags: (row.feature_flags ?? {}) as TenantFeatureFlags,
+          });
+          setSubdomainStatus("resolved");
+          return;
+        }
+
+        // The backend answered successfully and no ACTIVE centre owns this
+        // slug. This is the ONLY path allowed to claim the workspace does not
+        // exist — a transport or server failure must never land here.
         setSubdomainTenant(null);
-        setSubdomainResolved(true);
-        return;
+        setSubdomainStatus("not_found");
+      } catch (err) {
+        if (cancelled) return;
+
+        if (timedOut) {
+          // The timeout already consumed the whole budget; surface it now with
+          // a manual retry rather than doubling the user's wait.
+          settleFailure("timeout", err);
+          return;
+        }
+
+        if (!isRetry) {
+          // One controlled retry for fast failures (transient 5xx, dropped
+          // connection). Never a loop.
+          retryTimer = setTimeout(() => {
+            void attempt(true);
+          }, TENANT_RETRY_DELAY_MS);
+          return;
+        }
+
+        settleFailure("error", err);
+      } finally {
+        clearTimeout(timer);
       }
-      const row = Array.isArray(data) ? data[0] : data;
-      if (row) {
-        setSubdomainTenant({
-          id: row.id,
-          name: row.name,
-          logoUrl: row.logo_url ?? null,
-          subdomainSlug: row.subdomain_slug ?? subdomainSlug,
-          themeConfig: (row.theme_config ?? {}) as TenantThemeConfig,
-          featureFlags: (row.feature_flags ?? {}) as TenantFeatureFlags,
-        });
-      } else {
-        setSubdomainTenant(null);
-      }
-      setSubdomainResolved(true);
-    })();
+    };
+
+    void attempt(false);
+
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [subdomainSlug]);
+  }, [subdomainSlug, lookupNonce]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -281,7 +364,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   const isTenantMismatch =
     !!user && !isSuperAdmin && !!subdomainTenant && !!center && subdomainTenant.id !== center.id;
-  const isUnknownTenant = !!subdomainSlug && subdomainResolved && !subdomainTenant;
+  // "This workspace does not exist" — only ever from a successful backend answer.
+  const isUnknownTenant = !!subdomainSlug && subdomainStatus === "not_found";
+  // "We could not find out" — transport/server failure or timeout.
+  const tenantLookupFailed =
+    !!subdomainSlug && (subdomainStatus === "error" || subdomainStatus === "timeout");
 
   if (import.meta.env.DEV) {
     // Trace tenant resolution to help diagnose login/tenant-handoff issues.
@@ -297,6 +384,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       isSuperAdmin,
       isTenantMismatch,
       isUnknownTenant,
+      tenantLookupFailed,
+      subdomainStatus,
       isLoading,
       hasResolvedOnce,
       userId: user?.id ?? null,
@@ -355,6 +444,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       refreshCenters,
       subdomainSlug,
       subdomainTenant,
+      tenantLookupStatus: subdomainStatus,
+      retryTenantLookup,
       isTenantMismatch,
       isHQHost,
       isTenantHost,
@@ -370,6 +461,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       error,
       subdomainSlug,
       subdomainTenant,
+      subdomainStatus,
+      retryTenantLookup,
       isTenantMismatch,
       isHQHost,
       isTenantHost,
@@ -379,14 +472,22 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  // On a tenant host the lookup ALWAYS gates while it is in flight — including
+  // a manual retry — so the app is never rendered against an unverified tenant.
+  // The auth/centre conditions keep their original first-boot-only behaviour.
   const shouldGate =
-    !hasResolvedOnce &&
-    (authLoading || (!!user && isLoading) || (!!subdomainSlug && !subdomainResolved));
+    (!!subdomainSlug && subdomainStatus === "resolving") ||
+    (!hasResolvedOnce && (authLoading || (!!user && isLoading)));
 
   return (
     <TenantContext.Provider value={value}>
       {shouldGate ? (
         <TenantResolvingScreen />
+      ) : tenantLookupFailed ? (
+        <TenantUnavailableScreen
+          status={subdomainStatus}
+          onRetry={retryTenantLookup}
+        />
       ) : showHandoff && center?.subdomainSlug ? (
         <TenantHandoffScreen
           tenantName={center.name}
@@ -416,6 +517,54 @@ function TenantResolvingScreen({ redirect }: { redirect?: boolean }) {
         <p className="text-sm text-slate-500">
           {redirect ? "Redirecting you to your centre…" : "Loading your organisation…"}
         </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shown when the tenant lookup could not be completed — a transport failure,
+ * a server error, or a timeout.
+ *
+ * This is deliberately NOT the "isn't an Aras A+ workspace" screen: we do not
+ * know whether the workspace exists, so we must not claim it does not.
+ */
+function TenantUnavailableScreen({
+  status,
+  onRetry,
+}: {
+  status: TenantLookupStatus;
+  onRetry: () => void;
+}) {
+  const timedOut = status === "timeout";
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sky-50 p-8">
+      <div className="max-w-md w-full text-center flex flex-col items-center gap-4 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-semibold">
+          !
+        </div>
+        <h1 className="text-xl font-semibold text-[color:var(--brand-midnight,_#0F172A)]">
+          We couldn't load this workspace
+        </h1>
+        <p className="text-sm text-slate-500">
+          {timedOut
+            ? "The connection to our servers is taking longer than expected. Check your internet connection and try again."
+            : "We couldn't reach our servers just now. This is usually temporary — please try again in a moment."}
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <button
+            onClick={onRetry}
+            className="rounded-full bg-[color:var(--brand-primary,_#0052FF)] hover:opacity-90 text-white px-6 h-11 text-sm font-medium"
+          >
+            Try again
+          </button>
+          <a
+            href={`https://${ROOT_DOMAIN}`}
+            className="rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 px-6 h-11 inline-flex items-center text-sm font-medium"
+          >
+            Go to {ROOT_DOMAIN}
+          </a>
+        </div>
       </div>
     </div>
   );

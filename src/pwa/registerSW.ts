@@ -9,6 +9,26 @@
 
 const SW_URL = "/sw.js";
 
+/**
+ * Caches written by superseded service-worker configurations.
+ *
+ * `supabase-api-cache` held NetworkFirst copies of `/rest/v1/*` GET responses
+ * (profiles, user_roles, …) for 24 hours, keyed by URL alone. Workbox's
+ * `cleanupOutdatedCaches` only prunes the precache, so these entries survive a
+ * new deployment and can keep replaying stale identity/tenant data. Delete them
+ * on every production load until they are gone from the estate.
+ */
+const LEGACY_CACHES = ["supabase-api-cache"];
+
+async function purgeLegacyCaches(): Promise<void> {
+  if (typeof caches === "undefined") return;
+  try {
+    await Promise.all(LEGACY_CACHES.map((name) => caches.delete(name)));
+  } catch {
+    // Best-effort — never block boot on cache cleanup.
+  }
+}
+
 function isLovablePreviewHost(hostname: string): boolean {
   return (
     hostname.startsWith("id-preview--") ||
@@ -56,6 +76,10 @@ function notifyUpdateReady(): void {
 }
 
 export function registerAppServiceWorker(): void {
+  // Runs in EVERY context — including the refusal paths below — so a device
+  // that once cached Supabase API responses is cleaned up regardless.
+  void purgeLegacyCaches();
+
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
   if (shouldRefuseRegistration()) {
