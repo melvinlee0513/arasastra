@@ -5,10 +5,7 @@ import {
   AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Loader2, WifiOff, Save, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { QuizSubmitSheet } from "@/components/quiz/QuizSubmitSheet";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useClassContext } from "@/hooks/useClassContext";
@@ -78,16 +75,34 @@ export function StudentQuizAttempt() {
   const failuresRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /**
+   * The exact answers object handed to us by the server. Autosave compares
+   * against this by reference so hydrating an attempt stays a pure read —
+   * writing the server's own answers back on every mount would be a save storm
+   * on the RPC that caused the connection-pool incident.
+   */
+  const hydratedAnswersRef = useRef<Record<string, string> | null>(null);
+
   // Initialise from server payload once loaded (or on refetch after conflict).
   useEffect(() => {
     if (!attemptQ.data || initedRef.current) return;
     const p: StudentAttemptPayload = attemptQ.data;
-    setAnswers(p.attempt.saved_answers ?? {});
+    const saved = p.attempt.saved_answers ?? {};
+    hydratedAnswersRef.current = saved;
+    setAnswers(saved);
     setRevision(p.attempt.progress_revision);
     setDeadline(p.attempt.deadline);
     if (p.attempt.status !== "in_progress") {
       setSubmitted(true);
       setLocked(true);
+    } else {
+      // Resume where the student stopped: the first question with no saved
+      // answer, or the last question when every answer is already in.
+      const qs = p.questions ?? [];
+      if (qs.length > 0) {
+        const firstUnanswered = qs.findIndex((qq) => !saved[qq.id]);
+        setCurrent(firstUnanswered === -1 ? qs.length - 1 : firstUnanswered);
+      }
     }
     initedRef.current = true;
   }, [attemptQ.data]);
@@ -174,6 +189,9 @@ export function StudentQuizAttempt() {
   // Debounced trigger when answers change
   useEffect(() => {
     if (!initedRef.current || locked || submitted) return;
+    // Restoring an attempt is a read. The first post-hydration render still
+    // holds the server's own object, so there is nothing new to persist.
+    if (answers === hydratedAnswersRef.current) return;
     setSaveState((s) => (s === "saved" ? "unsaved" : s));
     const t = setTimeout(() => { void persist(); }, 600);
     return () => clearTimeout(t);
@@ -245,6 +263,18 @@ export function StudentQuizAttempt() {
   }, [attemptId, quizId, classId, navigate, answers, persist, qc, saveState, submitting, currentTenantId]);
 
   const quizzesHref = `/dashboard/classes/${classId}/quizzes`;
+  const resultsHref = `/dashboard/classes/${classId}/quizzes/${quizId}/results/${attemptId}`;
+
+  /**
+   * Reopening an already-submitted attempt must never present an editable
+   * arena. Send the student to the result route, which is what applies the
+   * quiz's result_visibility rules.
+   */
+  const alreadySubmitted =
+    !!attemptQ.data && attemptQ.data.attempt.status !== "in_progress";
+  useEffect(() => {
+    if (alreadySubmitted) navigate(resultsHref, { replace: true });
+  }, [alreadySubmitted, navigate, resultsHref]);
 
   // ── Render ───────────────────────────────────────────────────────────
   if (attemptQ.isLoading || classCtx.isLoading) {
@@ -338,7 +368,6 @@ export function StudentQuizAttempt() {
 
   const q = payload.questions[current];
   const answeredCount = payload.questions.filter((qq) => !!answers[qq.id]).length;
-  const unanswered = payload.questions.length - answeredCount;
   const isLast = current === payload.questions.length - 1;
 
   const gridOptions =
@@ -487,24 +516,19 @@ export function StudentQuizAttempt() {
         )}
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {unanswered > 0
-                ? `You have ${unanswered} unanswered question${unanswered === 1 ? "" : "s"}. You won't be able to change your answers after submitting.`
-                : "You won't be able to change your answers after submitting."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={submitting}>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={doSubmit} disabled={submitting}>
-              {submitting ? "Submitting…" : "Submit"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <QuizSubmitSheet
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        answered={answeredCount}
+        total={payload.questions.length}
+        submitting={submitting}
+        onSubmit={doSubmit}
+        onReview={() => {
+          const firstUnanswered = payload.questions.findIndex((qq) => !answers[qq.id]);
+          if (firstUnanswered !== -1) setCurrent(firstUnanswered);
+          setConfirmOpen(false);
+        }}
+      />
     </QuizArenaShell>
   );
 }

@@ -29,6 +29,7 @@ import {
   ArenaStatusCard,
   QuizArenaShell,
 } from "@/components/quiz/QuizArena";
+import { QuizExplanationFlipCard } from "@/components/quiz/QuizExplanationFlipCard";
 
 // Bounded polling window used when the attempt is submitted but the async
 // finaliser hasn't produced a scored quiz_results row yet.
@@ -368,17 +369,7 @@ export function StudentQuizResult() {
               </div>
             )}
 
-            {q.explanation && (
-              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-white/12 bg-quiz-accent/20 px-3 py-2">
-                <ArenaArt src={QUIZ_ART.explanation} className="h-8 w-8 shrink-0" />
-                <div className="min-w-0">
-                  <p className="mb-0.5 text-[10.5px] font-black uppercase tracking-wide text-quiz-arena-muted">
-                    Explanation
-                  </p>
-                  <p className="whitespace-pre-wrap text-[13.5px]">{q.explanation}</p>
-                </div>
-              </div>
-            )}
+            <QuizExplanationFlipCard explanation={q.explanation} />
           </ArenaPanel>
         ))}
       </div>
