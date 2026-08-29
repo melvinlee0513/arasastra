@@ -46,6 +46,9 @@ export function QuizExplanationFlipCard({
       if (el) setHeight(el.offsetHeight);
     };
     measure();
+    // Degrade to a one-off measurement rather than taking the page down where
+    // ResizeObserver is missing (older webviews, jsdom).
+    if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(measure);
     if (frontRef.current) ro.observe(frontRef.current);
     if (backRef.current) ro.observe(backRef.current);

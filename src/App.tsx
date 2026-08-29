@@ -78,6 +78,11 @@ const TutorNotes = lazy(() => import("@/pages/tutor/TutorNotes").then(m => ({ de
 const TutorUpload = lazy(() => import("@/pages/tutor/TutorUpload").then(m => ({ default: m.TutorUpload })));
 const ClassQuizzesManager = lazy(() => import("@/pages/class/ClassQuizzesManager").then(m => ({ default: m.ClassQuizzesManager })));
 const ClassQuizBuilder = lazy(() => import("@/pages/class/ClassQuizBuilder").then(m => ({ default: m.ClassQuizBuilder })));
+// Live multiplayer — gated behind the liveQuizMultiplayer flag (off by default).
+const HostLiveQuizSetup = lazy(() => import("@/pages/class/HostLiveQuizSetup").then(m => ({ default: m.HostLiveQuizSetup })));
+const LiveQuizHost = lazy(() => import("@/pages/quiz/LiveQuizHost").then(m => ({ default: m.LiveQuizHost })));
+const LiveQuizJoin = lazy(() => import("@/pages/quiz/LiveQuizJoin").then(m => ({ default: m.LiveQuizJoin })));
+const LiveQuizPlay = lazy(() => import("@/pages/quiz/LiveQuizPlay").then(m => ({ default: m.LiveQuizPlay })));
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
 const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/StudentClassFlashcards").then(m => ({ default: m.StudentClassFlashcards })));
 const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
@@ -217,6 +222,10 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizAttempt /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizResult /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
 
+            {/* Live multiplayer — student. Off until liveQuizMultiplayer is enabled. */}
+            <Route path="/dashboard/quiz/join" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizJoin /></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/quiz/live/:sessionId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizPlay /></FeatureRoute></TenantGuard></ProtectedRoute>} />
+
 
             {/* UI-only previews — superadmin-gated, never linked from production nav. Isolated mock data, no backend calls. */}
             <Route path="/dashboard/classes/:classId/preview" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><ClassRoomPreview /></DevPreviewGuard></ProtectedRoute>} />
@@ -250,6 +259,8 @@ const App = () => (
             <Route path="/admin/classes/:classId/quizzes/new" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizBuilder variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/edit" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizBuilder variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/live/new" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><AdminLayout><HostLiveQuizSetup variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/admin/classes/:classId/live/:sessionId" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizHost variant="admin" /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             {/* Class flashcards (Phase 3B1) — tenant `flashcards` flag gated; server enforces role/tenant */}
             <Route path="/admin/classes/:classId/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardsManager variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
@@ -269,6 +280,8 @@ const App = () => (
             <Route path="/tutor/classes/:classId/quizzes/new" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizBuilder variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/quizzes/:quizId/edit" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizBuilder variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/quizzes/:quizId/results" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizResultsManager variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/live/new" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><TutorLayout><HostLiveQuizSetup variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/classes/:classId/live/:sessionId" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizHost variant="tutor" /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><ClassQuizResultsManager variant="tutor" /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuestions /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><QuizAnalytics /></TutorLayout></TenantGuard></ProtectedRoute>} />
