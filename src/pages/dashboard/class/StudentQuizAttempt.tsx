@@ -109,6 +109,14 @@ export function StudentQuizAttempt() {
   }, []);
 
   // ── Autosave with debounce + serialise ───────────────────────────────
+  //
+  // Autosave MUST never turn into a request storm: `save_quiz_progress` takes a
+  // row lock on the attempt, so uncontrolled concurrent/immediate retries can
+  // pile up on the shared Data API connection pool and stall unrelated traffic
+  // (this caused a production bootstrap outage). Invariants enforced here:
+  //   - at most one save in flight (savingRef)
+  //   - a queued save is scheduled, never recursed into synchronously
+  //   - consecutive failures back off, and stop after a bounded number of tries
   const persist = useCallback(async () => {
     if (!attemptId || locked || submitted) return;
     if (!online) { setSaveState("offline"); return; }
@@ -120,11 +128,16 @@ export function StudentQuizAttempt() {
       setRevision(res.progress_revision);
       setDeadline(res.deadline);
       setSaveState("saved");
+      failuresRef.current = 0;
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message ?? "";
+      failuresRef.current += 1;
       if (msg.includes("progress_revision_conflict")) {
+        // Another session owns this attempt — never retry, ask the user to reload.
+        queuedRef.current = false;
         setSaveState("conflict");
       } else if (msg.includes("attempt_deadline_passed")) {
+        queuedRef.current = false;
         setSaveState("failed");
         setLocked(true);
       } else {
@@ -132,12 +145,22 @@ export function StudentQuizAttempt() {
       }
     } finally {
       savingRef.current = false;
-      if (queuedRef.current) {
+      if (queuedRef.current && failuresRef.current < MAX_SAVE_FAILURES) {
         queuedRef.current = false;
-        void persist();
+        // Back off on failures; never re-enter synchronously.
+        const delay = failuresRef.current === 0
+          ? 250
+          : Math.min(8_000, 1_000 * 2 ** (failuresRef.current - 1));
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => { void persist(); }, delay);
       }
     }
   }, [answers, attemptId, revision, online, locked, submitted]);
+
+  // Clear any pending retry when the attempt view goes away.
+  useEffect(() => () => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
 
   // Debounced trigger when answers change
   useEffect(() => {
@@ -148,10 +171,12 @@ export function StudentQuizAttempt() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answers]);
 
-  // Retry when reconnecting
+  // Retry once when reconnecting (guarded so it cannot loop on `persist` identity)
   useEffect(() => {
-    if (online && saveState === "offline") void persist();
-  }, [online, saveState, persist]);
+    if (!online || saveState !== "offline") return;
+    void persist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
 
   // ── Timer-driven expiry submission ───────────────────────────────────
   useEffect(() => {
