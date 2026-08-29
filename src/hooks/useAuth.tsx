@@ -141,14 +141,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserData = async (userId: string) => {
+    // Bounded: a hung profile/role read must not outlive the bootstrap budget.
+    // postgrest resolves aborted queries as { error }, which the handling
+    // below already treats as a soft failure.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), AUTH_BOOTSTRAP_TIMEOUT_MS);
+
     // Run independently so a failure in one query does NOT prevent the other
     // from populating state. Previously a Promise.all with .single() on the
     // profile would reject the whole batch when the profile row was missing
     // or blocked by RLS, leaving `role` null forever → login loop.
     const [profileRes, roleRes] = await Promise.allSettled([
-      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId),
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .abortSignal(controller.signal)
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .abortSignal(controller.signal),
     ]);
+    clearTimeout(timer);
 
     try {
       if (profileRes.status === "fulfilled") {
