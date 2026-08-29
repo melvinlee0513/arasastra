@@ -64,7 +64,23 @@ export type TenantLookupStatus =
   | "error"
   | "timeout";
 
-/** Budget for a single tenant lookup before it is aborted. */
+/**
+ * Outcome of resolving the signed-in user's centre (roles + profile +
+ * tuition centre). Separate from the subdomain lookup because it runs for a
+ * different reason (who is this user?) and fails independently.
+ *
+ * "resolved" covers the legitimate no-centre case (center stays null); the
+ * failure states mean the queries themselves did not complete, so we do not
+ * know the user's centre and must not render as if we did.
+ */
+export type CenterLookupStatus =
+  | "idle"
+  | "resolving"
+  | "resolved"
+  | "error"
+  | "timeout";
+
+/** Budget for a single bootstrap lookup (tenant or centre) before it is aborted. */
 const TENANT_LOOKUP_TIMEOUT_MS = 10_000;
 /** Delay before the single automatic retry (fast failures only). */
 const TENANT_RETRY_DELAY_MS = 1_200;
@@ -82,7 +98,9 @@ type TenantContextValue = {
   subdomainTenant: TenantCenter | null;
   /** Distinguishes "no such tenant" from "we could not reach the backend". */
   tenantLookupStatus: TenantLookupStatus;
-  /** Re-runs the subdomain tenant lookup (used by the failure screen). */
+  /** Same distinction for the signed-in user's centre resolution. */
+  centerLookupStatus: CenterLookupStatus;
+  /** Re-runs the bootstrap lookups (used by the failure screens). */
   retryTenantLookup: () => void;
   isTenantMismatch: boolean;
   /** Convenience flags for gating UI + auth flows. */
@@ -116,15 +134,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasResolvedOnce, setHasResolvedOnce] = useState(false);
-  // Track which user we already fully resolved centres for. This prevents
-  // Supabase token refreshes (which produce a fresh `user` object with the
-  // SAME id) from re-triggering tenant resolution and flashing the
-  // "Loading your organisation…" gate over modals and forms.
-  const [resolvedForUserId, setResolvedForUserId] = useState<string | null>(null);
+  // Track which user we already ATTEMPTED centre resolution for (success or
+  // terminal failure). This prevents Supabase token refreshes (which produce a
+  // fresh `user` object with the SAME id) from re-triggering tenant resolution
+  // and flashing the "Loading your organisation…" gate over modals and forms —
+  // and, on failure, prevents an accidental retry loop. Cleared by the manual
+  // retry action and on sign-out.
+  const [attemptedForUserId, setAttemptedForUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subdomainTenant, setSubdomainTenant] = useState<TenantCenter | null>(null);
   const [subdomainStatus, setSubdomainStatus] = useState<TenantLookupStatus>("resolving");
-  // Bumping this re-runs the lookup effect (manual retry from the failure screen).
+  const [centerStatus, setCenterStatus] = useState<CenterLookupStatus>("idle");
+  // Bumping this re-runs the lookup effects (manual retry from a failure screen).
   const [lookupNonce, setLookupNonce] = useState(0);
 
   const subdomainInfo = useMemo(() => getTenantSubdomain(), []);
@@ -132,7 +153,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const isHQHost = subdomainInfo.isApex && !subdomainInfo.isPreview;
   const isTenantHost = !!subdomainSlug;
 
-  const retryTenantLookup = useCallback(() => setLookupNonce((n) => n + 1), []);
+  const retryTenantLookup = useCallback(() => {
+    // Allow the centre-resolution effect to run again for the same user.
+    setAttemptedForUserId(null);
+    setLookupNonce((n) => n + 1);
+  }, []);
 
   // Resolve the tenant bound to the current subdomain. Runs anonymously and is
   // independent of auth, so it must be bounded on its own: without a timeout a
@@ -229,51 +254,107 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     };
   }, [subdomainSlug, lookupNonce]);
 
+  // Resolve the signed-in user's centre (roles + profile + tuition centre).
+  // Every query is bounded by an AbortController: on the APEX host this effect
+  // is the ONLY bootstrap work, so an unbounded hang here previously trapped
+  // authenticated users on "Loading your organisation…" forever.
   useEffect(() => {
-    if (authLoading) return;
+    // While auth is still deciding AND we have no user id, there is nothing to
+    // resolve yet. Once the user id is known we start immediately — even if
+    // auth is still hydrating roles — so the two bounded lookups run in
+    // parallel instead of stacking their timeouts.
+    if (authLoading && !userId) return;
 
     if (!userId) {
       setCenter(null);
       setAvailableCenters([]);
       setIsSuperAdmin(false);
       setIsLoading(false);
-      setResolvedForUserId(null);
+      setCenterStatus("idle");
+      setAttemptedForUserId(null);
+      // An anonymous visitor's bootstrap is complete: the gate must never
+      // re-arm over the sign-in flow.
+      setHasResolvedOnce(true);
       return;
     }
 
-    // Already fully resolved for this user — a stale user object from a
-    // token refresh must not restart tenant resolution.
-    if (resolvedForUserId === userId) {
+    // Already attempted for this user (success or terminal failure) — a stale
+    // user object from a token refresh must not restart resolution, and a
+    // failure must not silently loop.
+    if (attemptedForUserId === userId) {
       return;
     }
 
     let cancelled = false;
-    (async () => {
-      // Only show the loading state during the FIRST resolution. Subsequent
-      // background revalidations keep the previous tenant data visible so
-      // modals/forms don't remount.
-      if (!hasResolvedOnce) setIsLoading(true);
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let activeController: AbortController | null = null;
+
+    // Only show the loading state during the FIRST resolution. Subsequent
+    // re-runs (manual retry, user switch) gate via centerStatus instead so
+    // previously rendered data never flashes.
+    if (!hasResolvedOnce) setIsLoading(true);
+    setCenterStatus("resolving");
+
+    const settle = () => {
+      setAttemptedForUserId(userId);
+      setIsLoading(false);
+      setHasResolvedOnce(true);
+    };
+
+    const settleFailure = (status: "error" | "timeout", err: unknown) => {
+      console.error("[TenantProvider] centre resolution failed", {
+        userId,
+        status,
+        err,
+      });
+      setError("Failed to resolve organisation");
+      if (!hasResolvedOnce) setCenter(null);
+      setCenterStatus(status);
+      settle();
+    };
+
+    const attempt = async (isRetry: boolean): Promise<void> => {
+      const controller = new AbortController();
+      activeController = controller;
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, TENANT_LOOKUP_TIMEOUT_MS);
+
       try {
         const [rolesRes, profileRes] = await Promise.all([
-          supabase.from("user_roles").select("role").eq("user_id", userId),
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .abortSignal(controller.signal),
           supabase
             .from("profiles")
             .select("center_id")
             .eq("user_id", userId)
+            .abortSignal(controller.signal)
             .maybeSingle(),
         ]);
         if (cancelled) return;
+        // A query error (abort included — postgrest resolves aborts as
+        // { error }) means we DON'T know the user's centre. It must not be
+        // treated as "user has no centre".
+        if (rolesRes.error) throw rolesRes.error;
+        if (profileRes.error) throw profileRes.error;
 
         const roleSet = new Set((rolesRes.data ?? []).map((r) => r.role));
         const superAdmin = roleSet.has("superadmin");
-        setIsSuperAdmin(superAdmin);
 
         let centers: TenantCenter[] = [];
         if (superAdmin) {
-          const { data } = await supabase
+          const { data, error: centersErr } = await supabase
             .from("tuition_centers")
             .select("id, name, logo_url, subdomain_slug, theme_config, feature_flags")
-            .order("name");
+            .order("name")
+            .abortSignal(controller.signal);
+          if (cancelled) return;
+          if (centersErr) throw centersErr;
           centers = (data ?? []).map((c: any) => ({
             id: c.id,
             name: c.name,
@@ -292,11 +373,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           if (found) {
             activeCenter = found;
           } else {
-            const { data: c } = await supabase
+            const { data: c, error: centerErr } = await supabase
               .from("tuition_centers")
               .select("id, name, logo_url, subdomain_slug, theme_config, feature_flags")
               .eq("id", userCenterId)
+              .abortSignal(controller.signal)
               .maybeSingle();
+            if (cancelled) return;
+            if (centerErr) throw centerErr;
             if (c) {
               const anyC = c as any;
               activeCenter = {
@@ -312,27 +396,44 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        setIsSuperAdmin(superAdmin);
         setAvailableCenters(centers);
         setCenter(activeCenter);
         setError(null);
-        setResolvedForUserId(userId);
+        setCenterStatus("resolved");
+        settle();
       } catch (err) {
         if (cancelled) return;
-        console.error("[TenantProvider] failed to resolve tenant", err);
-        setError("Failed to resolve organisation");
-        if (!hasResolvedOnce) setCenter(null);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-          setHasResolvedOnce(true);
+
+        if (timedOut) {
+          // The whole budget is already spent — surface the failure now with
+          // a manual retry rather than doubling the user's wait.
+          settleFailure("timeout", err);
+          return;
         }
+
+        if (!isRetry) {
+          // One controlled retry for fast failures. Never a loop.
+          retryTimer = setTimeout(() => {
+            void attempt(true);
+          }, TENANT_RETRY_DELAY_MS);
+          return;
+        }
+
+        settleFailure("error", err);
+      } finally {
+        clearTimeout(timer);
       }
-    })();
+    };
+
+    void attempt(false);
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      activeController?.abort();
     };
-  }, [userId, authLoading, resolvedForUserId, hasResolvedOnce]);
+  }, [userId, authLoading, attemptedForUserId, hasResolvedOnce, lookupNonce]);
 
   const setCurrentTenantId = (id: string) => {
     const next = availableCenters.find((c) => c.id === id);
@@ -369,6 +470,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   // "We could not find out" — transport/server failure or timeout.
   const tenantLookupFailed =
     !!subdomainSlug && (subdomainStatus === "error" || subdomainStatus === "timeout");
+  // The signed-in user's centre could not be resolved. Without it we cannot
+  // route by role or validate tenant membership, so rendering the app would
+  // either lie ("no organisation assigned") or skip the mismatch check.
+  const centerLookupFailed =
+    !!user && (centerStatus === "error" || centerStatus === "timeout");
 
   if (import.meta.env.DEV) {
     // Trace tenant resolution to help diagnose login/tenant-handoff issues.
@@ -385,7 +491,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       isTenantMismatch,
       isUnknownTenant,
       tenantLookupFailed,
+      centerLookupFailed,
       subdomainStatus,
+      centerStatus,
       isLoading,
       hasResolvedOnce,
       userId: user?.id ?? null,
@@ -445,6 +553,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       subdomainSlug,
       subdomainTenant,
       tenantLookupStatus: subdomainStatus,
+      centerLookupStatus: centerStatus,
       retryTenantLookup,
       isTenantMismatch,
       isHQHost,
@@ -462,6 +571,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       subdomainSlug,
       subdomainTenant,
       subdomainStatus,
+      centerStatus,
       retryTenantLookup,
       isTenantMismatch,
       isHQHost,
@@ -472,12 +582,16 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  // On a tenant host the lookup ALWAYS gates while it is in flight — including
-  // a manual retry — so the app is never rendered against an unverified tenant.
-  // The auth/centre conditions keep their original first-boot-only behaviour.
+  // Gate ONLY while a bounded lookup is actually in flight:
+  //  - the subdomain tenant lookup (tenant hosts, ≤ ~11s incl. one retry);
+  //  - the initial auth bootstrap (≤ 10s via its own safety timeout);
+  //  - the signed-in centre resolution (≤ ~11s incl. one retry).
+  // Every arm settles into resolved / not_found / error / timeout, so this
+  // gate can no longer hold indefinitely.
   const shouldGate =
     (!!subdomainSlug && subdomainStatus === "resolving") ||
-    (!hasResolvedOnce && (authLoading || (!!user && isLoading)));
+    (!hasResolvedOnce && authLoading) ||
+    (!!user && centerStatus === "resolving");
 
   return (
     <TenantContext.Provider value={value}>
@@ -485,7 +599,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         <TenantResolvingScreen />
       ) : tenantLookupFailed ? (
         <TenantUnavailableScreen
-          status={subdomainStatus}
+          status={subdomainStatus === "timeout" ? "timeout" : "error"}
+          onRetry={retryTenantLookup}
+        />
+      ) : centerLookupFailed ? (
+        <TenantUnavailableScreen
+          status={centerStatus === "timeout" ? "timeout" : "error"}
           onRetry={retryTenantLookup}
         />
       ) : showHandoff && center?.subdomainSlug ? (
@@ -533,7 +652,7 @@ function TenantUnavailableScreen({
   status,
   onRetry,
 }: {
-  status: TenantLookupStatus;
+  status: "error" | "timeout";
   onRetry: () => void;
 }) {
   const timedOut = status === "timeout";
