@@ -87,6 +87,8 @@
        drive the immersive gameplay + results screens (dark violet space). */
     --quiz-accent: 262 83% 58%;
     --quiz-accent-strong: 266 85% 48%;
+    /* Pink end of the arena CTA gradient — pairs with --quiz-accent. */
+    --quiz-accent-pink: 320 85% 62%;
     --quiz-tint: 260 100% 97%;
     --quiz-tint-strong: 258 96% 93%;
     --quiz-xp: 43 96% 50%;

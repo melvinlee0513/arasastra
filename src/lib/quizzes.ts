@@ -620,9 +620,31 @@ export async function getQuizAttemptForManager(attemptId: string): Promise<Manag
 }
 
 // ─── Friendly error mapping ─────────────────────────────────────────────────
+/**
+ * Map a Postgres error onto something a person can act on.
+ *
+ * Two naming conventions are in play. The quiz-definition RPCs raise
+ * snake_case tokens (`attempt_not_found`), while the older student attempt
+ * RPCs in `20260718082042_*.sql` — `start_quiz_attempt` above all — raise
+ * prose (`attempt limit reached`). Both forms have to be matched here: a
+ * student who is early, late or out of attempts otherwise gets the generic
+ * fallback instead of the actual reason.
+ */
 export function mapQuizError(err: unknown, fallback = "Something went wrong. Please try again."): string {
-  const msg = (err as { message?: string })?.message ?? "";
-  if (!msg) return fallback;
+  const raw = (err as { message?: string })?.message ?? "";
+  if (!raw) return fallback;
+  // Collapse the prose forms onto the snake_case tokens so each rule below
+  // only has to state the condition once.
+  const msg = raw
+    .replace(/not authenticated/gi, "not_authenticated")
+    .replace(/not authorised|not authorized/gi, "access_denied")
+    .replace(/not enrolled in class/gi, "not_enrolled")
+    .replace(/quiz not yet available/gi, "quiz_not_available")
+    .replace(/quiz due date passed/gi, "quiz_past_due")
+    .replace(/attempt limit reached/gi, "attempts_exhausted")
+    .replace(/quiz unavailable/gi, "quiz_unavailable")
+    .replace(/attempt not found/gi, "attempt_not_found");
+
   if (msg.includes("not_authenticated")) return "Please sign in again.";
   if (msg.includes("access_denied")) return "You don't have permission to manage this quiz.";
   if (msg.includes("not_enrolled")) return "You aren't enrolled in this class.";
@@ -653,5 +675,7 @@ export function mapQuizError(err: unknown, fallback = "Something went wrong. Ple
     return idx > -1 ? msg.slice(idx + 1).trim() : "Please complete the quiz before publishing.";
   }
   if (msg.includes("invalid_status")) return "That status change isn't allowed.";
+  if (msg.includes("result_visibility=after_due"))
+    return "Set a due date before releasing results after the due date.";
   return fallback;
 }

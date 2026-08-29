@@ -170,9 +170,24 @@ export function ClassQuizBuilder({ variant }: Props) {
 
   const locked = !!defQ.data?.locked;
   const hasAttempts = !!defQ.data?.has_attempts;
-  // Optimistic concurrency: the version we loaded. The server rejects the save
-  // with `quiz_definition_conflict` if another manager saved in the meantime.
-  const expectedVersion = defQ.data?.quiz.definition_version ?? null;
+
+  // Optimistic concurrency: the version we believe the server holds. The server
+  // rejects the save with `quiz_definition_conflict` if it has moved on.
+  //
+  // A save returns the new definition_version immediately, but the definition
+  // query is only invalidated — until that refetch lands the cache still holds
+  // the pre-save version. Reading the version from the cache there would reject
+  // the tutor's own next save as somebody else's edit, so the acknowledged
+  // version wins until the refetch catches up with it.
+  const [ackedVersion, setAckedVersion] = useState<number | null>(null);
+  const loadedVersion = defQ.data?.quiz.definition_version ?? null;
+  const expectedVersion = ackedVersion ?? loadedVersion;
+
+  useEffect(() => {
+    if (ackedVersion !== null && loadedVersion !== null && loadedVersion >= ackedVersion) {
+      setAckedVersion(null);
+    }
+  }, [loadedVersion, ackedVersion]);
 
   const draftKey = useMemo(() => {
     if (!user?.id || !currentTenantId) return null;
@@ -291,6 +306,9 @@ export function ClassQuizBuilder({ variant }: Props) {
       return res;
     },
     onSuccess: async (res, args) => {
+      // Carry the server's new version forward so a second save in the same
+      // session isn't rejected as a conflict with the tutor's own first save.
+      setAckedVersion(res.definition_version ?? null);
       qc.invalidateQueries({ queryKey: quizManagerKeys.list(currentTenantId, classId) });
       qc.invalidateQueries({ queryKey: ["class-context", currentTenantId, classId] });
       qc.invalidateQueries({ queryKey: ["tutor-class-home"] });

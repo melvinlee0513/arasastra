@@ -48,6 +48,7 @@ export default {
         quiz: {
           accent: "hsl(var(--quiz-accent))",
           "accent-strong": "hsl(var(--quiz-accent-strong))",
+          "accent-pink": "hsl(var(--quiz-accent-pink))",
           tint: "hsl(var(--quiz-tint))",
           "tint-strong": "hsl(var(--quiz-tint-strong))",
           xp: "hsl(var(--quiz-xp))",
