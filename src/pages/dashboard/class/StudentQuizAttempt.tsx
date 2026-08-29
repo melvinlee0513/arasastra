@@ -33,6 +33,12 @@ import {
 
 type SaveState = "unsaved" | "saving" | "saved" | "failed" | "conflict" | "offline";
 
+/**
+ * Ceiling on consecutive autosave retries. Past this the UI shows a failed state
+ * and waits for a user action instead of hammering the Data API.
+ */
+const MAX_SAVE_FAILURES = 4;
+
 export function StudentQuizAttempt() {
   const { classId, quizId, attemptId } = useParams<{ classId: string; quizId: string; attemptId: string }>();
   const { user } = useAuth();
