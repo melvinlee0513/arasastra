@@ -68,6 +68,9 @@ export function StudentQuizAttempt() {
   const queuedRef = useRef(false);
   const initedRef = useRef(false);
   const totalSecondsRef = useRef<number | null>(null);
+  /** Consecutive autosave failures — drives backoff and the retry ceiling. */
+  const failuresRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialise from server payload once loaded (or on refetch after conflict).
   useEffect(() => {
