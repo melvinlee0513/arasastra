@@ -901,6 +901,13 @@ REVOKE ALL ON FUNCTION public._live_quiz_points(integer, timestamptz, timestampt
 REVOKE ALL ON FUNCTION public._is_live_quiz_participant(uuid)                                    FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public._can_host_live_quiz(uuid)                                          FROM PUBLIC, anon;
 
+-- These two are called from inside the RLS policies below, and a policy
+-- expression is evaluated as the querying role. Without EXECUTE the policy
+-- raises "permission denied for function" instead of returning false, which
+-- makes every session row unreadable and takes Realtime down with it.
+GRANT EXECUTE ON FUNCTION public._is_live_quiz_participant(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public._can_host_live_quiz(uuid)       TO authenticated;
+
 GRANT EXECUTE ON FUNCTION public.create_live_quiz_session(uuid, integer, boolean, integer, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.join_live_quiz_session(text)                                       TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_live_quiz_snapshot(uuid)                                       TO authenticated;
