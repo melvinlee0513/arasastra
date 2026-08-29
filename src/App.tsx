@@ -215,7 +215,7 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentClassQuizzes /></DashboardLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/attempt/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizAttempt /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
-            <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><DashboardLayout><StudentQuizResult /></DashboardLayout></TenantGuard></ProtectedRoute>} />
+            <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizResult /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
 
 
             {/* UI-only previews — superadmin-gated, never linked from production nav. Isolated mock data, no backend calls. */}
