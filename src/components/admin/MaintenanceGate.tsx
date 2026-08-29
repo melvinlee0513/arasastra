@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wrench } from "lucide-react";
 import owlMascot from "@/assets/owl-mascot.png";
 
+/**
+ * Upper bound on the maintenance check.
+ *
+ * This gate sits above the router, so a stalled request here blocks the whole
+ * application just as the tenant gate does. The check fails OPEN: if we cannot
+ * confirm maintenance mode in time we let the app through.
+ */
+const MAINTENANCE_CHECK_TIMEOUT_MS = 8_000;
+
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [message, setMessage] = useState("We are upgrading the experience. Please check back shortly.");
@@ -10,7 +19,10 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    checkMaintenance();
+    // Fail open on a stalled request rather than gating the app indefinitely.
+    const timer = setTimeout(() => setIsLoading(false), MAINTENANCE_CHECK_TIMEOUT_MS);
+    void checkMaintenance().finally(() => clearTimeout(timer));
+    return () => clearTimeout(timer);
   }, []);
 
   const checkMaintenance = async () => {

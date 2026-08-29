@@ -41,6 +41,15 @@ interface Profile {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Upper bound on the initial session bootstrap.
+ *
+ * `getSession()` can trigger a token refresh, and the follow-up profile/role
+ * reads can stall. Without a bound, `isLoading` stays true forever and every
+ * downstream gate (TenantProvider, ProtectedRoute, …) blocks with it.
+ */
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 10_000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -49,6 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchingRef = useRef<string | null>(null);
+  // True once the FIRST bootstrap has settled, so the safety timeout below
+  // cannot interfere with later sign-in/sign-out hydration.
+  const bootstrapDoneRef = useRef(false);
   const queryClient = useQueryClient();
 
 
@@ -82,21 +94,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // 2. THEN check for an existing session.
-    supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      setSession(existing);
-      setUser(existing?.user ?? null);
-      if (existing?.user) {
-        if (fetchingRef.current !== existing.user.id) {
-          fetchingRef.current = existing.user.id;
-          fetchUserData(existing.user.id);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    });
+    // Safety net: a hung getSession()/token refresh, or a stalled profile/role
+    // read, must never keep the whole app behind a loading gate. This only
+    // stops BLOCKING — the stored session is left untouched and a late
+    // onAuthStateChange still hydrates normally. We never sign anyone out
+    // because a network request was slow.
+    const bootstrapTimer = setTimeout(() => {
+      if (bootstrapDoneRef.current) return;
+      bootstrapDoneRef.current = true;
+      console.warn(
+        "[auth] session bootstrap exceeded its budget — releasing the loading gate",
+      );
+      setIsLoading(false);
+    }, AUTH_BOOTSTRAP_TIMEOUT_MS);
 
-    return () => subscription.unsubscribe();
+    // 2. THEN check for an existing session.
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: existing } }) => {
+        setSession(existing);
+        setUser(existing?.user ?? null);
+        if (existing?.user) {
+          if (fetchingRef.current !== existing.user.id) {
+            fetchingRef.current = existing.user.id;
+            // fetchUserData settles the gate in its own `finally`.
+            fetchUserData(existing.user.id);
+          }
+        } else {
+          bootstrapDoneRef.current = true;
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        // Transient failure (offline, refresh endpoint unreachable). Release
+        // the gate so the app can render its own error/sign-in surfaces —
+        // do NOT clear the session.
+        console.error("[auth] getSession failed", err);
+        bootstrapDoneRef.current = true;
+        setIsLoading(false);
+      });
+
+    return () => {
+      clearTimeout(bootstrapTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserData = async (userId: string) => {
@@ -137,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("[auth] roles fetch rejected", roleRes.reason);
       }
     } finally {
+      bootstrapDoneRef.current = true;
       setIsLoading(false);
     }
   };

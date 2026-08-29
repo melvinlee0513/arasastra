@@ -77,13 +77,20 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-api-cache",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-              networkTimeoutSeconds: 5,
-            },
+            // Supabase traffic is NEVER cached by the service worker.
+            //
+            // Auth, tenancy, roles and every other user-specific response must
+            // come from the network. Previously `/rest/v1/*` GETs were served
+            // by NetworkFirst with a 24h `supabase-api-cache`, which meant:
+            //   - the Cache Storage key is the URL only, so the Authorization
+            //     header is not part of it — a cached `profiles` / `user_roles`
+            //     response could outlive the session that fetched it;
+            //   - a 5s network timeout silently substituted stale identity and
+            //     tenant data whenever the network was slow.
+            // NetworkOnly keeps the worker out of the way: nothing is written
+            // to Cache Storage and nothing stale can ever be replayed.
+            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co"),
+            handler: "NetworkOnly",
           },
         ],
       },
