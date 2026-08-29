@@ -1,19 +1,19 @@
+/**
+ * Tutor / Admin quiz builder — thin controller.
+ *
+ * Owns loading, draft state, wizard navigation, optimistic version, locked
+ * state, validation routing and the save/publish mutations. Rendering lives in
+ * `@/components/quiz/builder/*`.
+ *
+ * Backend contract is unchanged: `save_quiz_definition` remains the single
+ * source of truth, `_expected_version` carries optimistic concurrency, folder
+ * placement stays a separate non-destructive `moveContentItem` call, and a
+ * locked quiz still sends the reduced payload the server accepts.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ArrowUp,
-  ArrowDown,
-  Copy,
-  HelpCircle,
-  Lock,
-  Plus,
-  Save,
-  Send,
-  Trash2,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, Copy, Loader2, Save, Send } from "lucide-react";
 import { ClassShell } from "@/components/class/ClassShell";
 import { TenantEmptyState } from "@/components/common/TenantGate";
 import { useClassContext } from "@/hooks/useClassContext";
@@ -21,28 +21,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { FolderSelect } from "@/components/class/FolderSelect";
-import {
-  fetchManagerContentTree,
-  folderKeys,
-  moveContentItem,
-} from "@/lib/contentFolders";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,231 +32,51 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  fetchManagerContentTree,
+  folderKeys,
+  moveContentItem,
+} from "@/lib/contentFolders";
+import {
   duplicateQuizAsDraft,
   getQuizDefinitionForManager,
   mapQuizError,
   quizManagerKeys,
-  RESULT_VISIBILITY_LABEL,
   saveQuizDefinition,
   type QuestionType,
-  type QuizDefinitionForManager,
-  type ResultVisibility,
 } from "@/lib/quizzes";
+import {
+  BuilderFooter,
+  BuilderShell,
+  BuilderStepper,
+} from "@/components/quiz/builder/QuizBuilderChrome";
+import { BasicInfoStep } from "@/components/quiz/builder/BasicInfoStep";
+import { QuestionsStep } from "@/components/quiz/builder/QuestionsStep";
+import { SettingsStep } from "@/components/quiz/builder/SettingsStep";
+import { PreviewStep } from "@/components/quiz/builder/PreviewStep";
+import {
+  BUILDER_STEPS,
+  emptyBuilderState,
+  invalidQuestionIndexes,
+  isBuilderStep,
+  newOption,
+  newQuestion,
+  rid,
+  stateFromDefinition,
+  toRpcDefinition,
+  validateBuilder,
+  validateBuilderIssues,
+  type BuilderState,
+  type BuilderStep,
+  type MetaDraft,
+  type OptionDraft,
+  type QuestionDraft,
+} from "@/components/quiz/builder/types";
 
 type Variant = "tutor" | "admin";
 
 interface Props {
   variant: Variant;
 }
-
-interface OptionDraft {
-  id: string; // local UUID (server-side always reassigned currently)
-  option_text: string;
-  is_correct: boolean;
-}
-interface QuestionDraft {
-  id: string;
-  question: string;
-  question_type: QuestionType;
-  points: number;
-  explanation: string;
-  options: OptionDraft[];
-}
-interface MetaDraft {
-  title: string;
-  description: string;
-  instructions: string;
-  available_from: string; // ISO local input value (yyyy-MM-ddTHH:mm) or ""
-  due_at: string;
-  time_limit_seconds: string; // stringified minutes source
-  attempt_limit: string;
-  shuffle_questions: boolean;
-  shuffle_options: boolean;
-  result_visibility: ResultVisibility;
-}
-interface BuilderState {
-  meta: MetaDraft;
-  questions: QuestionDraft[];
-}
-
-const RESULT_VISIBILITY_HINT: Record<ResultVisibility, string> = {
-  never: "Results remain hidden from students.",
-  after_submit: "Full result is shown immediately after the student submits.",
-  after_due: "Results appear once the due date has passed. Requires a due date.",
-  manual: "Results stay hidden until you release them manually.",
-};
-
-const emptyMeta = (): MetaDraft => ({
-  title: "",
-  description: "",
-  instructions: "",
-  available_from: "",
-  due_at: "",
-  time_limit_seconds: "",
-  attempt_limit: "1",
-  shuffle_questions: false,
-  shuffle_options: false,
-  result_visibility: "after_submit",
-});
-
-function rid(prefix = "id"): string {
-  return `${prefix}_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
-}
-function newOption(text = "", correct = false): OptionDraft {
-  return { id: rid("opt"), option_text: text, is_correct: correct };
-}
-function newQuestion(type: QuestionType = "mcq"): QuestionDraft {
-  if (type === "true_false") {
-    return {
-      id: rid("q"),
-      question: "",
-      question_type: "true_false",
-      points: 1,
-      explanation: "",
-      options: [newOption("True"), newOption("False")],
-    };
-  }
-  return {
-    id: rid("q"),
-    question: "",
-    question_type: "mcq",
-    points: 1,
-    explanation: "",
-    options: [newOption(), newOption()],
-  };
-}
-
-// Convert ISO timestamp → datetime-local input value in local TZ
-function toLocalInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function fromLocalInput(v: string): string | null {
-  if (!v) return null;
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function stateFromDefinition(def: QuizDefinitionForManager): BuilderState {
-  return {
-    meta: {
-      title: def.quiz.title ?? "",
-      description: def.quiz.description ?? "",
-      instructions: def.quiz.instructions ?? "",
-      available_from: toLocalInput(def.quiz.available_from),
-      due_at: toLocalInput(def.quiz.due_at),
-      time_limit_seconds: def.quiz.time_limit_seconds
-        ? String(Math.round(def.quiz.time_limit_seconds / 60))
-        : "",
-      attempt_limit: String(def.quiz.attempt_limit ?? 1),
-      shuffle_questions: !!def.quiz.shuffle_questions,
-      shuffle_options: !!def.quiz.shuffle_options,
-      result_visibility: def.quiz.result_visibility,
-    },
-    questions: def.questions.map((q) => ({
-      id: q.id,
-      question: q.question,
-      question_type: q.question_type === "true_false" ? "true_false" : "mcq",
-      points: q.points,
-      explanation: q.explanation ?? "",
-      options: q.options.map((o) => ({
-        id: o.id,
-        option_text: o.option_text,
-        is_correct: o.is_correct,
-      })),
-    })),
-  };
-}
-
-function emptyBuilderState(): BuilderState {
-  return { meta: emptyMeta(), questions: [] };
-}
-
-function validateBuilder(state: BuilderState, forPublish: boolean): string[] {
-  const errs: string[] = [];
-  const m = state.meta;
-  if (!m.title.trim()) errs.push("Add a title.");
-  const attemptLimit = parseInt(m.attempt_limit, 10);
-  if (!Number.isFinite(attemptLimit) || attemptLimit < 1) errs.push("Attempt limit must be at least 1.");
-  const tl = m.time_limit_seconds.trim();
-  if (tl && (!/^\d+$/.test(tl) || parseInt(tl, 10) < 0)) errs.push("Time limit must be a whole number of minutes.");
-  if (m.available_from && m.due_at) {
-    const a = new Date(m.available_from).getTime();
-    const d = new Date(m.due_at).getTime();
-    if (!isNaN(a) && !isNaN(d) && d < a) errs.push("Due date must be after the available date.");
-  }
-  if (m.result_visibility === "after_due" && !m.due_at) {
-    errs.push("Results after due date requires a due date.");
-  }
-  if (forPublish) {
-    if (state.questions.length === 0) errs.push("Add at least one question before publishing.");
-    state.questions.forEach((q, i) => {
-      const n = i + 1;
-      if (!q.question.trim()) errs.push(`Question ${n} is missing text.`);
-      if (!Number.isFinite(q.points) || q.points <= 0) errs.push(`Question ${n} needs points greater than zero.`);
-      if (q.question_type === "mcq") {
-        if (q.options.length < 2) errs.push(`Question ${n} needs at least 2 options.`);
-        if (q.options.some((o) => !o.option_text.trim())) errs.push(`Question ${n} has a blank option.`);
-      } else {
-        if (q.options.length !== 2) errs.push(`Question ${n} (true/false) needs exactly two options.`);
-        const t = q.options.filter((o) => o.option_text.trim().toLowerCase() === "true").length;
-        const f = q.options.filter((o) => o.option_text.trim().toLowerCase() === "false").length;
-        if (t !== 1 || f !== 1) errs.push(`Question ${n} (true/false) must have one True and one False option.`);
-      }
-      const correct = q.options.filter((o) => o.is_correct).length;
-      if (correct === 0) errs.push(`Question ${n} needs a correct answer.`);
-      if (correct > 1) errs.push(`Question ${n} has more than one correct answer.`);
-    });
-  }
-  return errs;
-}
-
-// Once a quiz has attempts the server freezes questions, shuffle, time limit
-// and schedule. Sending those keys — even unchanged — risks a locked error, so
-// a locked save carries only the fields the server still accepts.
-function toRpcDefinition(state: BuilderState, locked: boolean) {
-  const tlMin = state.meta.time_limit_seconds.trim();
-  if (locked) {
-    return {
-      meta: {
-        title: state.meta.title.trim(),
-        description: state.meta.description,
-        instructions: state.meta.instructions,
-        attempt_limit: Math.max(1, parseInt(state.meta.attempt_limit, 10) || 1),
-        result_visibility: state.meta.result_visibility,
-      },
-      questions: [],
-    };
-  }
-  return {
-    meta: {
-      title: state.meta.title.trim(),
-      description: state.meta.description,
-      instructions: state.meta.instructions,
-      available_from: fromLocalInput(state.meta.available_from),
-      due_at: fromLocalInput(state.meta.due_at),
-      time_limit_seconds: tlMin && /^\d+$/.test(tlMin) ? parseInt(tlMin, 10) * 60 : null,
-      attempt_limit: Math.max(1, parseInt(state.meta.attempt_limit, 10) || 1),
-      shuffle_questions: state.meta.shuffle_questions,
-      shuffle_options: state.meta.shuffle_options,
-      result_visibility: state.meta.result_visibility,
-    },
-    questions: state.questions.map((q) => ({
-      question: q.question,
-      question_type: q.question_type,
-      points: q.points,
-      explanation: q.explanation || null,
-      options: q.options.map((o) => ({
-        option_text: o.option_text,
-        is_correct: o.is_correct,
-      })),
-    })),
-  };
-}
-
 
 export function ClassQuizBuilder({ variant }: Props) {
   const params = useParams<{ classId: string; quizId?: string }>();
@@ -309,9 +107,43 @@ export function ClassQuizBuilder({ variant }: Props) {
   const [state, setState] = useState<BuilderState>(() => emptyBuilderState());
   const [initialized, setInitialized] = useState(isNew);
   const [dirty, setDirty] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Folder placement — new quizzes default to the folder the tutor came from.
+  // ── Wizard step (URL-driven, so refresh and Back behave) ──────────
+  const stepParam = searchParams.get("step");
+  const step: BuilderStep = isBuilderStep(stepParam) ? stepParam : "basic";
+  const [furthestStep, setFurthestStep] = useState<BuilderStep>(step);
+
+  useEffect(() => {
+    if (BUILDER_STEPS.indexOf(step) > BUILDER_STEPS.indexOf(furthestStep)) {
+      setFurthestStep(step);
+    }
+  }, [step, furthestStep]);
+
+  const goToStep = useCallback(
+    (next: BuilderStep, opts?: { replace?: boolean }) => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          p.set("step", next);
+          return p;
+        },
+        { replace: opts?.replace ?? false },
+      );
+      // Each step is a distinct screen on mobile — start it at the top.
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" });
+    },
+    [setSearchParams],
+  );
+
+  // Normalise a missing/invalid ?step= into the canonical first step.
+  useEffect(() => {
+    if (!isBuilderStep(stepParam)) goToStep("basic", { replace: true });
+  }, [stepParam, goToStep]);
+
+  const [activeQuestion, setActiveQuestion] = useState(0);
+
+  // ── Folder placement (separate from quiz-definition persistence) ──
   const treeQ = useQuery({
     queryKey: folderKeys.managerTree(currentTenantId, classId, user?.id),
     enabled: !!classId && !!user && canManage,
@@ -331,12 +163,16 @@ export function ClassQuizBuilder({ variant }: Props) {
     folderSeededRef.current = true;
     setFolderId(persistedFolderId);
   }, [isNew, treeQ.data, persistedFolderId]);
+
   const [cancelOpen, setCancelOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const restoredDraftRef = useRef(false);
 
   const locked = !!defQ.data?.locked;
   const hasAttempts = !!defQ.data?.has_attempts;
+  // Optimistic concurrency: the version we loaded. The server rejects the save
+  // with `quiz_definition_conflict` if another manager saved in the meantime.
+  const expectedVersion = defQ.data?.quiz.definition_version ?? null;
 
   const draftKey = useMemo(() => {
     if (!user?.id || !currentTenantId) return null;
@@ -363,13 +199,12 @@ export function ClassQuizBuilder({ variant }: Props) {
     restoredDraftRef.current = true;
     try {
       const raw = window.localStorage.getItem(draftKey);
-      if (raw) {
-        setRestoreOpen(true);
-      }
+      if (raw) setRestoreOpen(true);
     } catch { /* ignore */ }
   }, [initialized, draftKey]);
 
-  // Persist draft (debounced)
+  // Persist draft (debounced). Format unchanged, so drafts saved by the
+  // previous builder still restore.
   useEffect(() => {
     if (!draftKey || !initialized || !dirty) return;
     const t = setTimeout(() => {
@@ -391,8 +226,11 @@ export function ClassQuizBuilder({ variant }: Props) {
       const raw = window.localStorage.getItem(draftKey);
       if (raw) {
         const parsed = JSON.parse(raw) as BuilderState;
-        setState(parsed);
-        setDirty(true);
+        // Tolerate drafts written before this refactor.
+        if (parsed && typeof parsed === "object" && parsed.meta) {
+          setState({ meta: parsed.meta, questions: parsed.questions ?? [] });
+          setDirty(true);
+        }
       }
     } catch { /* ignore */ }
     setRestoreOpen(false);
@@ -403,7 +241,37 @@ export function ClassQuizBuilder({ variant }: Props) {
     setRestoreOpen(false);
   }, [clearDraft]);
 
-  // Mutations
+  // ── Validation ────────────────────────────────────────────────────
+  const clientIssues = useMemo(() => validateBuilderIssues(state, false), [state]);
+  const publishIssues = useMemo(() => validateBuilderIssues(state, true), [state]);
+  const clientErrors = useMemo(() => clientIssues.map((i) => i.message), [clientIssues]);
+  const publishErrors = useMemo(() => publishIssues.map((i) => i.message), [publishIssues]);
+  const invalidIndexes = useMemo(() => invalidQuestionIndexes(state), [state]);
+
+  /** Field keys failing validation, for the step currently shown. */
+  const invalidFieldsFor = useCallback(
+    (target: BuilderStep) => {
+      const set = new Set<string>();
+      for (const issue of clientIssues) {
+        if (issue.step === target && issue.field) set.add(issue.field);
+      }
+      return set;
+    },
+    [clientIssues],
+  );
+
+  /** Send the tutor to the first step that can fix a blocking issue. */
+  const routeToFirstIssue = useCallback(
+    (issues: typeof publishIssues) => {
+      const first = issues[0];
+      if (!first) return;
+      if (typeof first.questionIndex === "number") setActiveQuestion(first.questionIndex);
+      goToStep(first.step);
+    },
+    [goToStep],
+  );
+
+  // ── Mutations ─────────────────────────────────────────────────────
   const saveMut = useMutation({
     mutationFn: async (args: { publish: boolean }) => {
       const errs = validateBuilder(state, args.publish);
@@ -413,6 +281,7 @@ export function ClassQuizBuilder({ variant }: Props) {
         quizId: quizId,
         definition: toRpcDefinition(state, locked) as unknown as Parameters<typeof saveQuizDefinition>[0]["definition"],
         publish: args.publish,
+        expectedVersion,
       });
       // Placement is a separate, non-destructive move — attempts and results
       // are untouched because only `folder_id` changes.
@@ -432,7 +301,7 @@ export function ClassQuizBuilder({ variant }: Props) {
         description: args.publish ? "Students can now attempt this quiz." : "Your changes are saved.",
       });
       if (isNew) {
-        navigate(`${basePath}/quizzes/${res.id}/edit`, { replace: true });
+        navigate(`${basePath}/quizzes/${res.id}/edit?step=${step}`, { replace: true });
       } else {
         // Force reload of definition to get canonical server state
         qc.invalidateQueries({
@@ -462,20 +331,40 @@ export function ClassQuizBuilder({ variant }: Props) {
       toast({ title: "Duplicate failed", description: mapQuizError(err), variant: "destructive" }),
   });
 
-  // Handlers
-  const patchMeta = <K extends keyof MetaDraft>(k: K, v: MetaDraft[K]) => {
+  /** Validate first so a blocking issue navigates instead of only toasting. */
+  const attemptSave = useCallback(
+    (publish: boolean) => {
+      const issues = publish ? publishIssues : clientIssues;
+      if (issues.length > 0) {
+        routeToFirstIssue(issues);
+        toast({
+          title: publish ? "Can't publish yet" : "Can't save yet",
+          description: issues[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      saveMut.mutate({ publish });
+    },
+    [publishIssues, clientIssues, routeToFirstIssue, saveMut, toast],
+  );
+
+  // ── State patches ─────────────────────────────────────────────────
+  const patchMeta = useCallback(<K extends keyof MetaDraft>(k: K, v: MetaDraft[K]) => {
     setState((s) => ({ ...s, meta: { ...s.meta, [k]: v } }));
     setDirty(true);
-  };
-  const patchQuestion = (idx: number, patch: Partial<QuestionDraft>) => {
+  }, []);
+
+  const patchQuestion = useCallback((idx: number, patch: Partial<QuestionDraft>) => {
     setState((s) => {
       const qs = s.questions.slice();
       qs[idx] = { ...qs[idx], ...patch };
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const patchOption = (qIdx: number, oIdx: number, patch: Partial<OptionDraft>) => {
+  }, []);
+
+  const patchOption = useCallback((qIdx: number, oIdx: number, patch: Partial<OptionDraft>) => {
     setState((s) => {
       const qs = s.questions.slice();
       const opts = qs[qIdx].options.slice();
@@ -484,8 +373,9 @@ export function ClassQuizBuilder({ variant }: Props) {
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const setCorrect = (qIdx: number, oIdx: number) => {
+  }, []);
+
+  const setCorrect = useCallback((qIdx: number, oIdx: number) => {
     setState((s) => {
       const qs = s.questions.slice();
       const opts = qs[qIdx].options.map((o, i) => ({ ...o, is_correct: i === oIdx }));
@@ -493,24 +383,27 @@ export function ClassQuizBuilder({ variant }: Props) {
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const addOption = (qIdx: number) => {
+  }, []);
+
+  const addOption = useCallback((qIdx: number) => {
     setState((s) => {
       const qs = s.questions.slice();
       qs[qIdx] = { ...qs[qIdx], options: [...qs[qIdx].options, newOption()] };
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const removeOption = (qIdx: number, oIdx: number) => {
+  }, []);
+
+  const removeOption = useCallback((qIdx: number, oIdx: number) => {
     setState((s) => {
       const qs = s.questions.slice();
       qs[qIdx] = { ...qs[qIdx], options: qs[qIdx].options.filter((_, i) => i !== oIdx) };
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const changeQuestionType = (qIdx: number, type: QuestionType) => {
+  }, []);
+
+  const changeQuestionType = useCallback((qIdx: number, type: QuestionType) => {
     setState((s) => {
       const qs = s.questions.slice();
       const existing = qs[qIdx];
@@ -529,16 +422,19 @@ export function ClassQuizBuilder({ variant }: Props) {
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const addQuestion = (type: QuestionType) => {
+  }, []);
+
+  const addQuestion = useCallback((type: QuestionType) => {
     setState((s) => ({ ...s, questions: [...s.questions, newQuestion(type)] }));
     setDirty(true);
-  };
-  const removeQuestion = (idx: number) => {
+  }, []);
+
+  const removeQuestion = useCallback((idx: number) => {
     setState((s) => ({ ...s, questions: s.questions.filter((_, i) => i !== idx) }));
     setDirty(true);
-  };
-  const duplicateQuestion = (idx: number) => {
+  }, []);
+
+  const duplicateQuestion = useCallback((idx: number) => {
     setState((s) => {
       const q = s.questions[idx];
       const clone: QuestionDraft = {
@@ -551,8 +447,9 @@ export function ClassQuizBuilder({ variant }: Props) {
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
-  const moveQuestion = (idx: number, dir: -1 | 1) => {
+  }, []);
+
+  const moveQuestion = useCallback((idx: number, dir: -1 | 1) => {
     setState((s) => {
       const target = idx + dir;
       if (target < 0 || target >= s.questions.length) return s;
@@ -562,10 +459,25 @@ export function ClassQuizBuilder({ variant }: Props) {
       return { ...s, questions: qs };
     });
     setDirty(true);
-  };
+  }, []);
 
-  const clientErrors = useMemo(() => validateBuilder(state, false), [state]);
-  const publishErrors = useMemo(() => validateBuilder(state, true), [state]);
+  // Keep the active question in range after deletes.
+  useEffect(() => {
+    if (activeQuestion > 0 && activeQuestion >= state.questions.length) {
+      setActiveQuestion(Math.max(0, state.questions.length - 1));
+    }
+  }, [state.questions.length, activeQuestion]);
+
+  // Warn on tab close with unsaved edits.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const cancel = () => {
     if (dirty) setCancelOpen(true);
@@ -606,6 +518,8 @@ export function ClassQuizBuilder({ variant }: Props) {
   }
 
   const loading = ctx.isLoading || (!isNew && defQ.isLoading) || !initialized;
+  const stepIndex = BUILDER_STEPS.indexOf(step);
+  const isLastStep = stepIndex === BUILDER_STEPS.length - 1;
 
   return (
     <ClassShell
@@ -617,6 +531,9 @@ export function ClassQuizBuilder({ variant }: Props) {
       materialsPath={materialsPath}
       breadcrumbs={breadcrumbs}
       headerRight={headerRight}
+      mobileTitle={isNew ? "Create quiz" : "Edit quiz"}
+      mobileBackTo={managerPath}
+      mobileBackLabel="Quizzes"
     >
       {loading ? (
         <div className="flex items-center justify-center py-16 text-slate-500">
@@ -627,452 +544,132 @@ export function ClassQuizBuilder({ variant }: Props) {
           {mapQuizError(defQ.error)}
         </div>
       ) : (
-        <div className="space-y-5 pb-32">
-          {locked && (
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 flex items-start gap-3">
-              <Lock className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" />
-              <div className="text-sm text-amber-900">
-                <p className="font-medium">This quiz has student attempts.</p>
-                <p className="mt-1">
+        <BuilderShell>
+          <BuilderStepper current={step} furthest={furthestStep} onSelect={goToStep} />
+
+          {locked && step === "basic" && (
+            <div className="mb-4 flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4">
+              <div className="min-w-0 text-[13px] text-amber-900">
+                <p className="font-bold">This quiz has student attempts.</p>
+                <p className="mt-1 leading-snug">
                   Questions, answers, shuffle, time limit, availability and due date are locked to
                   preserve historical results. You can still edit title, description, instructions,
                   result visibility and increase the attempt limit.
                 </p>
-                <div className="mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => dupMut.mutate()}
-                    disabled={dupMut.isPending}
-                  >
-                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Duplicate as new draft
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Metadata card */}
-          <section className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-5">
-            <header>
-              <h2 className="text-lg font-semibold text-slate-900">Quiz details</h2>
-              <p className="text-sm text-slate-500">
-                Students see the title, description and instructions when the quiz is published.
-              </p>
-            </header>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Label htmlFor="quiz-title">Title *</Label>
-                <Input
-                  id="quiz-title"
-                  value={state.meta.title}
-                  onChange={(e) => patchMeta("title", e.target.value)}
-                  placeholder="e.g. Chapter 5 — Quadratic Equations"
-                  className="mt-1"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="quiz-folder">Folder</Label>
-                <div className="mt-1">
-                  <FolderSelect
-                    id="quiz-folder"
-                    folders={folders}
-                    value={folderId}
-                    onChange={(next) => {
-                      setFolderId(next);
-                      setDirty(true);
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="quiz-desc">Description</Label>
-                <Textarea
-                  id="quiz-desc"
-                  value={state.meta.description}
-                  onChange={(e) => patchMeta("description", e.target.value)}
-                  placeholder="Short summary of what this quiz covers."
-                  className="mt-1"
-                  rows={2}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="quiz-inst">Instructions</Label>
-                <Textarea
-                  id="quiz-inst"
-                  value={state.meta.instructions}
-                  onChange={(e) => patchMeta("instructions", e.target.value)}
-                  placeholder="What students should know before starting."
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="q-avail">Available from</Label>
-                <Input
-                  id="q-avail"
-                  type="datetime-local"
-                  value={state.meta.available_from}
-                  onChange={(e) => patchMeta("available_from", e.target.value)}
-                  disabled={locked}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="q-due">Due at</Label>
-                <Input
-                  id="q-due"
-                  type="datetime-local"
-                  value={state.meta.due_at}
-                  onChange={(e) => patchMeta("due_at", e.target.value)}
-                  disabled={locked}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="q-tl">Time limit (minutes)</Label>
-                <Input
-                  id="q-tl"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={state.meta.time_limit_seconds}
-                  onChange={(e) => patchMeta("time_limit_seconds", e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="No time limit"
-                  disabled={locked}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="q-al">Attempt limit</Label>
-                <Input
-                  id="q-al"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={state.meta.attempt_limit}
-                  onChange={(e) => patchMeta("attempt_limit", e.target.value.replace(/[^0-9]/g, "") || "1")}
-                  className="mt-1"
-                />
-                {locked && (
-                  <p className="text-[11px] text-slate-500 mt-1">Only increases are allowed after attempts.</p>
-                )}
-              </div>
-
-              <div>
-                <Label>Shuffle questions</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <Switch
-                    checked={state.meta.shuffle_questions}
-                    onCheckedChange={(v) => patchMeta("shuffle_questions", v)}
-                    disabled={locked}
-                  />
-                  <span className="text-sm text-slate-600">Randomise order between students</span>
-                </div>
-              </div>
-              <div>
-                <Label>Shuffle options</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <Switch
-                    checked={state.meta.shuffle_options}
-                    onCheckedChange={(v) => patchMeta("shuffle_options", v)}
-                    disabled={locked}
-                  />
-                  <span className="text-sm text-slate-600">Randomise answer order</span>
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <Label htmlFor="q-rv">Result visibility</Label>
-                <Select
-                  value={state.meta.result_visibility}
-                  onValueChange={(v) => patchMeta("result_visibility", v as ResultVisibility)}
-                >
-                  <SelectTrigger id="q-rv" className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(RESULT_VISIBILITY_LABEL) as ResultVisibility[]).map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {RESULT_VISIBILITY_LABEL[k]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-slate-500 mt-1">
-                  {RESULT_VISIBILITY_HINT[state.meta.result_visibility]}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Questions */}
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Questions</h2>
-                <p className="text-sm text-slate-500">
-                  {state.questions.length} question{state.questions.length === 1 ? "" : "s"} · Total{" "}
-                  {state.questions.reduce((s, q) => s + (q.points || 0), 0)} points
-                </p>
-              </div>
-              <div className="flex gap-2">
                 <Button
-                  variant="outline"
                   size="sm"
-                  onClick={() => addQuestion("mcq")}
-                  disabled={locked}
-                  className="rounded-full"
-                >
-                  <Plus className="w-4 h-4 mr-1" /> MCQ
-                </Button>
-                <Button
                   variant="outline"
-                  size="sm"
-                  onClick={() => addQuestion("true_false")}
-                  disabled={locked}
-                  className="rounded-full"
+                  className="mt-3 min-h-[44px] rounded-full bg-white"
+                  onClick={() => dupMut.mutate()}
+                  disabled={dupMut.isPending}
                 >
-                  <Plus className="w-4 h-4 mr-1" /> True / False
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Duplicate as new draft
                 </Button>
               </div>
             </div>
-
-            {state.questions.length === 0 ? (
-              <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-8 text-center">
-                <HelpCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="font-medium text-slate-800">No questions yet</p>
-                <p className="text-sm text-slate-500">
-                  Add your first MCQ or true/false question to get started.
-                </p>
-              </div>
-            ) : (
-              state.questions.map((q, qIdx) => (
-                <article
-                  key={q.id}
-                  className="bg-white border border-slate-200 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4"
-                >
-                  <header className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="rounded-full">Q{qIdx + 1}</Badge>
-                      <Select
-                        value={q.question_type}
-                        onValueChange={(v) => changeQuestionType(qIdx, v as QuestionType)}
-                        disabled={locked}
-                      >
-                        <SelectTrigger className="w-[140px] h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mcq">MCQ</SelectItem>
-                          <SelectItem value="true_false">True / False</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => moveQuestion(qIdx, -1)}
-                        disabled={locked || qIdx === 0}
-                        title="Move up"
-                      >
-                        <ArrowUp className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => moveQuestion(qIdx, 1)}
-                        disabled={locked || qIdx === state.questions.length - 1}
-                        title="Move down"
-                      >
-                        <ArrowDown className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => duplicateQuestion(qIdx)}
-                        disabled={locked}
-                        title="Duplicate"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => removeQuestion(qIdx)}
-                        disabled={locked}
-                        title="Remove"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </header>
-
-                  <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-                    <div>
-                      <Label htmlFor={`${q.id}-prompt`}>Prompt *</Label>
-                      <Textarea
-                        id={`${q.id}-prompt`}
-                        value={q.question}
-                        onChange={(e) => patchQuestion(qIdx, { question: e.target.value })}
-                        rows={2}
-                        placeholder="What is …?"
-                        disabled={locked}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`${q.id}-pts`}>Points</Label>
-                      <Input
-                        id={`${q.id}-pts`}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={q.points.toString()}
-                        onChange={(e) =>
-                          patchQuestion(qIdx, { points: Math.max(0, parseInt(e.target.value || "0", 10) || 0) })
-                        }
-                        disabled={locked}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Options *</Label>
-                    <RadioGroup
-                      value={q.options.findIndex((o) => o.is_correct).toString()}
-                      onValueChange={(v) => setCorrect(qIdx, parseInt(v, 10))}
-                      className="mt-2 space-y-2"
-                    >
-                      {q.options.map((o, oIdx) => (
-                        <div
-                          key={o.id}
-                          className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-slate-50 rounded-2xl p-2.5"
-                        >
-                          <div className="flex items-center gap-2 shrink-0">
-                            <RadioGroupItem
-                              value={oIdx.toString()}
-                              id={`${q.id}-o${oIdx}`}
-                              disabled={locked}
-                            />
-                            <Label
-                              htmlFor={`${q.id}-o${oIdx}`}
-                              className="text-xs uppercase tracking-wide text-slate-500 cursor-pointer"
-                            >
-                              Correct
-                            </Label>
-                          </div>
-                          <Input
-                            value={o.option_text}
-                            onChange={(e) => patchOption(qIdx, oIdx, { option_text: e.target.value })}
-                            placeholder={
-                              q.question_type === "true_false"
-                                ? oIdx === 0 ? "True" : "False"
-                                : `Option ${String.fromCharCode(65 + oIdx)}`
-                            }
-                            disabled={locked || q.question_type === "true_false"}
-                            className="flex-1"
-                          />
-                          {q.question_type === "mcq" && q.options.length > 2 && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-9 w-9 text-red-600"
-                              onClick={() => removeOption(qIdx, oIdx)}
-                              disabled={locked}
-                              title="Remove option"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </RadioGroup>
-                    {q.question_type === "mcq" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-full mt-2"
-                        onClick={() => addOption(qIdx)}
-                        disabled={locked}
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Add option
-                      </Button>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`${q.id}-exp`}>Explanation (optional)</Label>
-                    <Textarea
-                      id={`${q.id}-exp`}
-                      value={q.explanation}
-                      onChange={(e) => patchQuestion(qIdx, { explanation: e.target.value })}
-                      placeholder="Shown to students with results (per visibility settings)."
-                      rows={2}
-                      disabled={locked}
-                      className="mt-1"
-                    />
-                  </div>
-                </article>
-              ))
-            )}
-          </section>
-
-          {/* Validation summary */}
-          {clientErrors.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-3xl p-4 text-sm">
-              <p className="font-medium text-slate-800 mb-1">Before saving, check:</p>
-              <ul className="list-disc list-inside text-slate-600 space-y-0.5">
-                {clientErrors.map((e, i) => <li key={i}>{e}</li>)}
-              </ul>
-            </div>
           )}
-          {publishErrors.length > 0 && publishErrors.length !== clientErrors.length && (
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 text-sm text-amber-900">
-              <p className="font-medium mb-1">Publishing requires:</p>
-              <ul className="list-disc list-inside space-y-0.5">
-                {publishErrors.filter((e) => !clientErrors.includes(e)).map((e, i) => <li key={i}>{e}</li>)}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* Sticky action bar */}
-      {!loading && (
-        <div className="fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 px-4 py-3">
-          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-end gap-2">
-            <Button variant="ghost" onClick={cancel} className="rounded-full">
-              Cancel
-            </Button>
+          {step === "basic" && (
+            <BasicInfoStep
+              meta={state.meta}
+              onPatch={patchMeta}
+              className_={ctx.data?.klass?.title ?? null}
+              subjectName={ctx.data?.klass?.subject?.name ?? null}
+              folders={folders}
+              folderId={folderId}
+              onFolderChange={(next) => {
+                setFolderId(next);
+                setDirty(true);
+              }}
+              invalidFields={invalidFieldsFor("basic")}
+            />
+          )}
+
+          {step === "questions" && (
+            <QuestionsStep
+              questions={state.questions}
+              activeIndex={Math.min(activeQuestion, Math.max(0, state.questions.length - 1))}
+              onActiveIndexChange={setActiveQuestion}
+              locked={locked}
+              invalidIndexes={invalidIndexes}
+              onAddQuestion={addQuestion}
+              onPatchQuestion={patchQuestion}
+              onChangeType={changeQuestionType}
+              onRemoveQuestion={removeQuestion}
+              onDuplicateQuestion={duplicateQuestion}
+              onMoveQuestion={moveQuestion}
+              onPatchOption={patchOption}
+              onSetCorrect={setCorrect}
+              onAddOption={addOption}
+              onRemoveOption={removeOption}
+            />
+          )}
+
+          {step === "settings" && (
+            <SettingsStep
+              meta={state.meta}
+              onPatch={patchMeta}
+              locked={locked}
+              invalidFields={invalidFieldsFor("settings")}
+            />
+          )}
+
+          {step === "preview" && (
+            <PreviewStep
+              state={state}
+              publishIssues={publishErrors}
+              onGoToQuestions={() => goToStep("questions")}
+            />
+          )}
+
+          <BuilderFooter>
             <Button
               variant="outline"
-              onClick={() => saveMut.mutate({ publish: false })}
-              disabled={saveMut.isPending || clientErrors.length > 0}
-              className="rounded-full"
+              onClick={() => (stepIndex === 0 ? cancel() : goToStep(BUILDER_STEPS[stepIndex - 1]))}
+              className="h-12 shrink-0 rounded-full px-4 text-[14px] font-semibold"
             >
-              <Save className="w-4 h-4 mr-1.5" />
-              {isNew ? "Save draft" : "Save changes"}
+              {stepIndex === 0 ? "Cancel" : "Back"}
             </Button>
-            {!locked && (
+
+            <Button
+              variant="ghost"
+              onClick={() => attemptSave(false)}
+              disabled={saveMut.isPending}
+              className="h-12 shrink-0 rounded-full px-3 text-[14px] font-semibold text-quiz-accent-strong hover:bg-quiz-tint"
+            >
+              {saveMut.isPending && !saveMut.variables?.publish ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-1.5 h-4 w-4" />
+              )}
+              Save
+            </Button>
+
+            {isLastStep ? (
+              !locked && (
+                <Button
+                  onClick={() => attemptSave(true)}
+                  disabled={saveMut.isPending || hasAttempts}
+                  className="h-12 flex-1 rounded-full bg-gradient-to-r from-quiz-accent to-quiz-accent-strong text-[15px] font-extrabold text-white"
+                >
+                  {saveMut.isPending && saveMut.variables?.publish ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-1.5 h-4 w-4" />
+                  )}
+                  Publish quiz
+                </Button>
+              )
+            ) : (
               <Button
-                onClick={() => saveMut.mutate({ publish: true })}
-                disabled={saveMut.isPending || publishErrors.length > 0 || hasAttempts}
-                className="rounded-full"
+                onClick={() => goToStep(BUILDER_STEPS[stepIndex + 1])}
+                className="h-12 flex-1 rounded-full bg-quiz-accent text-[15px] font-extrabold text-white hover:bg-quiz-accent-strong"
               >
-                <Send className="w-4 h-4 mr-1.5" />
-                Publish now
+                Next
               </Button>
             )}
-          </div>
-        </div>
+          </BuilderFooter>
+        </BuilderShell>
       )}
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
@@ -1080,7 +677,7 @@ export function ClassQuizBuilder({ variant }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved edits. Leaving will keep them locally on this device so you can come back.
+              Your edits to this quiz will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

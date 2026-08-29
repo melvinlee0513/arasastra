@@ -249,13 +249,23 @@ export function ClassQuizzesManager({ variant }: Props) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search quiz titles…"
-                className="pl-9 rounded-full"
+                className="h-12 pl-9 rounded-full bg-white border-slate-200 text-[15px]"
               />
             </div>
-            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <TabsList className="rounded-full">
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              className="w-full sm:w-auto"
+            >
+              {/* Four equal columns so the strip never overflows at 375px, and
+                  p-0.5 keeps each trigger at a 44px touch target. */}
+              <TabsList className="grid h-12 w-full grid-cols-4 rounded-full p-0.5 sm:w-auto sm:inline-flex">
                 {STATUS_FILTERS.map((f) => (
-                  <TabsTrigger key={f} value={f} className="rounded-full capitalize">
+                  <TabsTrigger
+                    key={f}
+                    value={f}
+                    className="h-full rounded-full px-2 text-[12.5px] font-semibold capitalize sm:px-3"
+                  >
                     {f === "all" ? "All" : STATUS_LABEL[f as "draft" | "published" | "archived"]}
                   </TabsTrigger>
                 ))}
@@ -283,7 +293,7 @@ export function ClassQuizzesManager({ variant }: Props) {
               body={
                 listQ.data?.length
                   ? "Try a different filter or search term."
-                  : "Once the builder ships you'll be able to create quizzes for this class here."
+                  : "Create your first quiz for this class with the New quiz button above."
               }
             />
           ) : (
@@ -413,23 +423,41 @@ function QuizCard({
         : "bg-amber-100 text-amber-700";
 
   return (
-    <article className="bg-white border border-slate-200 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-slate-900 break-words">{row.title}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Updated {formatRelative(row.updated_at)}
-          </p>
-          <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1 break-words">
+    <article className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {/* The title is the card's primary tap target — opening the builder
+              shouldn't require finding the overflow menu on a phone. */}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="block w-full min-h-[44px] text-left"
+          >
+            <h3 className="text-[15px] font-bold leading-tight text-slate-900 break-words">
+              {row.title}
+            </h3>
+            <p className="text-[11.5px] text-slate-500 mt-1">
+              Updated {formatRelative(row.updated_at)}
+            </p>
+          </button>
+          <p className="text-[11.5px] text-slate-500 mt-1 inline-flex items-center gap-1 break-words">
             <FolderInput className="w-3 h-3 shrink-0" />
             {folderLabel ?? "Unfiled Materials"}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Badge className={`rounded-full ${statusColor}`}>{STATUS_LABEL[row.status]}</Badge>
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge className={`rounded-full text-[11px] ${statusColor}`}>
+            {STATUS_LABEL[row.status]}
+          </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="rounded-full h-8 w-8" disabled={busy}>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`Actions for ${row.title}`}
+                className="rounded-full h-11 w-11 shrink-0"
+                disabled={busy}
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -498,10 +526,10 @@ function QuizCard({
       </div>
 
       {row.description && (
-        <p className="text-sm text-slate-600 line-clamp-2">{row.description}</p>
+        <p className="text-[13px] leading-snug text-slate-600 line-clamp-2">{row.description}</p>
       )}
 
-      <dl className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-2xl bg-slate-50/70 p-3 text-slate-600">
         <Stat label="Questions" value={`${row.question_count}`} />
         <Stat label="Points" value={`${row.total_points}`} />
         <Stat label="Attempts" value={`${row.attempt_limit}`} />
@@ -520,8 +548,8 @@ function QuizCard({
       </dl>
 
       {locked && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2 flex items-center gap-2">
-          <Lock className="w-3 h-3" />
+        <div className="text-[11.5px] leading-snug text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2 flex items-start gap-2">
+          <Lock className="w-3 h-3 mt-0.5 shrink-0" />
           Attempts exist — question edits are locked. Duplicate to make changes.
         </div>
       )}
@@ -532,8 +560,8 @@ function QuizCard({
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="text-slate-800 truncate">{value}</dd>
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="text-[12.5px] font-medium text-slate-800 truncate">{value}</dd>
     </div>
   );
 }

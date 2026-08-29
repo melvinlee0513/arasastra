@@ -37,6 +37,12 @@ export type TenantFeatureFlags = {
   progressRings?: boolean;
   googleDrive?: boolean;
   oneDrive?: boolean;
+  /**
+   * Live multiplayer quiz sessions (host, lobby, game codes, realtime
+   * leaderboard). NOT implemented — no tables, RPCs or realtime channels exist
+   * for it yet. Defaults OFF and must stay off until that architecture lands.
+   */
+  liveQuizMultiplayer?: boolean;
   [key: string]: boolean | undefined;
 };
 
