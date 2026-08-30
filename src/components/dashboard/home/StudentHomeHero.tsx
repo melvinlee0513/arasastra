@@ -15,11 +15,25 @@ interface StudentHomeHeroProps {
   showGamification: boolean;
   showRank: boolean;
   statsLoading: boolean;
-  streak: number;
   totalXp: number;
   rank: number | null;
   /** Unread inbox count from the canonical inbox reader. */
   unreadCount?: number;
+}
+
+/**
+ * Exact figure for the values students actually reach; compact only past a
+ * million, where the full number would be ellipsised inside the pill. The
+ * screen-reader label always carries the precise total.
+ */
+function formatXp(total: number): string {
+  if (total >= 1_000_000) {
+    return new Intl.NumberFormat("en-US", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(total);
+  }
+  return total.toLocaleString("en-US");
 }
 
 interface Stat {
@@ -34,8 +48,8 @@ interface Stat {
 
 /**
  * Mobile Home hero — an open, playful top section: avatar + greeting on the
- * left, notification bell top-right, floating spark accents, and three compact
- * soft stat widgets below. No heavy saturated banner block.
+ * left, notification bell top-right, floating spark accents, and two compact
+ * soft stat widgets below (XP and rank). No heavy saturated banner block.
  */
 export function StudentHomeHero({
   profile,
@@ -43,24 +57,18 @@ export function StudentHomeHero({
   showGamification,
   showRank,
   statsLoading,
-  streak,
   totalXp,
   rank,
   unreadCount = 0,
 }: StudentHomeHeroProps) {
+  // Two pills, not three. Three squeezed the values at phone widths; the
+  // streak still lives in gamification, quizzes, the leaderboard, achievements
+  // and StreakWidget — this is a presentation choice for the Home hero only.
   const stats: Stat[] = [];
   if (showGamification) {
     stats.push({
-      art: HOME_ART.flame,
-      value: `${streak} day${streak === 1 ? "" : "s"}`,
-      caption: "streak",
-      iconClass: "bg-home-updates text-home-updates-accent",
-      captionClass: "text-home-updates-accent",
-      srLabel: `${streak} day${streak === 1 ? "" : "s"} learning streak`,
-    });
-    stats.push({
       art: HOME_ART.bolt,
-      value: `${totalXp.toLocaleString("en-US")} XP`,
+      value: `${formatXp(totalXp)} XP`,
       caption: "earned",
       iconClass: "bg-home-learning text-home-learning-accent",
       captionClass: "text-home-learning-accent",
@@ -170,8 +178,8 @@ export function StudentHomeHero({
 
       {showGamification && (
         statsLoading ? (
-          <div className="relative z-10 mt-4 flex gap-2.5 md:mt-5 md:max-w-[560px]" aria-hidden="true">
-            {[0, 1, 2].map((i) => (
+          <div className="relative z-10 mt-4 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:gap-2.5 md:mt-5 md:max-w-[560px]" aria-hidden="true">
+            {Array.from({ length: showRank ? 2 : 1 }).map((_, i) => (
               <div
                 key={i}
                 className="h-[62px] flex-1 animate-pulse rounded-[20px] border border-slate-200/70 bg-white"
@@ -179,7 +187,7 @@ export function StudentHomeHero({
             ))}
           </div>
         ) : stats.length > 0 ? (
-          <ul className="relative z-10 mt-4 flex gap-2.5 md:mt-5 md:max-w-[560px]">
+          <ul className="relative z-10 mt-4 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:gap-2.5 md:mt-5 md:max-w-[560px]">
             {stats.map((s) => (
               <li
                 key={s.caption + s.value}
@@ -187,7 +195,7 @@ export function StudentHomeHero({
               >
                 <span
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px]",
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-[13px] sm:h-9 sm:w-9",
                     s.iconClass,
                   )}
                 >

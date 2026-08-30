@@ -47,7 +47,6 @@ export function StudentHomeMobile() {
           showGamification={gamificationOn && gamification.enabled}
           showRank={showLeaderboard}
           statsLoading={gamification.isLoading}
-          streak={gamification.currentStreak}
           totalXp={gamification.totalXp}
           rank={weekly.data?.me?.position ?? null}
           unreadCount={inboxOn ? unread.count : 0}
