@@ -55,7 +55,12 @@ interface FolderCardProps {
   centerId?: string | null;
   onOpen: () => void;
   actions?: React.ReactNode;
-  /** Subfolders render as a compact icon tile — no custom artwork required. */
+  /**
+   * Denser card, used while browsing inside a folder so a long list of
+   * children stays scannable. It is a VIEW-DEPTH flag, not a folder-depth one:
+   * covers still render here. Suppressing them was why a cover uploaded to a
+   * subfolder appeared to save but never showed.
+   */
   compact?: boolean;
 }
 
@@ -98,11 +103,19 @@ export function FolderCard({
         <div
           className={cn(
             "relative w-full bg-gradient-to-br",
-            compact ? "aspect-[16/7] sm:aspect-[3/1]" : "aspect-square",
+            // Covers are square (600x600). A compact card's 3:1 strip would crop
+            // one down to a sliver, so a covered compact card gets a 16/9 band —
+            // still denser than the root grid, but the artwork stays legible.
+            // Uncovered cards keep the original icon-tile geometry exactly.
+            compact
+              ? coverUrl
+                ? "aspect-[16/9] sm:aspect-[2/1]"
+                : "aspect-[16/7] sm:aspect-[3/1]"
+              : "aspect-square",
             fallbackGradient(folder.id),
           )}
         >
-          {coverUrl && !compact ? (
+          {coverUrl ? (
             <img
               src={coverUrl}
               alt={`${folder.name} cover`}

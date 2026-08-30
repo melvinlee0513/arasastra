@@ -18,6 +18,7 @@ import {
   subscribeToLiveQuizSession,
   unsubscribeFromLiveQuiz,
   type LiveQuizSnapshot,
+  type RealtimeStatus,
 } from "@/lib/liveQuiz";
 
 export function useLiveQuizSession(sessionId: string | undefined) {
@@ -49,16 +50,24 @@ export function useLiveQuizSession(sessionId: string | undefined) {
     }
   }, [q.data?.session.server_now]);
 
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>("connecting");
+  const [lastEventAt, setLastEventAt] = useState<string | null>(null);
+
   const refresh = useCallback(() => {
+    setLastEventAt(new Date().toISOString());
     void qc.invalidateQueries({ queryKey });
   }, [qc, queryKey]);
 
   useEffect(() => {
     if (!sessionId || !user) return;
-    channelRef.current = subscribeToLiveQuizSession(sessionId, refresh);
+    setRealtimeStatus("connecting");
+    channelRef.current = subscribeToLiveQuizSession(sessionId, refresh, setRealtimeStatus);
     return () => {
+      // One channel per mounted session. Tearing it down here is what stops a
+      // route change or remount leaving a second listener behind.
       unsubscribeFromLiveQuiz(channelRef.current);
       channelRef.current = null;
+      setRealtimeStatus("disconnected");
     };
   }, [sessionId, user, refresh]);
 
@@ -73,5 +82,13 @@ export function useLiveQuizSession(sessionId: string | undefined) {
 
   const secondsLeft = q.data ? secondsRemaining(q.data.session, Date.now(), offset) : null;
 
-  return { ...q, snapshot: q.data, secondsLeft, refresh };
+  return {
+    ...q,
+    snapshot: q.data,
+    secondsLeft,
+    refresh,
+    // Developer diagnostics — no answer data, safe to surface.
+    realtimeStatus,
+    lastEventAt,
+  };
 }

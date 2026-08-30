@@ -83,6 +83,8 @@ const HostLiveQuizSetup = lazy(() => import("@/pages/class/HostLiveQuizSetup").t
 const LiveQuizHost = lazy(() => import("@/pages/quiz/LiveQuizHost").then(m => ({ default: m.LiveQuizHost })));
 const LiveQuizJoin = lazy(() => import("@/pages/quiz/LiveQuizJoin").then(m => ({ default: m.LiveQuizJoin })));
 const LiveQuizPlay = lazy(() => import("@/pages/quiz/LiveQuizPlay").then(m => ({ default: m.LiveQuizPlay })));
+// Superadmin-only QA harness. Real RPCs + realtime, independent of the flag.
+const LiveQuizHarness = lazy(() => import("@/pages/dev/LiveQuizHarness").then(m => ({ default: m.LiveQuizHarness })));
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
 const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/StudentClassFlashcards").then(m => ({ default: m.StudentClassFlashcards })));
 const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
@@ -223,6 +225,11 @@ const App = () => (
             <Route path="/dashboard/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><StudentQuizResult /></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
 
             {/* Live multiplayer — student. Off until liveQuizMultiplayer is enabled. */}
+            {/* Superadmin-only live QA harness. Deliberately NOT behind
+                liveQuizMultiplayer so the backend can be driven from real
+                browser sessions before the flag is enabled. */}
+            <Route path="/dev/live-quiz" element={<ProtectedRoute requiredRole="authenticated"><DevPreviewGuard><LiveQuizHarness /></DevPreviewGuard></ProtectedRoute>} />
+
             <Route path="/dashboard/quiz/join" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizJoin /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/dashboard/quiz/live/:sessionId" element={<ProtectedRoute requiredRole="authenticated"><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizPlay /></FeatureRoute></TenantGuard></ProtectedRoute>} />
 
