@@ -119,6 +119,23 @@ describe("folder cover rendering", () => {
     expect(h.signedFor).toEqual([COVER]);
   });
 
+it("frames a covered folder as a square, so a 600x600 cover is never cropped", async () => {
+    // The upload crops to 600x600. A 16/9 frame showed only ~56% of that
+    // artwork and cut the bottom off, which is where these covers put their
+    // subject. Cover + square frame + square source = zero crop.
+    const { container } = renderCard(folder({ cover_image_path: COVER }), true);
+    await screen.findByAltText("2021 cover");
+    const frame = container.querySelector("div.relative.w-full");
+    expect(frame?.className).toContain("aspect-square");
+    expect(frame?.className).not.toContain("aspect-[16/9]");
+  });
+
+  it("keeps the slim strip for an uncovered folder inside a parent", async () => {
+    const { container } = renderCard(folder(), true);
+    const frame = container.querySelector("div.relative.w-full");
+    expect(frame?.className).toContain("aspect-[16/7]");
+  });
+
   it("uses object-cover so a 600x600 cover is cropped, never stretched", async () => {
     renderCard(folder({ cover_image_path: COVER }), true);
     const img = await screen.findByAltText("2021 cover");

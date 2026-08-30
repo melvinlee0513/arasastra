@@ -104,7 +104,17 @@ export function StudentHomeHero({
           <picture>
             {/* Desktop breakpoints get the dedicated wide artwork; the mobile
                 asset is untouched. The <source> switch happens in CSS, so no
-                colour/asset flash is introduced. */}
+                colour/asset flash is introduced.
+
+                The artwork is a rounded card drawn on a white field: the card
+                spans ~94% of the source's width and only ~68% of its height.
+                Plain object-cover therefore fits those white margins INSIDE
+                the hero and they read as hard rectangular bands. Scaling to
+                150% pushes the margins outside the box at every aspect this
+                hero takes (1/0.68 = 1.47 is the worst case, on a tall box),
+                so only the card's interior shows and the container's own
+                28px radius supplies the rounded silhouette. Uniform scale —
+                the artwork is never stretched. */}
             <source
               media="(min-width: 768px)"
               srcSet={heroBackgroundFor(profile?.home_header_color, "desktop")}
@@ -116,7 +126,7 @@ export function StudentHomeHero({
               draggable={false}
               fetchPriority="high"
               decoding="async"
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[112%] w-[112%] -translate-x-1/2 -translate-y-1/2 select-none object-cover object-center md:h-full md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:object-contain"
+              className="pointer-events-none absolute inset-0 h-full w-full select-none scale-[1.5] object-cover object-center md:scale-100 md:object-contain"
             />
           </picture>
         )}
@@ -178,20 +188,20 @@ export function StudentHomeHero({
 
       {showGamification && (
         statsLoading ? (
-          <div className="relative z-10 mt-4 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:gap-2.5 md:mt-5 md:max-w-[560px]" aria-hidden="true">
+          <div className="relative z-10 mt-4 flex flex-wrap items-start gap-2 sm:gap-2.5 md:mt-5" aria-hidden="true">
             {Array.from({ length: showRank ? 2 : 1 }).map((_, i) => (
               <div
                 key={i}
-                className="h-[62px] flex-1 animate-pulse rounded-[20px] border border-slate-200/70 bg-white"
+                className="h-[58px] w-[124px] animate-pulse rounded-[20px] border border-slate-200/70 bg-white"
               />
             ))}
           </div>
         ) : stats.length > 0 ? (
-          <ul className="relative z-10 mt-4 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:gap-2.5 md:mt-5 md:max-w-[560px]">
+          <ul className="relative z-10 mt-4 flex flex-wrap items-start gap-2 sm:gap-2.5 md:mt-5">
             {stats.map((s) => (
               <li
                 key={s.caption + s.value}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white bg-white px-3 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]"
+                className="flex min-w-0 items-center gap-2 rounded-[20px] border border-white bg-white px-2.5 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] sm:px-3"
               >
                 <span
                   className={cn(
