@@ -213,9 +213,16 @@ export async function findMyLiveQuizSession(): Promise<{
  * re-read the snapshot, not a payload to render: the row is unredacted, so the
  * client must never read question content from it.
  */
+export type RealtimeStatus =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
+
 export function subscribeToLiveQuizSession(
   sessionId: string,
   onChange: () => void,
+  onStatus?: (status: RealtimeStatus) => void,
 ): RealtimeChannel {
   return supabase
     .channel(`live-quiz:${sessionId}`)
@@ -229,7 +236,21 @@ export function subscribeToLiveQuizSession(
       },
       () => onChange(),
     )
-    .subscribe();
+    .subscribe((status) => {
+      // supabase-js reports SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED.
+      // A dropped socket retries on its own, so an error is "reconnecting"
+      // rather than a terminal state — the snapshot RPC remains the source of
+      // truth either way.
+      if (status === "SUBSCRIBED") {
+        onStatus?.("connected");
+        // A resubscribe means we may have missed updates while away.
+        onChange();
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        onStatus?.("reconnecting");
+      } else if (status === "CLOSED") {
+        onStatus?.("disconnected");
+      }
+    });
 }
 
 export function unsubscribeFromLiveQuiz(channel: RealtimeChannel | null) {

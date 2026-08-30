@@ -6,9 +6,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * DevPreviewGuard
  * ---------------
- * Wraps UI-only preview routes (isolated mock data, not wired to production).
- * Only superadmins may access. Everyone else is redirected away — preventing
- * students, tutors, or tenant admins from seeing mock data.
+ * Wraps two kinds of route: UI-only previews backed by isolated mock data, and
+ * QA harnesses that drive the REAL backend before a feature is enabled for
+ * anyone. Only superadmins may access either; everyone else is redirected
+ * away, which keeps students, tutors and tenant admins out of both mock data
+ * and unreleased features.
  *
  * These routes are never linked from production navigation.
  */
