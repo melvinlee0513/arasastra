@@ -68,8 +68,9 @@ function StudyCardArt({ src }: { src: string }) {
 }
 
 /**
- * Continue Learning — a tactile, layered learning deck. Two subtle backing cards
- * sit behind the primary activity; extra recent items swipe horizontally.
+ * Continue Learning — one flat card per recent activity; extra items swipe
+ * horizontally. Each card used to sit on two decorative "backing deck" layers
+ * that implied a stack of items where there was only one, so they were dropped.
  * Access history only, never a progress or completion claim.
  */
 export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry }: Props) {
@@ -212,16 +213,9 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
                     : "w-full",
                 )}
               >
-                {/* Backing deck layers — restrained offsets, decorative only. */}
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-3 bottom-0 top-6 rounded-[24px] border border-home-learning-accent/15 bg-home-learning/70"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-1.5 bottom-1.5 top-3 rounded-[24px] border border-slate-200/70 bg-white/80"
-                />
-
+                {/* One item, one card surface. The decorative "backing deck"
+                    layers that used to sit behind each card are gone: they read
+                    as clutter in a horizontal carousel, not as depth. */}
                 <Link
                   to={continueRoute(item)}
                   className={cn(
@@ -273,8 +267,7 @@ export function StudentHomeContinueLearning({ items, isLoading, isError, onRetry
 function DeckSkeleton() {
   return (
     <div className="relative pb-3 pr-3" aria-hidden="true">
-      <span className="absolute inset-x-3 bottom-0 top-6 rounded-[24px] border border-home-learning-accent/15 bg-home-learning/70" />
-      <span className="absolute inset-x-1.5 bottom-1.5 top-3 rounded-[24px] border border-slate-200/70 bg-white/80" />
+      {/* Matches the real card: a single surface, no backing deck. */}
       <div className={cn(HOME_CARD, "relative space-y-3 p-4")}>
         <div className="flex items-center gap-2.5">
           <div className="h-11 w-11 animate-pulse rounded-[16px] bg-slate-100" />

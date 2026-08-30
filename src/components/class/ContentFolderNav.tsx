@@ -103,15 +103,13 @@ export function FolderCard({
         <div
           className={cn(
             "relative w-full bg-gradient-to-br",
-            // Covers are square (600x600). A compact card's 3:1 strip would crop
-            // one down to a sliver, so a covered compact card gets a 16/9 band —
-            // still denser than the root grid, but the artwork stays legible.
-            // Uncovered cards keep the original icon-tile geometry exactly.
-            compact
-              ? coverUrl
-                ? "aspect-[16/9] sm:aspect-[2/1]"
-                : "aspect-[16/7] sm:aspect-[3/1]"
-              : "aspect-square",
+            // Covers are cropped to a 600x600 square on upload, so the frame
+            // that shows one must be square too — any other ratio silently
+            // crops part of the artwork away (a 16/9 band cut the bottom off,
+            // which is where these covers tend to put their subject).
+            // Uncovered cards keep their original geometry: a square tile at
+            // the root, a slim strip while browsing inside a folder.
+            coverUrl ? "aspect-square" : compact ? "aspect-[16/7] sm:aspect-[3/1]" : "aspect-square",
             fallbackGradient(folder.id),
           )}
         >
