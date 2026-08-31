@@ -11,7 +11,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  Check, Copy, Eye, Loader2, LogOut, Play, SkipForward, Trophy, Users, X,
+  Check, Copy, Eye, Loader2, Lock, LogOut, Play, SkipForward, Trophy, Users, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +25,13 @@ import {
   ArenaArt, ArenaChip, ArenaPanel, ArenaProgress, ArenaStatusCard, QuizArenaShell,
 } from "@/components/quiz/QuizArena";
 import { useLiveQuizSession } from "@/hooks/useLiveQuizSession";
-import { advanceLiveQuizSession, mapLiveQuizError, type LiveQuizAction } from "@/lib/liveQuiz";
+import {
+  advanceLiveQuizSession, mapLiveQuizError, removeLiveQuizParticipant,
+  type LiveQuizAction,
+} from "@/lib/liveQuiz";
 import { LiveQuizLeaderboard } from "@/components/quiz/live/LiveQuizLeaderboard";
+import { LiveQuizResponseBars } from "@/components/quiz/live/LiveQuizResponseBars";
+import { LiveQuizPlayerList } from "@/components/quiz/live/LiveQuizPlayerList";
 
 export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
   const { classId, sessionId } = useParams<{ classId: string; sessionId: string }>();
@@ -53,6 +58,20 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
     onSuccess: () => refresh(),
     onError: (err) => {
       toast.error(mapLiveQuizError(err));
+      refresh();
+    },
+  });
+
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const removeMut = useMutation({
+    mutationFn: (participantId: string) => {
+      setRemovingId(participantId);
+      return removeLiveQuizParticipant({ sessionId: sessionId!, participantId });
+    },
+    onSettled: () => setRemovingId(null),
+    onSuccess: () => refresh(),
+    onError: (err) => {
+      toast.error(mapLiveQuizError(err, "Couldn't remove that player."));
       refresh();
     },
   });
@@ -111,16 +130,53 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
             <p className="mt-1 text-[13.5px] text-quiz-arena-muted">{s.quiz_title}</p>
           </div>
           {s.status === "completed" && (
-            <div className="mt-5">
-              <LiveQuizLeaderboard rows={snapshot.leaderboard} showPodium />
-            </div>
+            <>
+              {/* Session summary — every figure is derived by the server from
+                  the answers actually recorded. Average accuracy is omitted
+                  rather than guessed when it isn't derivable. */}
+              {s.summary && (
+                <ArenaPanel className="mt-5 p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+                    Session summary
+                  </p>
+                  <dl className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      { k: "Players", v: s.summary.players.toLocaleString() },
+                      { k: "Questions", v: s.summary.questions.toLocaleString() },
+                      { k: "Average score", v: s.summary.average_score.toLocaleString() },
+                      {
+                        k: "Average accuracy",
+                        v: s.summary.average_accuracy_pct === null
+                          ? "—"
+                          : `${s.summary.average_accuracy_pct}%`,
+                      },
+                    ].map((x) => (
+                      <div key={x.k} className="rounded-2xl bg-white/6 px-3 py-2.5">
+                        <dt className="text-[11px] font-semibold text-quiz-arena-muted">{x.k}</dt>
+                        <dd className="mt-0.5 text-[17px] font-black tabular-nums">{x.v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </ArenaPanel>
+              )}
+              <div className="mt-4">
+                <LiveQuizLeaderboard rows={snapshot.leaderboard} showPodium />
+              </div>
+            </>
           )}
-          <div className="mt-6">
+          {s.status === "completed" && (
+            <p className="mt-4 text-center text-[12px] leading-snug text-quiz-arena-muted">
+              These standings are this session's record. The quiz results page tracks solo
+              attempts, which are counted separately.
+            </p>
+          )}
+
+          <div className="mt-5">
             <Button
               className="h-12 w-full rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
               onClick={() => navigate(`${basePath}/quizzes`)}
             >
-              Back to quiz management
+              Return to quiz manager
             </Button>
           </div>
         </div>
@@ -142,8 +198,10 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
             <X className="h-4 w-4" />
           </button>
           <div className="min-w-0 flex-1">
+            {/* The header used to read "Quiz lobby" for the whole game, long
+                after the lobby was over. */}
             <p className="truncate text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
-              Quiz lobby · hosting
+              {inLobby ? "Quiz lobby · hosting" : "Live · hosting"}
             </p>
             <h1 className="truncate text-[15px] font-extrabold leading-tight">{s.quiz_title}</h1>
           </div>
@@ -163,17 +221,21 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
               <p className="mt-3 text-center text-[40px] font-black leading-none tracking-[0.16em] tabular-nums">
                 {s.game_code}
               </p>
+              {/* `flex-1` is applied only from sm up. In the stacked column it
+                  sets flex-basis:0 on the MAIN (vertical) axis, which collapsed
+                  both buttons to 37px — under the 44px touch minimum — on every
+                  phone width. */}
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={() => copy(s.game_code ?? "", "code")}
-                  className="h-12 flex-1 rounded-full bg-white/12 text-[14px] font-bold text-quiz-arena-foreground hover:bg-white/20"
+                  className="h-12 min-h-[48px] shrink-0 rounded-full bg-white/12 text-[14px] font-bold text-quiz-arena-foreground hover:bg-white/20 sm:flex-1"
                 >
                   {copied === "code" ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
                   Copy code
                 </Button>
                 <Button
                   onClick={() => copy(joinUrl, "link")}
-                  className="h-12 flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[14px] font-bold text-white"
+                  className="h-12 min-h-[48px] shrink-0 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[14px] font-bold text-white sm:flex-1"
                 >
                   {copied === "link" ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
                   Copy join link
@@ -196,46 +258,32 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
               </ArenaPanel>
             )}
 
-            {/* Players */}
-            <ArenaPanel className="mt-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[14px] font-bold">
-                  Players joined ({s.participant_count}/{s.max_players})
-                </p>
-                <Users className="h-4 w-4 text-quiz-arena-muted" />
-              </div>
-              {snapshot.players.length === 0 ? (
+            {/* Players — same managed list the live screen uses, so a tutor
+                can remove someone before the game starts too. */}
+            {snapshot.players.length === 0 ? (
+              <ArenaPanel className="mt-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[14px] font-bold">
+                    Players joined (0/{s.max_players})
+                  </p>
+                  <Users className="h-4 w-4 text-quiz-arena-muted" aria-hidden="true" />
+                </div>
                 <div className="mt-3 rounded-2xl border border-dashed border-white/15 px-4 py-6 text-center">
                   <ArenaArt src={QUIZ_ART.hourglass} className="mx-auto h-16 w-16" />
                   <p className="mt-2 text-[13px] text-quiz-arena-muted">
                     Waiting for students to join…
                   </p>
                 </div>
-              ) : (
-                <ul className="mt-3 max-h-64 space-y-1.5 overflow-y-auto pr-1">
-                  {snapshot.players.map((p) => (
-                    <li
-                      key={p.participant_id}
-                      className="flex items-center gap-2.5 rounded-2xl bg-white/6 px-3 py-2"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/12 text-[12px] font-bold">
-                        {p.avatar_url
-                          ? <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
-                          : p.display_name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
-                        {p.display_name}
-                      </span>
-                      {p.status === "joined" ? (
-                        <Check className="h-4 w-4 shrink-0 text-emerald-300" />
-                      ) : (
-                        <span className="shrink-0 text-[11px] font-bold text-quiz-arena-muted">left</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </ArenaPanel>
+              </ArenaPanel>
+            ) : (
+              <LiveQuizPlayerList
+                className="mt-4"
+                players={snapshot.players}
+                showAnswered={false}
+                onRemove={(id) => removeMut.mutate(id)}
+                removingId={removingId}
+              />
+            )}
 
             <ArenaPanel className="mt-4 flex items-center gap-3">
               <ArenaArt src={QUIZ_ART.crystalGem} className="h-9 w-9 shrink-0" />
@@ -253,8 +301,12 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
                 <ArenaChip art={QUIZ_ART.xpHexagon}>
                   Q {Math.min(idx + 1, total)} / {total}
                 </ArenaChip>
+                {/* One source for "answered": the same tally the bars below
+                    use, so the chip and the distribution can never disagree
+                    on screen. Falls back to the session counter only when the
+                    per-question stats aren't in the payload. */}
                 <ArenaChip art={QUIZ_ART.goldStar} tone="good">
-                  {s.answered_count}/{s.participant_count} answered
+                  {snapshot.question_stats?.answered ?? s.answered_count}/{s.participant_count} answered
                 </ArenaChip>
                 {s.status === "question_open" && secondsLeft !== null && (
                   <span className="ml-auto text-[15px] font-black tabular-nums">{secondsLeft}s</span>
@@ -273,7 +325,9 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
               <h2 className="mt-1.5 whitespace-pre-wrap text-[16px] font-bold leading-snug">
                 {snapshot.question?.question ?? "—"}
               </h2>
-              {snapshot.question && (
+              {/* Without stats (a payload that isn't the host's) fall back to
+                  the plain option list rather than rendering nothing. */}
+              {snapshot.question && !snapshot.question_stats && (
                 <ul className="mt-3 space-y-1.5">
                   {snapshot.question.options.map((o) => (
                     <li
@@ -293,11 +347,29 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
               )}
             </ArenaPanel>
 
+            {/* Response distribution — host only, and the correct option stays
+                unmarked until the host has actually revealed it. */}
+            {snapshot.question_stats && (
+              <LiveQuizResponseBars
+                className="mt-4"
+                stats={snapshot.question_stats}
+                revealed={s.status === "answer_reveal" || s.status === "leaderboard"}
+              />
+            )}
+
             {s.status === "leaderboard" && (
               <div className="mt-4">
                 <LiveQuizLeaderboard rows={snapshot.leaderboard} />
               </div>
             )}
+
+            <LiveQuizPlayerList
+              className="mt-4"
+              players={snapshot.players}
+              showAnswered
+              onRemove={(id) => removeMut.mutate(id)}
+              removingId={removingId}
+            />
           </>
         )}
 
@@ -315,13 +387,26 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
           ) : (
             <>
               {s.status === "question_open" && (
-                <Button
-                  className="h-12 min-h-[48px] flex-1 rounded-full bg-white/12 text-[14.5px] font-bold text-quiz-arena-foreground hover:bg-white/20"
-                  disabled={advance.isPending}
-                  onClick={() => advance.mutate("reveal")}
-                >
-                  <Eye className="mr-1.5 h-4 w-4" /> Reveal answer
-                </Button>
+                <>
+                  {/* Stop the clock without revealing — useful when everyone
+                      has answered and the tutor wants to talk first. */}
+                  <Button
+                    className="h-12 min-h-[48px] shrink-0 rounded-full bg-white/12 px-4 text-[14.5px] font-bold text-quiz-arena-foreground hover:bg-white/20"
+                    disabled={advance.isPending}
+                    onClick={() => advance.mutate("lock")}
+                    aria-label="Lock answers"
+                  >
+                    <Lock className="h-4 w-4" aria-hidden="true" />
+                    <span className="ml-1.5 hidden sm:inline">Lock</span>
+                  </Button>
+                  <Button
+                    className="h-12 min-h-[48px] flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
+                    disabled={advance.isPending}
+                    onClick={() => advance.mutate("reveal")}
+                  >
+                    <Eye className="mr-1.5 h-4 w-4" aria-hidden="true" /> Reveal answer
+                  </Button>
+                </>
               )}
               {s.status === "question_locked" && (
                 <Button

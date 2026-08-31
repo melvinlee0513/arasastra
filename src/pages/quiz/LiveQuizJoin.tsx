@@ -94,14 +94,20 @@ export function LiveQuizJoin() {
           </p>
         </div>
 
-        <ArenaPanel className="mt-5">
+        {/* Six adjacent 44px boxes plus their gaps need 264px. A 320px phone
+            leaves 288px inside the shell, and a normal panel's p-5 spends 40 of
+            those — which is why the digits measured 40px wide. On the smallest
+            screens only, the panel reclaims 8px each side and drops to px-2,
+            giving 268px of box width: 44.6px each. From `sm` up it is an
+            ordinary panel again. */}
+        <ArenaPanel className="mt-5 -mx-2 px-2 sm:mx-0 sm:px-5">
           <label
             htmlFor="code-0"
             className="mb-3 block text-center text-[11px] font-bold uppercase tracking-[0.14em] text-quiz-arena-muted"
           >
             Enter game code
           </label>
-          <div className="flex justify-center gap-1.5 sm:gap-2">
+          <div className="flex justify-center gap-1 sm:gap-2">
             {digits.map((d, i) => (
               <input
                 key={i}

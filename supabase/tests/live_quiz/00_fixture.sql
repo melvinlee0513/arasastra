@@ -89,7 +89,8 @@ CREATE TABLE IF NOT EXISTS public.quiz_options (
   center_id uuid,
   option_text text NOT NULL,
   is_correct boolean NOT NULL DEFAULT false,
-  order_index integer
+  order_index integer,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- ── Helper functions (semantics copied from the repo) ──────────────────────
@@ -145,3 +146,53 @@ DO $$ BEGIN
     CREATE PUBLICATION supabase_realtime;
   END IF;
 END $$;
+
+-- ── quiz content RLS + grants, copied from production ──────────────────────
+-- Needed so the answer-key secrecy tests are meaningful: without the real
+-- policy and the real table-level grant, a "student cannot read is_correct"
+-- assertion would pass for the wrong reason.
+--   grant:  supabase grants SELECT on every public table to authenticated
+--   policy: 20260713053532 "quiz_options read for enrolled or staff"
+--           20260704020459 "Enrolled can view exclusive quiz questions"
+ALTER TABLE public.quiz_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quiz_options   ENABLE ROW LEVEL SECURITY;
+
+-- Supabase grants the authenticated role full DML on public tables and lets
+-- RLS decide; reproducing that is what makes "the revoke touches SELECT only"
+-- a real assertion rather than an accident of a thin fixture.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.quiz_questions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.quiz_options   TO authenticated;
+
+DROP POLICY IF EXISTS "quiz_questions read for enrolled or staff" ON public.quiz_questions;
+CREATE POLICY "quiz_questions read for enrolled or staff"
+  ON public.quiz_questions FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.quizzes q
+       WHERE q.id = quiz_questions.quiz_id
+         AND (public.is_tutor_of_class(q.class_id) OR public.is_enrolled_in_class(q.class_id))
+    )
+  );
+
+DROP POLICY IF EXISTS "quiz_options read for enrolled or staff" ON public.quiz_options;
+CREATE POLICY "quiz_options read for enrolled or staff"
+  ON public.quiz_options FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.quiz_questions qq
+      JOIN public.quizzes q ON q.id = qq.quiz_id
+      WHERE qq.id = quiz_options.question_id
+        AND (public.is_tutor_of_class(q.class_id) OR public.is_enrolled_in_class(q.class_id))
+    )
+  );
+
+-- The app reads `quizzes` straight from the client (QuizList, QuizManagerTab),
+-- so authenticated genuinely holds SELECT on it in production. The quiz_options
+-- policy above joins through this table and is evaluated as the *querying*
+-- role, so without this grant the leak test would fail for the wrong reason.
+ALTER TABLE public.quizzes ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.quizzes TO authenticated;
+DROP POLICY IF EXISTS "quizzes read for enrolled or staff" ON public.quizzes;
+CREATE POLICY "quizzes read for enrolled or staff"
+  ON public.quizzes FOR SELECT TO authenticated
+  USING (public.is_tutor_of_class(class_id) OR public.is_enrolled_in_class(class_id));

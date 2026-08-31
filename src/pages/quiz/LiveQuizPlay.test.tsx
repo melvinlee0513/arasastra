@@ -41,7 +41,10 @@ import { LiveQuizPlay } from "./LiveQuizPlay";
 type Status = "lobby" | "question_open" | "question_locked" | "answer_reveal" | "leaderboard" | "completed";
 
 /** Mirrors the RPC's redaction rules exactly. */
-function snapshot(status: Status, over: { answered?: boolean; correct?: boolean } = {}) {
+function snapshot(
+  status: Status,
+  over: { answered?: boolean; correct?: boolean; myStatus?: "joined" | "left" | "removed" } = {},
+) {
   const revealed = status === "answer_reveal" || status === "leaderboard" || status === "completed";
   return {
     session: {
@@ -63,9 +66,14 @@ function snapshot(status: Status, over: { answered?: boolean; correct?: boolean 
       state_revision: 4,
       started_at: "2026-08-30T10:00:00.000Z",
       completed_at: null,
+      expires_at: "2026-08-30T16:00:00.000Z",
+      summary: null,
       server_now: "2026-08-30T10:00:05.000Z",
     },
     is_host: false,
+    my_status: over.myStatus ?? ("joined" as const),
+    // A player is never sent the host's response tally.
+    question_stats: null,
     question:
       status === "lobby"
         ? null
@@ -258,5 +266,55 @@ describe("reconnect", () => {
 
     await screen.findByText(/Answer locked in/);
     expect(answerCalls()).toHaveLength(0);
+  });
+});
+
+describe("removed by the host", () => {
+  it("tells the player they were removed instead of showing the question", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: snapshot("question_open", { myStatus: "removed" }),
+      error: null,
+    });
+    renderPlay();
+    expect(await screen.findByText("You were removed")).toBeTruthy();
+    // The question must not be on screen for someone who cannot answer it.
+    expect(
+      screen.queryByText("What is the main pigment used in photosynthesis?"),
+    ).toBeNull();
+  });
+
+  it("takes precedence over the live question, whatever the session state", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: snapshot("leaderboard", { myStatus: "removed" }),
+      error: null,
+    });
+    renderPlay();
+    expect(await screen.findByText("You were removed")).toBeTruthy();
+  });
+
+  it("still plays normally for a joined participant", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: snapshot("question_open"),
+      error: null,
+    });
+    renderPlay();
+    expect(
+      await screen.findByText("What is the main pigment used in photosynthesis?"),
+    ).toBeTruthy();
+    expect(screen.queryByText("You were removed")).toBeNull();
+  });
+});
+
+describe("a player's snapshot carries no host-only data", () => {
+  it("never renders a response tally", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: snapshot("answer_reveal", { answered: true, correct: true }),
+      error: null,
+    });
+    const { container } = renderPlay();
+    await screen.findByText("What is the main pigment used in photosynthesis?");
+    // "18 answered" style copy belongs to the host screen only.
+    expect(container.textContent).not.toMatch(/\d+ answered/);
+    expect(container.textContent).not.toMatch(/Responses/);
   });
 });

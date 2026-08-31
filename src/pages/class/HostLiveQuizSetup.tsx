@@ -274,6 +274,42 @@ export function HostLiveQuizSetup({ variant }: { variant: Variant }) {
             </div>
           </BuilderSection>
 
+          {/* 4 — Quiz summary. Every figure comes from the chosen quiz or the
+              settings above; nothing here is invented, and the block only
+              appears once there is a quiz to summarise. */}
+          {chosen && (
+            <BuilderSection
+              title="Quiz summary"
+              description="What you're about to host."
+              icon={<Gamepad2 className="h-5 w-5" />}
+            >
+              <dl className="grid grid-cols-2 gap-2">
+                {[
+                  { k: "Quiz", v: chosen.title },
+                  { k: "Questions", v: `${chosen.question_count}` },
+                  { k: "Total points", v: chosen.total_points.toLocaleString() },
+                  {
+                    k: "Estimated time",
+                    v: `${Math.max(1, Math.round((chosen.question_count * seconds) / 60))} min`,
+                  },
+                  { k: "Max players", v: `${maxPlayers}` },
+                  { k: "Per question", v: `${seconds}s` },
+                ].map((x) => (
+                  <div key={x.k} className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                    <dt className="text-[11.5px] font-semibold text-slate-500">{x.k}</dt>
+                    <dd className="mt-0.5 truncate text-[14.5px] font-bold text-slate-900">
+                      {x.v}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2.5 text-[12px] leading-snug text-slate-500">
+                Estimated time counts question windows only — it doesn't include the time you
+                spend on the reveal and leaderboard between questions.
+              </p>
+            </BuilderSection>
+          )}
+
           {/* Honest about what isn't built */}
           <BuilderCard>
             <div className="flex items-start gap-2.5">

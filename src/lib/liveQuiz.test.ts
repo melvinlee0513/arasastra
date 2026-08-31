@@ -31,6 +31,7 @@ import {
   isRevealed,
   joinLiveQuizSession,
   mapLiveQuizError,
+  removeLiveQuizParticipant,
   secondsRemaining,
   serverClockOffset,
   submitLiveQuizAnswer,
@@ -160,5 +161,50 @@ describe("error mapping does not leak session existence", () => {
 
   it("falls back for an unknown error", () => {
     expect(mapLiveQuizError({ message: "something odd" }, "fallback")).toBe("fallback");
+  });
+});
+
+// ─── Phase 2 ───────────────────────────────────────────────────────────────
+
+describe("removeLiveQuizParticipant", () => {
+  it("sends only the two ids — never a claim of authority", async () => {
+    h.result = { data: { removed: true }, error: null };
+    await removeLiveQuizParticipant({ sessionId: "s-1", participantId: "p-9" });
+    expect(last().name).toBe("remove_live_quiz_participant");
+    expect(last().args).toEqual({ _session_id: "s-1", _participant_id: "p-9" });
+    // No role, no centre, no "is_host" — the server derives all of it.
+    expect(JSON.stringify(last().args)).not.toMatch(/host|role|center|centre|admin/i);
+  });
+
+  it("propagates the server's refusal rather than swallowing it", async () => {
+    h.result = { data: null, error: { message: "access_denied" } };
+    await expect(
+      removeLiveQuizParticipant({ sessionId: "s-1", participantId: "p-9" }),
+    ).rejects.toBeTruthy();
+  });
+});
+
+describe("mapLiveQuizError — phase 2 states", () => {
+  it("explains an expired session instead of a generic failure", () => {
+    expect(mapLiveQuizError({ message: "session_expired" })).toMatch(/expired/i);
+  });
+
+  it("tells a removed player what actually happened", () => {
+    expect(mapLiveQuizError({ message: "removed_by_host" })).toMatch(/removed you/i);
+  });
+
+  it("still refuses to distinguish a bad code from another centre's game", () => {
+    // Probing protection: these must read identically.
+    expect(mapLiveQuizError({ message: "session_not_found" })).toBe(
+      "That game code isn't valid.",
+    );
+  });
+
+  it("falls back without leaking a raw Postgres message", () => {
+    const msg = mapLiveQuizError({
+      message: 'duplicate key value violates unique constraint "live_quiz_answers_once_uq"',
+    });
+    expect(msg).toBe("Something went wrong.");
+    expect(msg).not.toMatch(/constraint|violates|uq/i);
   });
 });
