@@ -17,6 +17,8 @@ import {
   mapQuizError,
   RESULT_VISIBILITY_LABEL,
   quizStudentKeys,
+  resultChosenOptionIds as chosenIds,
+  resultCorrectAnswerText as correctText,
   type QuizResultPayload,
 } from "@/lib/quizzes";
 import { cn } from "@/lib/utils";
@@ -320,7 +322,11 @@ export function StudentQuizResult() {
             {q.options.length > 0 ? (
               <ul className="mt-3 space-y-1.5">
                 {q.options.map((o) => {
-                  const isSelected = o.id === q.selected_option_id;
+                  // A multiple select stores its picks as a JSON array in
+                  // selected_answer, not in selected_option_id, so comparing
+                  // against that column alone marked none of them as the
+                  // student's own.
+                  const isSelected = chosenIds(q).includes(o.id);
                   return (
                     <li
                       key={o.id}
@@ -356,14 +362,24 @@ export function StudentQuizResult() {
                   <p className="mb-0.5 text-[10.5px] font-black uppercase tracking-wide text-quiz-arena-muted">
                     Your answer
                   </p>
-                  <p className="whitespace-pre-wrap">{q.selected_answer || "— no answer —"}</p>
+                  <p className="whitespace-pre-wrap">
+                    {q.selected_answer
+                      ? q.selected_answer + (q.answer_unit ? ` ${q.answer_unit}` : "")
+                      : "— no answer —"}
+                  </p>
                 </div>
-                {q.correct_answer && (
+                {/* The key lives in a different column for each of the Phase 5
+                    types, and in none of them is it `correct_answer`. Reading
+                    only that column left a student who got a short answer or a
+                    numeric question wrong with nothing to learn from. */}
+                {correctText(q) && (
                   <div className="rounded-2xl border border-quiz-correct/50 bg-quiz-correct/15 px-3 py-2">
                     <p className="mb-0.5 text-[10.5px] font-black uppercase tracking-wide text-emerald-200">
-                      Correct answer
+                      {q.accepted_answers && q.accepted_answers.length > 1
+                        ? "Accepted answers"
+                        : "Correct answer"}
                     </p>
-                    <p className="whitespace-pre-wrap text-emerald-50">{q.correct_answer}</p>
+                    <p className="whitespace-pre-wrap text-emerald-50">{correctText(q)}</p>
                   </div>
                 )}
               </div>

@@ -20,6 +20,10 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIGRATION="$HERE/../../migrations/20260830000000_live_quiz_sessions.sql"
 MIGRATION2="$HERE/../../migrations/20260831000000_live_quiz_phase2.sql"
+# 20260905 undoes the column-level grant 20260831 made and returns both
+# answer-key tables to no privilege at all. Applying it here is what makes the
+# S-block assertions describe production rather than the harness.
+MIGRATION3="$HERE/../../migrations/20260905000000_answer_key_least_privilege.sql"
 
 PGHOST="${PGHOST:-127.0.0.1}"
 PGPORT="${PGPORT:-54329}"
@@ -39,6 +43,9 @@ psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIGRATION" 2>&1 | grep -vi notice || tr
 
 echo "→ migration (phase 2)"
 psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIGRATION2" 2>&1 | grep -vi notice || true
+
+echo "→ migration (answer-key least privilege)"
+psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIGRATION3" 2>&1 | grep -vi notice || true
 
 echo "→ seed"
 psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$HERE/01_seed.sql" 2>&1 | grep -vi notice || true

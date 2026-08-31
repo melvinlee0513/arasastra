@@ -436,11 +436,49 @@ export interface QuizResultQuestion {
   points: number;
   explanation: string | null;
   correct_answer: string | null;
+  /** short_answer / fill_blank only. Every form the grader would have accepted. */
+  accepted_answers: string[] | null;
+  /** numeric only. The tolerance is deliberately not sent. */
+  numeric_answer: number | null;
+  /** Display label for a numeric answer ("m/s²"). */
+  answer_unit: string | null;
   options: QuizResultOption[];
   selected_option_id: string | null;
+  /**
+   * The raw response for anything that is not a single chosen option: a typed
+   * string, or the JSON array of option ids for a multiple select.
+   */
   selected_answer: string | null;
   is_correct: boolean;
   points_awarded: number;
+}
+
+/**
+ * The option ids this student chose. One for a single choice; several for a
+ * multiple select, which stores them as a JSON array in `selected_answer`.
+ */
+export function resultChosenOptionIds(q: QuizResultQuestion): string[] {
+  if (q.selected_option_id) return [q.selected_option_id];
+  if (!q.selected_answer) return [];
+  if (q.question_type !== "multiple_select") return [];
+  try {
+    const parsed: unknown = JSON.parse(q.selected_answer);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * What to show a student as the correct answer, whichever column the key
+ * happens to live in. Null when the question's key is its options instead.
+ */
+export function resultCorrectAnswerText(q: QuizResultQuestion): string | null {
+  if (q.accepted_answers?.length) return q.accepted_answers.join(", ");
+  if (q.numeric_answer != null) {
+    return q.answer_unit ? `${q.numeric_answer} ${q.answer_unit}` : String(q.numeric_answer);
+  }
+  return q.correct_answer?.trim() ? q.correct_answer : null;
 }
 export type QuizResultPayload =
   | { status: "not_submitted"; attempt_id: string; quiz_id: string; class_id: string }

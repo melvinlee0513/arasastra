@@ -416,3 +416,87 @@ BEGIN
     public._quiz_answer_is_correct(v_copy, '"9.83"'::jsonb)
     AND NOT public._quiz_answer_is_correct(v_copy, '"9.9"'::jsonb), '');
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- V — RESULTS carry every kind of answer key (20260905000100)
+--
+-- get_quiz_result returned `correct_answer` and per-option `is_correct` and
+-- nothing else, so a student who got a short_answer, numeric or fill_blank
+-- question wrong was told only that they were wrong. Runs on the attempt the
+-- T block submitted.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_stu uuid := '22222222-0000-0000-0000-000000000003';
+  v_att uuid := 'cafeaaaa-0000-0000-0000-0000000000a2';
+  v_res jsonb;
+  q jsonb;
+BEGIN
+  PERFORM qa.as_user(v_stu);
+  v_res := public.get_quiz_result(v_att);
+
+  PERFORM qa.check('V1 the result is shown at all', v_res->>'status' = 'ok', v_res->>'status');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0004-0000-0000-0000-000000000004';   -- short_answer
+  PERFORM qa.check('V2 a short answer carries its accepted answers',
+    q->'accepted_answers' @> '["Newton"]'::jsonb, (q->'accepted_answers')::text);
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0006-0000-0000-0000-000000000006';   -- fill_blank, WRONG
+  PERFORM qa.check('V3 the blank the student got wrong shows what was accepted',
+    jsonb_typeof(q->'accepted_answers') = 'array'
+    AND jsonb_array_length(q->'accepted_answers') > 0,
+    (q->'accepted_answers')::text);
+  PERFORM qa.check('V4 and what the student actually wrote, to compare against',
+    q->>'selected_answer' = 'Chlorophyll', q->>'selected_answer');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0005-0000-0000-0000-000000000005';   -- numeric
+  PERFORM qa.check('V5 a numeric question carries its answer',
+    (q->>'numeric_answer')::numeric IS NOT NULL, q->>'numeric_answer');
+  PERFORM qa.check('V6 and its unit, so the number can be read back',
+    q ? 'answer_unit', (q->'answer_unit')::text);
+
+  PERFORM qa.check('V7 the tolerance is still never sent — it teaches nothing '
+                   'and narrows the search space',
+    v_res::text NOT LIKE '%tolerance%', 'no tolerance');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0001-0000-0000-0000-000000000001';   -- mcq
+  PERFORM qa.check('V8 a choice question carries no accepted-answer list for no reason',
+    q->'accepted_answers' IS NULL OR jsonb_typeof(q->'accepted_answers') = 'null',
+    (q->'accepted_answers')::text);
+  PERFORM qa.check('V9 and still marks the correct option, as it always did',
+    (SELECT bool_or((o->>'is_correct')::boolean) FROM jsonb_array_elements(q->'options') o),
+    (q->'options')::text);
+END $$;
+
+-- The keys are behind the visibility gate, not merely behind submission.
+DO $$
+DECLARE
+  v_stu uuid := '22222222-0000-0000-0000-000000000003';
+  v_att uuid := 'cafeaaaa-0000-0000-0000-0000000000a2';
+  v_res jsonb;
+BEGIN
+  UPDATE public.quizzes SET result_visibility = 'never'
+   WHERE id = 'cafe0000-0000-0000-0000-00000000cafe';
+
+  PERFORM qa.as_user(v_stu);
+  v_res := public.get_quiz_result(v_att);
+  PERFORM qa.check('V10 result_visibility=never hides the whole result',
+    v_res->>'status' = 'hidden', v_res->>'status');
+  PERFORM qa.check('V11 and therefore leaks no answer key at all',
+    v_res::text NOT LIKE '%accepted_answers%'
+    AND v_res::text NOT LIKE '%numeric_answer%'
+    AND v_res::text NOT LIKE '%Newton%', v_res::text);
+
+  UPDATE public.quizzes SET result_visibility = 'after_submit'
+   WHERE id = 'cafe0000-0000-0000-0000-00000000cafe';
+END $$;
+
+-- Another student's attempt is not readable, keys or otherwise.
+SELECT qa.expect_error('V12 a student cannot read another student''s result',
+  '22222222-0000-0000-0000-000000000002',
+  $$SELECT public.get_quiz_result('cafeaaaa-0000-0000-0000-0000000000a2'::uuid)$$,
+  'attempt not found');

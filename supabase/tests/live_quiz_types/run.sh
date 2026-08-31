@@ -11,6 +11,7 @@
 #   20260902 question bank
 #   20260903 expanded question types  (_quiz_answer_is_correct)
 #   20260904 live quiz × all types    (the one under test)
+#   20260905 answer-key least privilege, and solo results carrying them
 #
 # Running them in order is itself an assertion: 20260904 depends on a function
 # 20260903 creates and on a table 20260830 creates, and a deployment that
@@ -44,7 +45,9 @@ for m in 20260830000000_live_quiz_sessions \
          20260901000000_quiz_analytics \
          20260902000000_question_bank \
          20260903000000_question_types \
-         20260904000000_live_quiz_all_types; do
+         20260904000000_live_quiz_all_types \
+         20260905000000_answer_key_least_privilege \
+         20260905000100_quiz_result_answer_keys; do
   echo "→ migration $m"
   psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIG/$m.sql" 2>&1 | grep -viE 'notice|wal_level|HINT' || true
 done

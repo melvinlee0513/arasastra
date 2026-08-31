@@ -736,18 +736,53 @@ SELECT qa.expect_error('J4 an enrolled student cannot read quiz_questions.numeri
      WHERE id = 'e1111111-0000-0000-0000-000000000005'$$,
   'permission denied');
 
--- The one column a student legitimately needs from the same table still reads,
--- so J1–J4 are not passing because the whole table is unreadable.
+-- Not one column of either table reads, which is the posture 20260905000000
+-- restores: nothing outside the database reads them directly, so the correct
+-- privilege is none.
+SELECT qa.expect_error('J5 not even the question text reads directly',
+  '22222222-0000-0000-0000-000000000002',
+  $$SELECT question FROM public.quiz_questions
+     WHERE id = 'e1111111-0000-0000-0000-000000000005'$$,
+  'permission denied');
+
+SELECT qa.expect_error('J6 nor any column of quiz_options',
+  '22222222-0000-0000-0000-000000000002',
+  $$SELECT option_text FROM public.quiz_options
+     WHERE question_id = 'e1111111-0000-0000-0000-000000000001'$$,
+  'permission denied');
+
+-- J1-J6 must not be passing because the harness is broken or the tables are
+-- empty. Both checks below run as the SAME student.
 DO $$
-DECLARE v_ok boolean := false;
+DECLARE v_ok boolean := false; v_q text;
 BEGIN
+  -- The definer path — which is how every RPC reads these — is unaffected.
   PERFORM qa.as_user('22222222-0000-0000-0000-000000000002');
+  SELECT question INTO v_q FROM public.quiz_questions
+   WHERE id = 'e1111111-0000-0000-0000-000000000005';
+  PERFORM qa.check('J7 the row is there, and the definer path still reads it',
+    v_q IS NOT NULL, COALESCE(v_q, 'null'));
+
+  -- And a table the role IS granted still reads as that role.
   SET LOCAL ROLE authenticated;
-  SELECT true INTO v_ok FROM public.quiz_questions
-   WHERE id = 'e1111111-0000-0000-0000-000000000005' AND question IS NOT NULL;
+  SELECT true INTO v_ok FROM public.quizzes
+   WHERE id = 'd1111111-0000-0000-0000-000000000001';
   RESET ROLE;
-  PERFORM qa.check('J5 the same student CAN still read the question text — '
-                   'J1-J4 are column privileges, not a dead table', COALESCE(v_ok, false), '');
+  PERFORM qa.check('J8 the same student CAN read a table they are granted — '
+                   'J1-J6 are privilege results, not a broken harness',
+    COALESCE(v_ok, false), '');
+END $$;
+
+DO $$
+DECLARE v_left text;
+BEGIN
+  SELECT string_agg(DISTINCT table_name || '.' || column_name || ' -> ' || grantee, ', ')
+    INTO v_left FROM information_schema.column_privileges
+   WHERE table_schema = 'public'
+     AND table_name IN ('quiz_questions', 'quiz_options')
+     AND grantee IN ('anon', 'authenticated');
+  PERFORM qa.check('J9 no column-level grant survives on either answer-key table',
+    v_left IS NULL, COALESCE(v_left, 'none'));
 END $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
