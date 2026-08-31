@@ -98,7 +98,17 @@ export interface BankUsedIn {
   question_count: number;
 }
 
-export interface BankQuestionDetail {
+export interface BankAnswerConfig {
+  /** short_answer / fill_blank. Never sent to a student. */
+  accepted_answers: string[];
+  answer_match_mode: "exact" | "ignore_case";
+  numeric_answer: number | null;
+  numeric_tolerance: number | null;
+  /** Display label ("m/s²"). This one IS shown to students. */
+  answer_unit: string | null;
+}
+
+export interface BankQuestionDetail extends BankAnswerConfig {
   id: string;
   question: string;
   question_type: string;
@@ -180,6 +190,11 @@ export async function saveBankQuestion(args: {
   collectionId?: string | null;
   subjectId?: string | null;
   options: { option_text: string; is_correct: boolean }[];
+  acceptedAnswers?: string[] | null;
+  answerMatchMode?: "exact" | "ignore_case";
+  numericAnswer?: number | null;
+  numericTolerance?: number | null;
+  answerUnit?: string | null;
 }): Promise<{ id: string }> {
   const { data, error } = await supabase.rpc("save_question_bank_question" as never, {
     _question_id: args.id ?? null,
@@ -191,6 +206,11 @@ export async function saveBankQuestion(args: {
     _collection_id: args.collectionId ?? null,
     _subject_id: args.subjectId ?? null,
     _options: args.options,
+    _accepted_answers: args.acceptedAnswers ?? null,
+    _answer_match_mode: args.answerMatchMode ?? "ignore_case",
+    _numeric_answer: args.numericAnswer ?? null,
+    _numeric_tolerance: args.numericTolerance ?? null,
+    _answer_unit: args.answerUnit ?? null,
   } as never);
   if (error) throw error;
   return data as unknown as { id: string };
@@ -278,6 +298,11 @@ export const QUESTION_TYPE_LABEL: Record<string, string> = {
   numeric: "Numeric",
   fill_blank: "Blank",
 };
+
+/** Types whose answer is a set of options rather than typed text. */
+export const CHOICE_TYPES = new Set(["mcq", "multiple_choice", "true_false", "multiple_select"]);
+/** Types whose answer key is a list of accepted strings. */
+export const TEXT_ANSWER_TYPES = new Set(["short_answer", "fill_blank"]);
 
 export function typeLabel(t: string): string {
   return QUESTION_TYPE_LABEL[t] ?? t;

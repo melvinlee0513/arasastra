@@ -23,8 +23,10 @@ import { cn } from "@/lib/utils";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  bankKeys, getBankQuestion, listQuestionBank, mapBankError, saveBankQuestion,
+  CHOICE_TYPES, TEXT_ANSWER_TYPES, bankKeys, getBankQuestion, listQuestionBank,
+  mapBankError, saveBankQuestion,
 } from "@/lib/questionBank";
+import { QUESTION_TYPES } from "@/lib/questionTypes";
 import { AnalyticsShell, Skel } from "@/components/quiz/analytics/AnalyticsChrome";
 import { BuilderSection } from "@/components/quiz/builder/QuizBuilderChrome";
 
@@ -37,11 +39,8 @@ interface OptionDraft {
 const LETTERS = "ABCDEFGH";
 const rid = () => Math.random().toString(36).slice(2, 10);
 
-/** Types this editor can save today. Phase 5 widens this list. */
-const TYPES = [
-  { value: "mcq", label: "Multiple choice" },
-  { value: "true_false", label: "True / False" },
-] as const;
+/** The canonical six. Every one saves, reloads, publishes, and grades. */
+const TYPES = QUESTION_TYPES.map((t) => ({ value: t.value as string, label: t.label }));
 
 const TRUE_FALSE_OPTIONS = (): OptionDraft[] => [
   { key: rid(), option_text: "True", is_correct: true },
@@ -68,6 +67,11 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
     { key: rid(), option_text: "", is_correct: true },
     { key: rid(), option_text: "", is_correct: false },
   ]);
+  const [accepted, setAccepted] = useState<string[]>([""]);
+  const [matchMode, setMatchMode] = useState<"exact" | "ignore_case">("ignore_case");
+  const [numAnswer, setNumAnswer] = useState("");
+  const [numTolerance, setNumTolerance] = useState("");
+  const [unit, setUnit] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   const home = useQuery({
@@ -99,23 +103,76 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
         ? d.options.map((o) => ({ key: o.id, option_text: o.option_text, is_correct: o.is_correct }))
         : [{ key: rid(), option_text: "", is_correct: true }],
     );
+    setAccepted(d.accepted_answers?.length ? d.accepted_answers : [""]);
+    setMatchMode(d.answer_match_mode === "exact" ? "exact" : "ignore_case");
+    setNumAnswer(d.numeric_answer === null || d.numeric_answer === undefined ? "" : String(d.numeric_answer));
+    setNumTolerance(
+      d.numeric_tolerance === null || d.numeric_tolerance === undefined ? "" : String(d.numeric_tolerance));
+    setUnit(d.answer_unit ?? "");
     setHydrated(true);
   }, [existing.data, isNew, hydrated]);
 
-  /** True/False has a fixed option set; switching to it replaces the drafts. */
+  /**
+   * True/False has a fixed option set. Switching between single- and
+   * multi-answer types keeps the option text but re-normalises correctness, so
+   * a question never carries a selection its own type cannot express.
+   */
   function changeType(next: string) {
     setType(next);
-    if (next === "true_false") setOptions(TRUE_FALSE_OPTIONS());
+    if (next === "true_false") { setOptions(TRUE_FALSE_OPTIONS()); return; }
+    if (type === "true_false" && next !== "true_false") {
+      setOptions([
+        { key: rid(), option_text: "", is_correct: true },
+        { key: rid(), option_text: "", is_correct: false },
+      ]);
+      return;
+    }
+    if (next === "mcq") {
+      // Single answer: keep only the first correct option marked.
+      setOptions((prev) => {
+        const first = prev.findIndex((o) => o.is_correct);
+        return prev.map((o, i) => ({ ...o, is_correct: i === (first === -1 ? 0 : first) }));
+      });
+    }
   }
 
   const filled = options.filter((o) => o.option_text.trim().length > 0);
+  const acceptedFilled = accepted.map((a) => a.trim()).filter(Boolean);
+  const isChoice = CHOICE_TYPES.has(type);
+  const isTextAnswer = TEXT_ANSWER_TYPES.has(type);
+
+  /**
+   * Mirrors what the server will actually do. A choice question with no
+   * correct option, or a numeric one with no answer, would mark every attempt
+   * wrong — so the form refuses to save it rather than shipping a trap.
+   */
   const errors = useMemo(() => {
     const e: string[] = [];
     if (!question.trim()) e.push("Enter the question text.");
-    if (filled.length < 2) e.push("Add at least two answer options.");
-    if (!filled.some((o) => o.is_correct)) e.push("Mark one option as the correct answer.");
+    if (isChoice) {
+      if (filled.length < 2) e.push("Add at least two answer options.");
+      const correct = filled.filter((o) => o.is_correct).length;
+      if (correct === 0) {
+        e.push(type === "multiple_select"
+          ? "Mark at least one option as correct."
+          : "Mark one option as the correct answer.");
+      }
+      if (type === "multiple_select" && correct === filled.length && filled.length > 1) {
+        e.push("Marking every option correct makes the question meaningless.");
+      }
+    }
+    if (isTextAnswer && acceptedFilled.length === 0) {
+      e.push("Add at least one accepted answer.");
+    }
+    if (type === "numeric") {
+      if (numAnswer.trim() === "") e.push("Enter the correct numeric answer.");
+      else if (!/^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(numAnswer.trim()))
+        e.push("The numeric answer must be a plain number.");
+      if (numTolerance.trim() !== "" && !/^\d+(\.\d*)?$/.test(numTolerance.trim()))
+        e.push("Tolerance must be zero or a positive number.");
+    }
     return e;
-  }, [question, filled]);
+  }, [question, filled, type, isChoice, isTextAnswer, acceptedFilled.length, numAnswer, numTolerance]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -128,7 +185,15 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
         topic: topic.trim() || null,
         collectionId,
         subjectId,
-        options: filled.map((o) => ({ option_text: o.option_text.trim(), is_correct: o.is_correct })),
+        options: isChoice
+          ? filled.map((o) => ({ option_text: o.option_text.trim(), is_correct: o.is_correct }))
+          : [],
+        acceptedAnswers: isTextAnswer ? acceptedFilled : null,
+        answerMatchMode: matchMode,
+        numericAnswer: type === "numeric" && numAnswer.trim() !== "" ? Number(numAnswer) : null,
+        numericTolerance:
+          type === "numeric" && numTolerance.trim() !== "" ? Number(numTolerance) : null,
+        answerUnit: type === "numeric" ? unit.trim() || null : null,
       }),
     onSuccess: (res) => {
       toast.success(isNew ? "Question added." : "Question saved.");
@@ -215,10 +280,16 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
 
           <BuilderSection
             title="Answers"
-            description={type === "true_false"
-              ? "Mark whether the statement is true or false."
-              : "Mark the one correct answer."}
+            description={
+              type === "true_false" ? "Mark whether the statement is true or false."
+                : type === "multiple_select" ? "Select all correct answers."
+                  : type === "numeric" ? "The value a student must reach."
+                    : isTextAnswer ? "Any of these counts as correct."
+                      : "Mark the one correct answer."
+            }
           >
+          {isChoice ? (
+            <>
             <ul className="space-y-2">
               {options.map((o, i) => (
                 <li
@@ -231,8 +302,12 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                   <button
                     type="button"
                     onClick={() =>
-                      // Single-answer semantics for both current types.
-                      setOptions((prev) => prev.map((x, j) => ({ ...x, is_correct: j === i })))
+                      setOptions((prev) =>
+                        type === "multiple_select"
+                          // Multi-answer: toggle this one, leave the rest alone.
+                          ? prev.map((x, j) => (j === i ? { ...x, is_correct: !x.is_correct } : x))
+                          // Single-answer: exactly one option can be correct.
+                          : prev.map((x, j) => ({ ...x, is_correct: j === i })))
                     }
                     aria-label={`Mark option ${LETTERS[i] ?? i + 1} as correct`}
                     aria-pressed={o.is_correct}
@@ -278,6 +353,171 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                 <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" /> Add option
               </Button>
             )}
+            </>
+          ) : isTextAnswer ? (
+            <>
+              <ul className="space-y-2">
+                {accepted.map((a, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <Input
+                      value={a}
+                      onChange={(e) =>
+                        setAccepted((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+                      }
+                      aria-label={`Accepted answer ${i + 1}`}
+                      placeholder={i === 0 ? "Newton" : "Another accepted spelling"}
+                      className="h-11 min-w-0 flex-1 rounded-xl border-slate-200 bg-white text-[14px]"
+                    />
+                    {accepted.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setAccepted((prev) => prev.filter((_, j) => j !== i))}
+                        aria-label={`Remove accepted answer ${i + 1}`}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition active:scale-95"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {accepted.length < 8 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAccepted((p) => [...p, ""])}
+                  className="mt-2 min-h-[44px] w-full rounded-2xl border-dashed border-slate-300 text-[13.5px] font-bold text-quiz-accent-strong"
+                >
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" /> Add accepted answer
+                </Button>
+              )}
+
+              {/* One control, two states — never two switches that contradict
+                  each other. */}
+              <fieldset className="mt-4">
+                <legend className="mb-1.5 text-[12.5px] font-semibold text-slate-700">
+                  Answer matching
+                </legend>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {([
+                    ["ignore_case", "Ignore capitalisation", "\u201cnewton\u201d and \u201cNewton\u201d both count."],
+                    ["exact", "Exact match", "Capitalisation must match exactly."],
+                  ] as const).map(([v, label, hint]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      role="radio"
+                      aria-checked={matchMode === v}
+                      onClick={() => setMatchMode(v)}
+                      className={cn(
+                        "min-h-[56px] flex-1 shrink-0 rounded-2xl border p-3 text-left transition active:scale-[0.99]",
+                        matchMode === v
+                          ? "border-quiz-accent bg-quiz-tint"
+                          : "border-slate-200 bg-white",
+                      )}
+                    >
+                      <span className="block text-[13.5px] font-bold text-slate-900">{label}</span>
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-500">
+                        {hint}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                <p className="text-[11.5px] font-bold uppercase tracking-wide text-slate-500">
+                  Student preview
+                </p>
+                <p className="mt-1.5 text-[13.5px] text-slate-700">
+                  {type === "fill_blank"
+                    ? (question.trim() || "Plants use ______ to absorb light energy.")
+                    : (question.trim() || "Your question appears here.")}
+                </p>
+                <div className="mt-2 flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-[13.5px] text-slate-400">
+                  Your answer
+                </div>
+              </div>
+            </>
+          ) : type === "numeric" ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
+                    Correct answer
+                  </span>
+                  <Input
+                    value={numAnswer}
+                    onChange={(e) => setNumAnswer(e.target.value.replace(/[^0-9.+-]/g, "").slice(0, 24))}
+                    inputMode="decimal"
+                    placeholder="9.8"
+                    aria-label="Correct numeric answer"
+                    className="h-12 rounded-2xl border-slate-200 bg-white text-[15px] font-bold tabular-nums"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
+                    Unit <span className="font-normal text-slate-400">(optional)</span>
+                  </span>
+                  <Input
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value.slice(0, 16))}
+                    placeholder="m/s²"
+                    aria-label="Answer unit"
+                    className="h-12 rounded-2xl border-slate-200 bg-white text-[15px]"
+                  />
+                </label>
+              </div>
+              <label className="mt-3 block">
+                <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
+                  Tolerance <span className="font-normal text-slate-400">(optional)</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-bold text-slate-500">±</span>
+                  <Input
+                    value={numTolerance}
+                    onChange={(e) => setNumTolerance(e.target.value.replace(/[^0-9.]/g, "").slice(0, 16))}
+                    inputMode="decimal"
+                    placeholder="0.1"
+                    aria-label="Numeric tolerance"
+                    className="h-12 min-w-0 flex-1 rounded-2xl border-slate-200 bg-white text-[15px] tabular-nums"
+                  />
+                </div>
+                <span className="mt-1 block text-[11.5px] leading-snug text-slate-500">
+                  {numTolerance.trim() === ""
+                    ? "With no tolerance, only the exact value is accepted."
+                    : `Anything from ${
+                        numAnswer && numTolerance
+                          ? String(Number(numAnswer) - Number(numTolerance))
+                          : "…"
+                      } to ${
+                        numAnswer && numTolerance
+                          ? String(Number(numAnswer) + Number(numTolerance))
+                          : "…"
+                      } is accepted.`}
+                </span>
+              </label>
+
+              <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                <p className="text-[11.5px] font-bold uppercase tracking-wide text-slate-500">
+                  Student preview
+                </p>
+                <div className="mt-2 flex items-stretch gap-2">
+                  <div className="flex min-h-[44px] flex-1 items-center rounded-xl border border-slate-200 bg-white px-3 text-[13.5px] text-slate-400">
+                    0.0
+                  </div>
+                  {unit.trim() && (
+                    <span className="flex min-h-[44px] shrink-0 items-center rounded-xl bg-slate-200 px-3 text-[13px] font-bold text-slate-600">
+                      {unit.trim()}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11.5px] text-slate-500">
+                  The answer and the tolerance are never sent to a student.
+                </p>
+              </div>
+            </>
+          ) : null}
           </BuilderSection>
 
           <BuilderSection title="Organise" description="Optional. Makes it findable later.">

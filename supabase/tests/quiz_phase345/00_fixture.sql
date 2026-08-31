@@ -158,3 +158,67 @@ GRANT EXECUTE ON FUNCTION public.can_manage_class(uuid), public.is_enrolled_in_c
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.quizzes, public.quiz_questions,
   public.quiz_options, public.quiz_attempts, public.quiz_results,
   public.student_quiz_answers, public.subjects, public.classes TO authenticated;
+
+-- ── Attempt-lifecycle dependencies (copied from the repo's migrations) ─────
+-- The Phase 5 grader calls these. They live in earlier migrations this harness
+-- does not load, so the fixture reproduces them verbatim rather than stubbing
+-- weaker versions that would make a grading assertion pass for the wrong reason.
+ALTER TABLE public.quizzes
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS instructions text,
+  ADD COLUMN IF NOT EXISTS due_at timestamptz,
+  ADD COLUMN IF NOT EXISTS available_from timestamptz,
+  ADD COLUMN IF NOT EXISTS time_limit_seconds integer,
+  ADD COLUMN IF NOT EXISTS attempt_limit integer NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS shuffle_questions boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS shuffle_options boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sound_theme text NOT NULL DEFAULT 'default',
+  ADD COLUMN IF NOT EXISTS results_released_at timestamptz;
+
+ALTER TABLE public.tuition_centers
+  ADD COLUMN IF NOT EXISTS feature_flags jsonb;
+
+CREATE TABLE IF NOT EXISTS public.student_xp_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_user_id uuid NOT NULL,
+  event_type text NOT NULL,
+  source_type text,
+  source_id uuid,
+  xp integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 20260718080323
+CREATE OR REPLACE FUNCTION public._quiz_attempt_deadline(_att public.quiz_attempts, _q public.quizzes)
+RETURNS timestamptz LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+  SELECT CASE
+    WHEN _q.due_at IS NOT NULL AND _q.time_limit_seconds IS NOT NULL
+      THEN LEAST(_q.due_at, _att.started_at + make_interval(secs => _q.time_limit_seconds))
+    WHEN _q.due_at IS NOT NULL THEN _q.due_at
+    WHEN _q.time_limit_seconds IS NOT NULL
+      THEN _att.started_at + make_interval(secs => _q.time_limit_seconds)
+    ELSE NULL
+  END
+$$;
+
+CREATE OR REPLACE FUNCTION public.record_learning_activity(
+  _event_type text, _xp integer, _source_id uuid, _source_type text)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  INSERT INTO public.student_xp_events (student_user_id, event_type, source_type, source_id, xp)
+  VALUES (auth.uid(), _event_type, _source_type, _source_id, _xp)
+$$;
+
+-- Production revokes the answer-key columns from `authenticated`. Reproducing
+-- that here is what makes the Phase 5 secrecy assertions meaningful.
+REVOKE SELECT ON public.quiz_questions FROM authenticated;
+DO $$
+DECLARE v_cols text;
+BEGIN
+  SELECT string_agg(quote_ident(column_name), ', ' ORDER BY ordinal_position)
+    INTO v_cols FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='quiz_questions'
+     AND column_name NOT IN ('correct_answer','accepted_answers','numeric_answer',
+                             'numeric_tolerance','explanation');
+  EXECUTE format('GRANT SELECT (%s) ON public.quiz_questions TO authenticated', v_cols);
+END $$;
+GRANT INSERT, UPDATE, DELETE ON public.quiz_questions TO authenticated;

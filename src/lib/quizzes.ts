@@ -4,7 +4,20 @@ import type { Database } from "@/integrations/supabase/types";
 // ─── Canonical types ────────────────────────────────────────────────────────
 export type QuizStatus = "draft" | "published" | "archived";
 export type ResultVisibility = "never" | "after_submit" | "after_due" | "manual";
-export type QuestionType = "mcq" | "true_false"; // legacy 'multiple_choice' normalises to 'mcq'
+export type QuestionType =
+  | "mcq"
+  | "true_false"
+  | "multiple_select"
+  | "short_answer"
+  | "numeric"
+  | "fill_blank"; // legacy 'multiple_choice' normalises to 'mcq'
+
+/**
+ * A saved answer. A single choice and a typed response are strings; a
+ * multiple-select answer is the list of chosen option ids. The server decides
+ * correctness for every shape — see `_quiz_answer_is_correct`.
+ */
+export type SavedAnswer = string | string[];
 
 export interface QuizManagerRow {
   id: string;
@@ -331,7 +344,7 @@ export interface StudentAttemptPayload {
   attempt: {
     id: string;
     status: "in_progress" | "submitted" | "expired";
-    saved_answers: Record<string, string> | null;
+    saved_answers: Record<string, SavedAnswer> | null;
     started_at: string;
     submitted_at: string | null;
     deadline: string | null;
@@ -365,7 +378,7 @@ export interface SaveProgressResult {
 
 export async function saveQuizProgress(args: {
   attemptId: string;
-  answers: Record<string, string>;
+  answers: Record<string, SavedAnswer>;
   expectedRevision: number;
 }): Promise<SaveProgressResult> {
   const { data, error } = await supabase.rpc(
@@ -382,7 +395,7 @@ export async function saveQuizProgress(args: {
 
 export async function submitQuizAttempt(args: {
   attemptId: string;
-  answers?: Record<string, string> | null;
+  answers?: Record<string, SavedAnswer> | null;
 }) {
   const { data, error } = await supabase.rpc("submit_quiz_attempt", {
     _attempt_id: args.attemptId,
@@ -591,7 +604,7 @@ export interface ManagerAttemptPayload {
     total_points: number;
     max_points: number;
     percentage: number | null;
-    saved_answers: Record<string, string> | null;
+    saved_answers: Record<string, SavedAnswer> | null;
   };
   result: {
     id: string;
