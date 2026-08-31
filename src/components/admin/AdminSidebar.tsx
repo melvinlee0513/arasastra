@@ -13,7 +13,6 @@ import {
   CreditCard,
   UserCheck,
   ClipboardCheck,
-  HelpCircle,
   Settings,
   Video,
   BookOpen,
@@ -42,7 +41,6 @@ const navItems = [
   { path: "/admin/payments", icon: CreditCard, label: "Payments" },
   { path: "/admin/grading", icon: ClipboardCheck, label: "Grading" },
   { path: "/admin/analytics", icon: BarChart3, label: "Analytics" },
-  { path: "/admin/quiz-analytics", icon: HelpCircle, label: "Quiz Analytics" },
   { path: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 

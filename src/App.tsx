@@ -49,7 +49,6 @@ import { SharedInfoShell } from "@/components/layout/SharedInfoShell";
 // Student Dashboard
 const StudentDashboard = lazy(() => import("@/pages/dashboard/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
 const ReplayLibrary = lazy(() => import("@/pages/dashboard/ReplayLibrary").then(m => ({ default: m.ReplayLibrary })));
-const QuizList = lazy(() => import("@/pages/dashboard/QuizList").then(m => ({ default: m.QuizList })));
 const NotesBank = lazy(() => import("@/pages/dashboard/NotesBank").then(m => ({ default: m.NotesBank })));
 const Achievements = lazy(() => import("@/pages/dashboard/Achievements").then(m => ({ default: m.Achievements })));
 const MorePage = lazy(() => import("@/pages/dashboard/MorePage").then(m => ({ default: m.MorePage })));
@@ -134,7 +133,6 @@ const NotesManagement = lazy(() => import("@/pages/admin/NotesManagement").then(
 const PaymentVerification = lazy(() => import("@/pages/admin/PaymentVerification").then(m => ({ default: m.PaymentVerification })));
 const LeadsManagement = lazy(() => import("@/pages/admin/LeadsManagement").then(m => ({ default: m.LeadsManagement })));
 const GradingPage = lazy(() => import("@/pages/admin/GradingPage").then(m => ({ default: m.GradingPage })));
-const QuizAnalytics = lazy(() => import("@/pages/admin/QuizAnalytics").then(m => ({ default: m.QuizAnalytics })));
 const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const CurriculumManager = lazy(() => import("@/pages/admin/CurriculumManager"));
 const EnrollmentMatrix = lazy(() => import("@/pages/admin/EnrollmentMatrix"));
@@ -323,7 +321,6 @@ const App = () => (
             <Route path="/tutor/question-bank/questions/:questionId/edit" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="questionBank" label="Question bank"><TutorLayout><QuestionBankEditor variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/question-bank/collections/:collectionId" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="questionBank" label="Question bank"><TutorLayout><QuestionBankBrowse variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/questions" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorQuestions /></TutorLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/tutor/quiz-analytics" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><QuizAnalytics /></TutorLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/account" element={<ProtectedRoute tutorOnly><TenantGuard><TutorLayout><TutorAccount /></TutorLayout></TenantGuard></ProtectedRoute>} />
 
             {/* Admin Routes */}
@@ -336,7 +333,6 @@ const App = () => (
             <Route path="/admin/payments" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><PaymentVerification /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/analytics" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AnalyticsDashboard /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/grading" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><GradingPage /></AdminLayout></TenantGuard></ProtectedRoute>} />
-            <Route path="/admin/quiz-analytics" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><QuizAnalytics /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><AdminSettings /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/videos" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><TutorVideos /></AdminLayout></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/curriculum" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><CurriculumManager /></AdminLayout></TenantGuard></ProtectedRoute>} />
