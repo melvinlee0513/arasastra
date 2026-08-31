@@ -500,3 +500,93 @@ SELECT qa.expect_error('V12 a student cannot read another student''s result',
   '22222222-0000-0000-0000-000000000002',
   $$SELECT public.get_quiz_result('cafeaaaa-0000-0000-0000-0000000000a2'::uuid)$$,
   'attempt not found');
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- W — THE SCHEMA ADMITS WHAT THE ENGINE GRADES (20260906000000)
+--
+-- quiz_questions_type_ck restricted question_type to mcq / multiple_choice /
+-- true_false and was never widened, so on a real database not one Phase 5 type
+-- could be saved. The fixture now carries the production constraint, so these
+-- are assertions about the schema rather than about the harness.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  t text;
+  v_def text;
+  v_quiz uuid := 'cafe0000-0000-0000-0000-00000000cafe';
+  v_ok boolean;
+  v_missing text := '';
+BEGIN
+  SELECT pg_get_constraintdef(oid) INTO v_def
+    FROM pg_constraint
+   WHERE conname = 'quiz_questions_type_ck'
+     AND conrelid = 'public.quiz_questions'::regclass;
+
+  PERFORM qa.check('W1 the type constraint still exists — it was not simply dropped',
+    v_def IS NOT NULL, COALESCE(v_def, 'missing'));
+
+  FOREACH t IN ARRAY ARRAY['mcq','multiple_choice','true_false',
+                           'multiple_select','short_answer','numeric','fill_blank'] LOOP
+    v_ok := true;
+    BEGIN
+      INSERT INTO public.quiz_questions (quiz_id, question, question_type, order_index)
+      VALUES (v_quiz, '__w_probe__', t, 999);
+    EXCEPTION WHEN check_violation THEN v_ok := false;
+    END;
+    IF NOT v_ok THEN v_missing := v_missing || t || ' '; END IF;
+    PERFORM qa.check(format('W2.%s the schema accepts a %s question', t, t), v_ok, '');
+  END LOOP;
+  DELETE FROM public.quiz_questions WHERE question = '__w_probe__';
+
+  -- And still refuses one the engine cannot grade, so a saveable-but-
+  -- ungradeable type cannot reach a student.
+  v_ok := false;
+  BEGIN
+    INSERT INTO public.quiz_questions (quiz_id, question, question_type, order_index)
+    VALUES (v_quiz, '__w_probe__', 'ordering', 999);
+  EXCEPTION WHEN check_violation THEN v_ok := true;
+  END;
+  DELETE FROM public.quiz_questions WHERE question = '__w_probe__';
+  PERFORM qa.check('W3 a type with no grading branch is still refused', v_ok, '');
+
+  -- The bank had no constraint at all: an ungradeable type saved fine there and
+  -- only failed later, on the copy into a quiz, naming a different table.
+  v_ok := false;
+  BEGIN
+    INSERT INTO public.question_bank_questions (center_id, question, question_type)
+    VALUES ('aaaaaaaa-0000-0000-0000-00000000000a', '__w_probe__', 'ordering');
+  EXCEPTION WHEN check_violation THEN v_ok := true;
+  END;
+  DELETE FROM public.question_bank_questions WHERE question = '__w_probe__';
+  PERFORM qa.check('W4 the bank refuses an ungradeable type where it is authored', v_ok, '');
+END $$;
+
+-- W5: the three places that list the supported types must agree. Three copies
+-- of one list is how a type comes to be saveable, ungradeable and unhostable
+-- all at once.
+DO $$
+DECLARE
+  v_ck   text;
+  v_live text;
+  t      text;
+  v_bad  text := '';
+BEGIN
+  SELECT pg_get_constraintdef(oid) INTO v_ck FROM pg_constraint
+   WHERE conname = 'quiz_questions_type_ck'
+     AND conrelid = 'public.quiz_questions'::regclass;
+
+  SELECT prosrc INTO v_live FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'create_live_quiz_session';
+
+  FOREACH t IN ARRAY ARRAY['mcq','multiple_choice','true_false',
+                           'multiple_select','short_answer','numeric','fill_blank'] LOOP
+    IF position(t in v_ck) = 0 THEN v_bad := v_bad || 'ck:' || t || ' '; END IF;
+    -- create_live_quiz_session is only present when the live migrations ran.
+    IF v_live IS NOT NULL AND position(t in v_live) = 0 THEN
+      v_bad := v_bad || 'live:' || t || ' ';
+    END IF;
+  END LOOP;
+
+  PERFORM qa.check('W5 the schema constraint and the live allow-list carry the same types',
+    v_bad = '', COALESCE(NULLIF(v_bad, ''), 'agree'));
+END $$;

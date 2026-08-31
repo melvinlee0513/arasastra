@@ -208,6 +208,13 @@ RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS 
   VALUES (auth.uid(), _event_type, _source_type, _source_id, _xp)
 $$;
 
+-- 20260718074806 put a CHECK on question_type and nothing ever widened it.
+-- Reproducing it is what turns "Phase 5 saves a numeric question" from a
+-- statement about this fixture into a statement about production.
+ALTER TABLE public.quiz_questions DROP CONSTRAINT IF EXISTS quiz_questions_type_ck;
+ALTER TABLE public.quiz_questions ADD CONSTRAINT quiz_questions_type_ck
+  CHECK (question_type IN ('mcq','multiple_choice','true_false'));
+
 -- Production revokes the answer-key columns from `authenticated`. Reproducing
 -- that here is what makes the Phase 5 secrecy assertions meaningful.
 REVOKE SELECT ON public.quiz_questions FROM authenticated;

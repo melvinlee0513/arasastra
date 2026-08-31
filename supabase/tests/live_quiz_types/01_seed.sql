@@ -78,17 +78,32 @@ INSERT INTO public.quiz_options (id, question_id, option_text, is_correct, order
   ('0a111111-0000-0000-0000-000000000033', 'e1111111-0000-0000-0000-000000000003', 'Coal', false, 2);
 
 -- ── A published quiz carrying a type the engine genuinely cannot grade. ────
--- 'ordering' is listed nowhere in QUESTION_TYPES and has no grading branch, so
--- hosting it live must fail loudly at create time.
+-- 'ordering' has no grading branch, and since 20260906000000 the schema refuses
+-- it outright — that CHECK is the primary guard. The row below therefore has to
+-- be planted THROUGH the constraint, because what it exercises is the second
+-- guard: a database where such a row exists anyway (one that predates the
+-- constraint, or a type added to the CHECK before its grading branch was
+-- written) must still be refused at host time rather than played and failed
+-- mid-session.
 INSERT INTO public.quizzes (id, class_id, center_id, title, status, total_points) VALUES
   ('d1111111-0000-0000-0000-000000000002', 'c1111111-0000-0000-0000-000000000001',
    'aaaaaaaa-0000-0000-0000-000000000001', 'Quiz With An Unknown Type', 'published', 200);
+
+ALTER TABLE public.quiz_questions DROP CONSTRAINT IF EXISTS quiz_questions_type_ck;
 
 INSERT INTO public.quiz_questions (id, quiz_id, question, question_type, points, order_index) VALUES
   ('e2222222-0000-0000-0000-000000000001', 'd1111111-0000-0000-0000-000000000002',
    'Which pigment captures light?', 'mcq', 100, 0),
   ('e2222222-0000-0000-0000-000000000002', 'd1111111-0000-0000-0000-000000000002',
    'Order these planets by distance.', 'ordering', 100, 1);
+
+-- NOT VALID: the planted row survives, and every later insert is still checked,
+-- so the rest of the suite runs against the production constraint.
+ALTER TABLE public.quiz_questions ADD CONSTRAINT quiz_questions_type_ck
+  CHECK (question_type IN (
+    'mcq', 'multiple_choice', 'true_false',
+    'multiple_select', 'short_answer', 'numeric', 'fill_blank'
+  )) NOT VALID;
 
 INSERT INTO public.quiz_options (id, question_id, option_text, is_correct, order_index) VALUES
   ('0a222222-0000-0000-0000-000000000011', 'e2222222-0000-0000-0000-000000000001', 'Chlorophyll', true, 0),
