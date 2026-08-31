@@ -229,3 +229,21 @@ BEGIN
   EXECUTE format('GRANT SELECT (%s) ON public.quiz_questions TO authenticated', v_cols);
 END $$;
 GRANT INSERT, UPDATE, DELETE ON public.quiz_questions TO authenticated;
+
+-- 20260803024307 — the one feature-flag read in the database. Copied verbatim
+-- so the flag assertions describe production's helper, not a stub.
+CREATE OR REPLACE FUNCTION public.tenant_feature_enabled(_center_id uuid, _flag text, _default boolean DEFAULT true)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT CASE
+    WHEN _center_id IS NULL THEN false
+    ELSE COALESCE(
+      (SELECT (tc.feature_flags->>_flag)::boolean FROM public.tuition_centers tc
+        WHERE tc.id = _center_id AND jsonb_typeof(tc.feature_flags->_flag) = 'boolean'),
+      _default)
+  END;
+$$;
+REVOKE ALL ON FUNCTION public.tenant_feature_enabled(uuid, text, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.tenant_feature_enabled(uuid, text, boolean) TO authenticated, service_role;
+
+ALTER TABLE public.tuition_centers
+  ALTER COLUMN feature_flags SET DEFAULT '{}'::jsonb;

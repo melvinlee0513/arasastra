@@ -812,3 +812,48 @@ BEGIN
       position('session_not_found' in SQLERRM) > 0, SQLERRM);
   END;
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- L — THE FLAG GATES HOSTING SERVER-SIDE (20260906000100)
+--
+-- FeatureRoute hides the host screen. This is what makes turning the flag off
+-- an actual answer to a release blocker rather than a cosmetic one.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"liveQuizMultiplayer": false}'::jsonb
+   WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+END $$;
+
+SELECT qa.expect_error('L1 hosting is refused server-side when the flag is off',
+  '11111111-0000-0000-0000-000000000001',
+  $$SELECT public.create_live_quiz_session('d1111111-0000-0000-0000-000000000001'::uuid)$$,
+  'feature_disabled');
+
+DO $$
+DECLARE v_sid uuid; snap jsonb;
+BEGIN
+  -- A session created BEFORE the flag flipped keeps playing. Cutting thirty
+  -- students off mid-question is worse than the feature being on for one more
+  -- game; the session ages out on its own six-hour expiry.
+  SELECT v INTO v_sid FROM qa.ctx WHERE k = 'session3';
+  PERFORM qa.as_user('11111111-0000-0000-0000-000000000001');
+  snap := public.get_live_quiz_snapshot(v_sid);
+  PERFORM qa.check('L2 a game already in progress is not killed by the switch',
+    snap -> 'session' ->> 'id' = v_sid::text, (snap -> 'session' ->> 'status'));
+END $$;
+
+DO $$
+DECLARE o jsonb;
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"liveQuizMultiplayer": true}'::jsonb
+   WHERE id = 'aaaaaaaa-0000-0000-0000-000000000001';
+
+  PERFORM qa.as_user('11111111-0000-0000-0000-000000000001');
+  o := public.create_live_quiz_session('d1111111-0000-0000-0000-000000000001', 30, true, 300, false);
+  PERFORM qa.check('L3 turning it back on restores hosting — the switch works both ways',
+    (o->>'id') IS NOT NULL, o::text);
+  PERFORM public.advance_live_quiz_session((o->>'id')::uuid, 'cancel');
+END $$;

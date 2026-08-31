@@ -48,7 +48,8 @@ for m in 20260830000000_live_quiz_sessions \
          20260904000000_live_quiz_all_types \
          20260905000000_answer_key_least_privilege \
          20260905000100_quiz_result_answer_keys \
-         20260906000000_widen_question_type_constraint; do
+         20260906000000_widen_question_type_constraint \
+         20260906000100_feature_flag_enforcement; do
   echo "→ migration $m"
   psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIG/$m.sql" 2>&1 | grep -viE 'notice|wal_level|HINT' || true
 done

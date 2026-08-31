@@ -40,3 +40,23 @@ export const QUESTION_TYPES: QuestionTypeDef[] = [
     hint: "Complete the sentence with the correct word or phrase.",
     icon: CheckSquare, tone: "bg-fuchsia-100 text-fuchsia-600" },
 ];
+
+/**
+ * The types Phase 5 added. Behind the `expandedQuestionTypes` flag, which gates
+ * AUTHORING only: a quiz that already contains one of these keeps working, and
+ * keeps grading, whatever the flag says. Turning the flag off must not strand a
+ * tutor's existing content — it stops new questions of these types being added.
+ */
+const EXPANDED_TYPES: ReadonlySet<QuestionType> = new Set([
+  "multiple_select",
+  "short_answer",
+  "numeric",
+  "fill_blank",
+]);
+
+/** The types a tutor may add right now, for this centre. */
+export function questionTypesFor(expandedEnabled: boolean): QuestionTypeDef[] {
+  return expandedEnabled
+    ? QUESTION_TYPES
+    : QUESTION_TYPES.filter((t) => !EXPANDED_TYPES.has(t.value));
+}

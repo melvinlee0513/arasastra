@@ -3,9 +3,15 @@
 -- is known by hand, so a grading assertion can be exact rather than circular.
 BEGIN;
 
-INSERT INTO public.tuition_centers (id, name, slug) VALUES
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'Centre A', 'centre-a'),
-  ('bbbbbbbb-0000-0000-0000-000000000002', 'Centre B', 'centre-b');
+-- Both centres have live multiplayer ON, so every cross-tenant assertion tests
+-- tenancy rather than the flag: a foreign tutor with the feature fully enabled
+-- must still be refused. Enablement is data on the centre row — there is no
+-- hardcoded id or slug anywhere in the product.
+INSERT INTO public.tuition_centers (id, name, slug, feature_flags) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'Centre A', 'centre-a',
+   '{"liveQuizMultiplayer": true, "expandedQuestionTypes": true}'::jsonb),
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'Centre B', 'centre-b',
+   '{"liveQuizMultiplayer": true}'::jsonb);
 
 INSERT INTO auth.users (id) VALUES
   ('11111111-0000-0000-0000-000000000001'), -- tutor A (host)

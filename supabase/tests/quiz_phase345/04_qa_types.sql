@@ -590,3 +590,115 @@ BEGIN
   PERFORM qa.check('W5 the schema constraint and the live allow-list carry the same types',
     v_bad = '', COALESCE(NULLIF(v_bad, ''), 'agree'));
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- X — FEATURE FLAGS GATE THE BACKEND, NOT ONLY THE ROUTER (20260906000100)
+--
+-- FeatureRoute hides the screens. These assert that the flag also stops the
+-- RPCs, which is the difference between "not linked" and "not enabled" — and
+-- what makes "turn the flag off" a real answer to a release blocker.
+--
+-- The flags are centre-scoped and live in tuition_centers.feature_flags. Centre
+-- A has them on; every check below flips one for Centre A only and puts it back.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_ctr   uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_ctr_b uuid := 'bbbbbbbb-0000-0000-0000-00000000000b';
+BEGIN
+  -- Centre B carries {"questionBank": true} and nothing else, so these two are
+  -- genuinely unset rather than explicitly false.
+  PERFORM qa.check('X1 an unset flag is OFF, matching useFeatureEnabled',
+    NOT public.tenant_feature_enabled(v_ctr_b, 'quizAnalytics', false)
+    AND NOT public.tenant_feature_enabled(v_ctr_b, 'liveQuizMultiplayer', false),
+    'unset = off');
+
+  PERFORM qa.check('X2 the pilot centre has them on, by data not by code',
+    public.tenant_feature_enabled(v_ctr, 'questionBank', false)
+    AND public.tenant_feature_enabled(v_ctr, 'quizAnalytics', false)
+    AND public.tenant_feature_enabled(v_ctr, 'liveQuizMultiplayer', false),
+    'pilot centre enabled');
+
+  PERFORM qa.check('X3 a null centre is never enabled',
+    NOT public.tenant_feature_enabled(NULL, 'questionBank', true), '');
+END $$;
+
+-- Analytics: one guard, five RPCs.
+DO $$
+DECLARE
+  v_ctr  uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_quiz uuid := '9012aaaa-0000-0000-0000-00000000000f';
+  v_tut  uuid := '11111111-0000-0000-0000-000000000001';
+  v_ok   boolean;
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"quizAnalytics": false}'::jsonb
+   WHERE id = v_ctr;
+
+  PERFORM qa.as_user(v_tut);
+  v_ok := false;
+  BEGIN
+    PERFORM public.get_quiz_analytics_overview(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := position('feature_disabled' in SQLERRM) > 0;
+  END;
+  PERFORM qa.check('X4 analytics is refused server-side when the flag is off', v_ok, '');
+
+  v_ok := false;
+  BEGIN
+    PERFORM public.get_quiz_question_analytics(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := position('feature_disabled' in SQLERRM) > 0;
+  END;
+  PERFORM qa.check('X5 and so is every other analytics RPC — one shared guard', v_ok, '');
+
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"quizAnalytics": true}'::jsonb
+   WHERE id = v_ctr;
+
+  v_ok := true;
+  BEGIN
+    PERFORM public.get_quiz_analytics_overview(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := false;
+  END;
+  PERFORM qa.check('X6 turning it back on restores it — the switch works both ways',
+    v_ok, '');
+END $$;
+
+-- Question bank: the guard is in _can_use_question_bank, which the RLS policies
+-- call too, so an off flag means no readable rows rather than no route.
+DO $$
+DECLARE
+  v_ctr uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_tut uuid := '11111111-0000-0000-0000-000000000001';
+  v_ok  boolean;
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": false}'::jsonb
+   WHERE id = v_ctr;
+
+  PERFORM qa.as_user(v_tut);
+  PERFORM qa.check('X7 the bank access predicate is false when the flag is off',
+    NOT public._can_use_question_bank(v_ctr), '');
+
+  v_ok := false;
+  BEGIN
+    PERFORM public.list_question_bank();
+  EXCEPTION WHEN OTHERS THEN v_ok := true;
+  END;
+  PERFORM qa.check('X8 and the bank RPCs refuse', v_ok, '');
+
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": true}'::jsonb
+   WHERE id = v_ctr;
+  PERFORM qa.check('X9 and it comes back on', public._can_use_question_bank(v_ctr), '');
+END $$;
+
+-- The flag must not be readable as a way around tenancy: a foreign tutor is
+-- still refused even when the flag is on.
+DO $$
+DECLARE
+  v_ctr uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+BEGIN
+  PERFORM qa.as_user('33333333-0000-0000-0000-000000000005');   -- Centre B tutor
+  PERFORM qa.check('X10 an enabled flag does not grant cross-centre access',
+    NOT public._can_use_question_bank(v_ctr), '');
+END $$;
