@@ -5,17 +5,22 @@
 # This is the only suite that applies BOTH migration families to one database,
 # in production filename order:
 #
-#   20260830 live quiz sessions
-#   20260831 live quiz phase 2 (answer-key revoke, kick, expiry)
-#   20260901 quiz analytics
-#   20260902 question bank
-#   20260903 expanded question types  (_quiz_answer_is_correct)
-#   20260904 live quiz × all types    (the one under test)
-#   20260905 answer-key least privilege, and solo results carrying them
+#   20260830000000 live quiz sessions
+#   20260831000000 live quiz phase 2 (kick, expiry, roster correctness)
+#   20260901000000 quiz analytics
+#   20260902000000 question bank
+#   20260903000000 expanded question types  (_quiz_answer_is_correct)
+#   20260904000000 live quiz × all types
+#   20260905000000 answer-key least privilege
+#   20260905000100 solo results carry the Phase 5 keys
+#   20260906000000 widen the question_type CHECK
+#   20260906000100 feature flags gate the RPCs
 #
 # Running them in order is itself an assertion: 20260904 depends on a function
-# 20260903 creates and on a table 20260830 creates, and a deployment that
-# applied them in any other order would fail here first.
+# 20260903 creates and on a table 20260830 creates, 20260905000000 undoes a
+# grant 20260831000000 made, and a deployment that applied them in any other
+# order would fail here first. Keep this list in step with the loop below —
+# DEPLOYMENT_PHASE1_5.md quotes the same order.
 #
 #   ./run.sh
 #   PGPORT=54329 ./run.sh
