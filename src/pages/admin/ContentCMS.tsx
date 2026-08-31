@@ -112,9 +112,8 @@ export function ContentCMS() {
           <PricingPlansTab />
         </TabsContent>
 
-        <TabsContent value="quizzes" className="mt-6" key={`quizzes-${refreshKey}`}>
-          <QuizManagerTab />
-        </TabsContent>
+        {/* Quizzes are managed per class in the Class Hub (Classes > class > Quizzes). */}
+
 
 
         <TabsContent value="parents" className="mt-6" key={`parents-${refreshKey}`}>
