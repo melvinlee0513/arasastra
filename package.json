@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "audit:sw": "node scripts/audit-service-worker.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
