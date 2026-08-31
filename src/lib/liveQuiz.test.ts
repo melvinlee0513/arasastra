@@ -58,7 +58,9 @@ describe("client never supplies authority it doesn't have", () => {
   it("answer submission sends no score, points or correctness", async () => {
     await submitLiveQuizAnswer({ sessionId: "s1", questionIndex: 2, optionId: "opt-9" });
     const keys = Object.keys(last().args).sort();
-    expect(keys).toEqual(["_answer_text", "_option_id", "_question_index", "_session_id"]);
+    expect(keys).toEqual([
+      "_answer", "_answer_text", "_option_id", "_question_index", "_session_id",
+    ]);
     expect(keys.some((k) => /score|point|correct|rank/.test(k))).toBe(false);
   });
 
@@ -81,6 +83,28 @@ describe("client never supplies authority it doesn't have", () => {
     await submitLiveQuizAnswer({ sessionId: "s1", questionIndex: 1, optionId: "opt-3" });
     expect(last().args._option_id).toBe("opt-3");
     expect(last().args._answer_text).toBeNull();
+  });
+
+  it("a multiple select travels as a list of option ids, not a joined string", async () => {
+    // The server needs the shape to compare sets; a comma-joined string would
+    // be graded as one short answer and always be wrong.
+    await submitLiveQuizAnswer({ sessionId: "s1", questionIndex: 3, answer: ["a", "b"] });
+    expect(last().args._answer).toEqual(["a", "b"]);
+    expect(last().args._option_id).toBeNull();
+    expect(last().args._answer_text).toBeNull();
+  });
+
+  it("a typed answer travels verbatim, with no local normalisation", async () => {
+    // Trimming or lower-casing here would silently change what an exact-match
+    // question is graded against. The server owns that decision.
+    await submitLiveQuizAnswer({ sessionId: "s1", questionIndex: 4, answer: "  Celsius  " });
+    expect(last().args._answer).toBe("  Celsius  ");
+  });
+
+  it("still sends no correctness alongside the richer payload", async () => {
+    await submitLiveQuizAnswer({ sessionId: "s1", questionIndex: 5, answer: ["a"] });
+    const body = JSON.stringify(last().args);
+    expect(body).not.toMatch(/is_correct|points|score/);
   });
 });
 

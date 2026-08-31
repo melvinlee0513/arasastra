@@ -62,16 +62,21 @@ export function LiveQuizPlayerList({
               <li
                 key={p.participant_id}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-2xl px-2.5 py-2",
+                  "flex items-center gap-2 rounded-2xl px-2.5 py-2",
                   gone ? "bg-white/4 opacity-60" : "bg-white/6",
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/12 text-[12px] font-bold">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/12 text-[12px] font-bold">
                   {p.avatar_url
                     ? <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
                     : p.display_name.slice(0, 1).toUpperCase()}
                 </span>
 
+                {/* The name is the point of this row — a tutor kicking the
+                    wrong player is the failure this layout exists to avoid — so
+                    the score sits on the meta line rather than taking a fixed
+                    56px column out of a 320px screen and squeezing the name to
+                    three letters. */}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-semibold">
                     {p.display_name}
@@ -80,10 +85,20 @@ export function LiveQuizPlayerList({
                       tall, so a class of 30 barely fit on a phone. */}
                   <span className="mt-0.5 flex min-w-0 items-center gap-x-2 text-[11.5px]">
                     <span className={cn("shrink-0 font-semibold", st.tone)}>{st.text}</span>
+                    {typeof p.score === "number" && (
+                      <span className="shrink-0 font-bold tabular-nums text-quiz-arena-foreground">
+                        {p.score.toLocaleString()}
+                      </span>
+                    )}
+                    {/* Hidden on the narrowest phones: at 320px there is not
+                        enough room left for it to say anything, and a clock
+                        icon next to a truncated "s" is worse than nothing. The
+                        status word carries the important half. */}
                     {p.last_seen_at && (
-                      <span className="inline-flex min-w-0 items-center gap-1 truncate text-quiz-arena-muted">
+                      <span className="hidden min-w-0 items-center gap-1 truncate text-quiz-arena-muted min-[360px]:inline-flex">
                         <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
-                        <span className="truncate">seen {formatRelative(p.last_seen_at)}</span>
+                        <span className="sr-only">last seen </span>
+                        <span className="truncate">{formatRelative(p.last_seen_at)}</span>
                       </span>
                     )}
                   </span>
@@ -101,12 +116,6 @@ export function LiveQuizPlayerList({
                     {p.answered
                       ? <Check className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
                       : <span className="h-1.5 w-1.5 rounded-full bg-white/40" />}
-                  </span>
-                )}
-
-                {typeof p.score === "number" && (
-                  <span className="w-14 shrink-0 text-right text-[13px] font-black tabular-nums">
-                    {p.score.toLocaleString()}
                   </span>
                 )}
 

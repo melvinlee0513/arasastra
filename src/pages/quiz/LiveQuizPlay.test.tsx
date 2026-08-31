@@ -318,3 +318,213 @@ describe("a player's snapshot carries no host-only data", () => {
     expect(container.textContent).not.toMatch(/Responses/);
   });
 });
+
+// ─── Expanded question types, live ────────────────────────────────────────
+//
+// A live game now plays every type the solo engine grades. Grading itself is
+// proven in `supabase/tests/live_quiz_types/`; what these pin is the client
+// contract: the right control appears, the right payload leaves, and nothing
+// the server withheld is on screen.
+
+/** A snapshot for one of the expanded types, redacted exactly as the RPC does. */
+function typedSnapshot(
+  type: "multiple_select" | "short_answer" | "numeric" | "fill_blank",
+  status: Status,
+  over: { answered?: boolean; correct?: boolean; answerText?: string } = {},
+) {
+  const revealed = status === "answer_reveal" || status === "leaderboard" || status === "completed";
+  const base = snapshot(status, { answered: over.answered, correct: over.correct });
+  return {
+    ...base,
+    question: {
+      id: "q-2",
+      index: 0,
+      question:
+        type === "multiple_select"
+          ? "Select every renewable source."
+          : type === "numeric"
+            ? "Acceleration due to gravity on Earth?"
+            : "Who formulated the laws of motion?",
+      question_type: type,
+      points: 100,
+      answer_unit: type === "numeric" ? "m/s²" : null,
+      explanation: revealed ? "Isaac Newton." : null,
+      accepted_answers:
+        revealed && (type === "short_answer" || type === "fill_blank")
+          ? ["Newton", "Isaac Newton"]
+          : null,
+      numeric_answer: revealed && type === "numeric" ? 9.81 : null,
+      options:
+        type === "multiple_select"
+          ? [
+              { id: "o-1", text: "Solar", is_correct: revealed ? true : null },
+              { id: "o-2", text: "Hydro", is_correct: revealed ? true : null },
+              { id: "o-3", text: "Coal", is_correct: revealed ? false : null },
+            ]
+          : [],
+    },
+    my_answer: over.answered
+      ? {
+          selected_option_id: null,
+          answer_text: over.answerText ?? "Einstein",
+          answered: true,
+          is_correct: revealed ? (over.correct ?? false) : null,
+          points_awarded: revealed ? (over.correct ? 130 : 0) : null,
+        }
+      : null,
+  };
+}
+
+describe("multiple select, live", () => {
+  it("renders tick boxes rather than tap-to-answer buttons", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("multiple_select", "question_open"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/renewable source/);
+    expect(screen.getByText("Select all that apply.")).toBeTruthy();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+  });
+
+  it("does not submit on tick — the answer is locked in deliberately", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("multiple_select", "question_open"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/renewable source/);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Solar/ }));
+    await new Promise((r) => setTimeout(r, 60));
+    // Ticking one of several answers must not end the student's turn.
+    expect(answerCalls()).toHaveLength(0);
+  });
+
+  it("sends the whole selection as a list once locked in", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("multiple_select", "question_open"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/renewable source/);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Solar/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Hydro/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Lock in answer/ }));
+
+    await waitFor(() => expect(answerCalls()).toHaveLength(1));
+    expect(answerCalls()[0].args._answer).toEqual(["o-1", "o-2"]);
+  });
+
+  it("cannot be locked in empty", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("multiple_select", "question_open"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/renewable source/);
+    // An empty submission is graded wrong, so the button must not offer it.
+    expect(screen.getByRole("button", { name: /Lock in answer/ }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows correctness on the options once revealed", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("multiple_select", "answer_reveal", {
+        answered: true,
+        correct: false,
+        answerText: '["o-1","o-3"]',
+      }),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/renewable source/);
+    expect(screen.getByRole("button", { name: /Solar/ }).className).toMatch(/quiz-correct/);
+    expect(screen.getByRole("button", { name: /Coal/ }).className).toMatch(/quiz-wrong/);
+  });
+});
+
+describe("typed answers, live", () => {
+  it("renders a text field and sends what was typed", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("short_answer", "question_open"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/laws of motion/);
+
+    fireEvent.change(screen.getByLabelText(/Answer for/), { target: { value: "Newton" } });
+    fireEvent.click(screen.getByRole("button", { name: /Lock in answer/ }));
+
+    await waitFor(() => expect(answerCalls()).toHaveLength(1));
+    expect(answerCalls()[0].args._answer).toBe("Newton");
+    expect(answerCalls()[0].args._option_id).toBeNull();
+  });
+
+  it("shows the unit on a numeric question, and never the tolerance", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("numeric", "question_open"),
+      error: null,
+    });
+    const { container } = renderPlay();
+    await screen.findByText(/gravity/);
+    expect(screen.getAllByText("m/s²").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/9\.81|tolerance/);
+  });
+
+  it("shows what the student wrote next to the accepted answers at reveal", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("short_answer", "answer_reveal", {
+        answered: true,
+        correct: false,
+        answerText: "Einstein",
+      }),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText("Your answer");
+    expect(screen.getByText("Einstein")).toBeTruthy();
+    expect(screen.getByText("Accepted answers")).toBeTruthy();
+    expect(screen.getByText("Newton, Isaac Newton")).toBeTruthy();
+  });
+
+  it("shows the numeric answer at reveal so a wrong answer still teaches", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("numeric", "answer_reveal", {
+        answered: true,
+        correct: false,
+        answerText: "9.5",
+      }),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText("Correct answer");
+    expect(screen.getByText("9.81 m/s²")).toBeTruthy();
+  });
+
+  it("says so plainly when the student did not answer at all", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("fill_blank", "answer_reveal"),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText("Your answer");
+    expect(screen.getByText("No answer")).toBeTruthy();
+  });
+
+  it("locks the control after submitting rather than letting it be edited", async () => {
+    h.handlers.get_live_quiz_snapshot = () => ({
+      data: typedSnapshot("short_answer", "question_open", {
+        answered: true,
+        answerText: "Newton",
+      }),
+      error: null,
+    });
+    renderPlay();
+    await screen.findByText(/Answer locked in/);
+    const input = screen.getByLabelText(/Answer for/) as HTMLInputElement;
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe("Newton");
+    expect(screen.queryByRole("button", { name: /Lock in answer/ })).toBeNull();
+  });
+});

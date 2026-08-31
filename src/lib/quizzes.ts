@@ -72,9 +72,26 @@ export interface QuizDefinitionDraft {
   questions?: QuizQuestionDraft[];
 }
 
+/** Human copy for a stored type, used wherever a type has to be named to a user. */
+export const QUESTION_TYPE_LABELS: Record<string, string> = {
+  mcq: "Multiple Choice",
+  multiple_choice: "Multiple Choice",
+  true_false: "True / False",
+  multiple_select: "Multiple Select",
+  short_answer: "Short Answer",
+  numeric: "Numeric",
+  fill_blank: "Fill in the Blank",
+};
+
+/**
+ * Collapse the one legacy alias the database still holds. Anything the engine
+ * does not know falls back to 'mcq' — the caller has already established the
+ * type is playable, and a wrong control is better than a blank screen.
+ */
 export function normaliseQuestionType(t: string | null | undefined): QuestionType {
-  if (t === "true_false") return "true_false";
-  return "mcq"; // treat legacy 'multiple_choice' as mcq
+  if (t === "multiple_choice") return "mcq";
+  if (t && t in QUESTION_TYPE_LABELS) return t as QuestionType;
+  return "mcq";
 }
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
