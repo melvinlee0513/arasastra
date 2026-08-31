@@ -13,7 +13,6 @@ import {
   CreditCard,
   UserCheck,
   ClipboardCheck,
-  HelpCircle,
   Settings,
   Video,
   BookOpen,
