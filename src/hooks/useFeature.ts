@@ -9,8 +9,9 @@ export type FeatureFlag = keyof TenantFeatureFlags;
  * A flag is considered enabled when it is `true` in the tenant's
  * feature_flags. Missing values default to `true` (backwards-compatible) except
  * for flags that must be explicitly turned on by an admin (`googleDrive`,
- * `oneDrive`) or that gate unbuilt architecture (`liveQuizMultiplayer`), which
- * stay off by default.
+ * `oneDrive`) or that gate backend-dependent work whose migrations have not
+ * been confirmed in production (`liveQuizMultiplayer`, `quizAnalytics`,
+ * `questionBank`, `expandedQuestionTypes`), which stay off by default.
  */
 export function useFeatureEnabled(flag: FeatureFlag): boolean {
   const { featureFlags } = useTenant();

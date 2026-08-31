@@ -17,6 +17,8 @@ import { showSupabaseError } from "@/lib/supabaseErrors";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QUIZ_ART } from "@/lib/quizArt";
+import { QuizAnswerInput } from "@/components/quiz/QuizAnswerInput";
+import { hasAnswer, type AnswerValue } from "@/lib/quizAnswers";
 import {
   ArenaAnswerGrid,
   ArenaArt,
@@ -57,7 +59,7 @@ export function StudentQuizAttempt() {
   });
 
   // ── Local answer state ────────────────────────────────────────────────
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [revision, setRevision] = useState<number>(0);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [deadline, setDeadline] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function StudentQuizAttempt() {
    * writing the server's own answers back on every mount would be a save storm
    * on the RPC that caused the connection-pool incident.
    */
-  const hydratedAnswersRef = useRef<Record<string, string> | null>(null);
+  const hydratedAnswersRef = useRef<Record<string, AnswerValue> | null>(null);
 
   // Initialise from server payload once loaded (or on refetch after conflict).
   useEffect(() => {
@@ -367,16 +369,9 @@ export function StudentQuizAttempt() {
   }
 
   const q = payload.questions[current];
-  const answeredCount = payload.questions.filter((qq) => !!answers[qq.id]).length;
+  const answeredCount = payload.questions.filter((qq) => hasAnswer(answers[qq.id])).length;
   const isLast = current === payload.questions.length - 1;
 
-  const gridOptions =
-    q.question_type === "true_false"
-      ? [
-          { id: "true", text: "True" },
-          { id: "false", text: "False" },
-        ]
-      : q.options.map((o) => ({ id: o.id, text: o.text }));
 
   return (
     <QuizArenaShell>
@@ -450,10 +445,10 @@ export function StudentQuizAttempt() {
       </ArenaPanel>
 
       <div className="mt-4">
-        <ArenaAnswerGrid
-          options={gridOptions}
-          selectedId={answers[q.id] ?? null}
-          onSelect={(id) => setAnswers((a) => ({ ...a, [q.id]: id }))}
+        <QuizAnswerInput
+          question={q as never}
+          value={answers[q.id]}
+          onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
           disabled={locked}
         />
       </div>
@@ -465,7 +460,7 @@ export function StudentQuizAttempt() {
         </p>
         <div className="flex flex-wrap gap-1.5">
           {payload.questions.map((qq, i) => {
-            const done = !!answers[qq.id];
+            const done = hasAnswer(answers[qq.id]);
             const active = i === current;
             return (
               <button
@@ -524,7 +519,7 @@ export function StudentQuizAttempt() {
         submitting={submitting}
         onSubmit={doSubmit}
         onReview={() => {
-          const firstUnanswered = payload.questions.findIndex((qq) => !answers[qq.id]);
+          const firstUnanswered = payload.questions.findIndex((qq) => !hasAnswer(answers[qq.id]));
           if (firstUnanswered !== -1) setCurrent(firstUnanswered);
           setConfirmOpen(false);
         }}

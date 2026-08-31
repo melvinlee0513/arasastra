@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
+  BarChart3,
   ArchiveRestore,
   Copy,
   Eye,
@@ -18,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { ClassShell } from "@/components/class/ClassShell";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import { TenantEmptyState } from "@/components/common/TenantGate";
 import { useClassContext } from "@/hooks/useClassContext";
 import { useTenant } from "@/contexts/TenantContext";
@@ -120,6 +122,8 @@ export function ClassQuizzesManager({ variant }: Props) {
   });
 
   const folders: ContentFolder[] = treeQ.data?.folders ?? [];
+  const analyticsEnabled = useFeatureEnabled("quizAnalytics");
+
   const folderByQuiz = useMemo(() => {
     const map = new Map<string, string | null>();
     for (const q of treeQ.data?.quizzes ?? []) map.set(q.id, q.folder_id ?? null);
@@ -302,6 +306,7 @@ export function ClassQuizzesManager({ variant }: Props) {
                 <QuizCard
                   key={row.id}
                   row={row}
+                  analyticsEnabled={analyticsEnabled}
                   onEdit={() => navigate(`${basePath}/quizzes/${row.id}/edit`)}
                   onStatus={(s) => statusMut.mutate({ id: row.id, status: s })}
                   onDelete={() => setPendingDelete(row)}
@@ -402,6 +407,7 @@ function QuizCard({
   folderLabel,
   onMove,
   busy,
+  analyticsEnabled,
 }: {
   row: QuizManagerRow;
   onEdit: () => void;
@@ -413,6 +419,8 @@ function QuizCard({
   folderLabel: string | null;
   onMove: () => void;
   busy: boolean;
+  /** Quiz analytics is flag-gated; hide the entry point when it is off. */
+  analyticsEnabled: boolean;
 }) {
   const locked = attemptsLock(row);
   const statusColor =
@@ -470,6 +478,13 @@ function QuizCard({
                   <Users className="w-4 h-4 mr-2" /> View results
                 </Link>
               </DropdownMenuItem>
+              {analyticsEnabled && (
+                <DropdownMenuItem asChild>
+                  <Link to={`../quizzes/${row.id}/analytics`} relative="path">
+                    <BarChart3 className="w-4 h-4 mr-2" /> Quiz analytics
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Lifecycle</DropdownMenuLabel>
               {row.status !== "published" && (

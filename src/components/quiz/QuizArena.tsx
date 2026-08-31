@@ -258,7 +258,13 @@ export function ArenaStatusCard({
         />
         <h1 className="text-[18px] font-extrabold">{title}</h1>
         <p className="mx-auto mt-1.5 max-w-sm text-[13.5px] text-quiz-arena-muted">{body}</p>
-        {action && <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div>}
+        {/* Failure screens often carry the only way out, so their action has
+            to clear the 44px touch minimum whatever the caller passes. */}
+        {action && (
+          <div className="mt-5 flex flex-wrap justify-center gap-2 [&_a]:min-h-[44px] [&_button]:min-h-[44px]">
+            {action}
+          </div>
+        )}
       </ArenaPanel>
     </QuizArenaShell>
   );

@@ -345,6 +345,10 @@ export const RESULT_VISIBILITY_HINT: Record<ResultVisibility, string> = {
 };
 
 export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
+  multiple_select: "Multiple Select",
+  short_answer: "Short Answer",
+  numeric: "Numeric",
+  fill_blank: "Fill in the Blank",
   mcq: "Multiple Choice",
   true_false: "True / False",
 };

@@ -19,6 +19,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIGRATION="$HERE/../../migrations/20260830000000_live_quiz_sessions.sql"
+MIGRATION2="$HERE/../../migrations/20260831000000_live_quiz_phase2.sql"
 
 PGHOST="${PGHOST:-127.0.0.1}"
 PGPORT="${PGPORT:-54329}"
@@ -36,12 +37,23 @@ psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$HERE/00_fixture.sql" 2>&1 | grep -viE '
 echo "→ migration"
 psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIGRATION" 2>&1 | grep -vi notice || true
 
+echo "→ migration (phase 2)"
+psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIGRATION2" 2>&1 | grep -vi notice || true
+
 echo "→ seed"
 psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$HERE/01_seed.sql" 2>&1 | grep -vi notice || true
 
 echo "→ qa"
 psql -d "$DB" -q -f "$HERE/02_qa.sql" >/dev/null
 psql -d "$DB" -q -f "$HERE/03_qa2.sql" >/dev/null
+psql -d "$DB" -q -f "$HERE/04_qa_phase2.sql" >/dev/null
+
+# The 30-player simulation is opt-in: it is the slow one, and it seeds 30 extra
+# users into the database it runs against.
+if [ "${LOAD:-0}" = "1" ]; then
+  echo "→ 30-player load"
+  psql -d "$DB" -q -f "$HERE/05_load_30.sql" >/dev/null
+fi
 
 echo
 psql -d "$DB" -tAF'  ' -c \
@@ -49,6 +61,12 @@ psql -d "$DB" -tAF'  ' -c \
 echo
 psql -d "$DB" -tAc \
   "select count(*) filter (where ok) || '/' || count(*) || ' passed' from qa.results;"
+
+if [ "${LOAD:-0}" = "1" ]; then
+  echo
+  psql -d "$DB" -tAF'  ' -c \
+    "select case when ok then 'PASS' else 'FAIL' end, label, detail from qa.load_results order by n;"
+fi
 
 FAILED=$(psql -d "$DB" -tAc "select count(*) from qa.results where not ok;")
 if [ "$FAILED" != "0" ]; then

@@ -103,6 +103,24 @@ export function LiveQuizPlay() {
     );
   }
 
+  // ── Removed by the host ──────────────────────────────────────────────
+  // Checked before every other state: a removed player must be told what
+  // happened rather than left staring at a question they can no longer answer.
+  if (snapshot.my_status === "removed") {
+    return (
+      <ArenaStatusCard
+        art={QUIZ_ART.owlSad}
+        title="You were removed"
+        body="Your tutor removed you from this game. Ask them if you think this was a mistake."
+        action={
+          <Button onClick={() => navigate("/dashboard")} className="rounded-full">
+            Back to dashboard
+          </Button>
+        }
+      />
+    );
+  }
+
   // ── Cancelled ────────────────────────────────────────────────────────
   if (s.status === "cancelled") {
     return (
@@ -436,7 +454,9 @@ function Stat({ label, value, art }: { label: string; value: string; art: string
     <div className="rounded-2xl bg-white/6 px-3 py-2.5">
       <div className="flex items-center gap-1.5">
         <ArenaArt src={art} className="h-5 w-5 shrink-0" />
-        <p className="text-[10.5px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+        {/* 11px floor: these are the labels that name the numbers, so they
+            have to stay readable rather than shrink to fit. */}
+        <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
           {label}
         </p>
       </div>

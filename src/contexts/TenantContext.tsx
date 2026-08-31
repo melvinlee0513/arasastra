@@ -43,6 +43,9 @@ export type TenantFeatureFlags = {
    * for it yet. Defaults OFF and must stay off until that architecture lands.
    */
   liveQuizMultiplayer?: boolean;
+  quizAnalytics?: boolean;
+  questionBank?: boolean;
+  expandedQuestionTypes?: boolean;
   [key: string]: boolean | undefined;
 };
 

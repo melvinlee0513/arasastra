@@ -67,6 +67,10 @@ export interface LiveQuizSessionState {
   state_revision: number;
   started_at: string | null;
   completed_at: string | null;
+  /** Abandoned sessions age out so their game code can be reused. */
+  expires_at: string | null;
+  /** Derived from real answers, and only once the session is completed. */
+  summary: LiveQuizSummary | null;
   /** Authoritative clock, used to correct a skewed browser clock. */
   server_now: string;
 }
@@ -101,17 +105,55 @@ export interface LiveQuizLeaderboardRow {
   rank: number;
 }
 
+export type LiveQuizParticipantStatus = "joined" | "left" | "removed";
+
 export interface LiveQuizPlayer {
   participant_id: string;
   display_name: string;
   avatar_url: string | null;
-  status: "joined" | "left";
+  status: LiveQuizParticipantStatus;
+  /**
+   * Operational fields, present ONLY when the caller is the host — the server
+   * omits them entirely from a player's payload rather than blanking them, so
+   * a player cannot read the roster's scores or who has answered.
+   */
+  score?: number;
+  correct_count?: number;
+  answered?: boolean;
+  last_seen_at?: string;
+  joined_at?: string;
+}
+
+/** Host-only per-option tally for the current question. */
+export interface LiveQuizOptionStat {
+  option_id: string;
+  text: string;
+  is_correct: boolean;
+  count: number;
+}
+
+export interface LiveQuizQuestionStats {
+  question_index: number;
+  answered: number;
+  options: LiveQuizOptionStat[];
+}
+
+/** Derived at read time from real answers; only present once completed. */
+export interface LiveQuizSummary {
+  players: number;
+  questions: number;
+  average_score: number;
+  average_accuracy_pct: number | null;
 }
 
 export interface LiveQuizSnapshot {
   session: LiveQuizSessionState;
   is_host: boolean;
+  /** The caller's own participant status, or "host". Null for a pure observer. */
+  my_status: LiveQuizParticipantStatus | "host" | null;
   question: LiveQuizQuestion | null;
+  /** Host only — null for players. */
+  question_stats: LiveQuizQuestionStats | null;
   me: LiveQuizMe | null;
   my_answer: LiveQuizMyAnswer | null;
   leaderboard: LiveQuizLeaderboardRow[];
@@ -184,6 +226,23 @@ export async function submitLiveQuizAnswer(args: {
   } as never);
   if (error) throw error;
   return data as unknown as { accepted: boolean; duplicate: boolean };
+}
+
+/**
+ * Remove a player from a live session. Host-only, enforced server-side by the
+ * same `can_manage_class` every other host action uses — the client cannot
+ * authorise itself by hiding the button. Idempotent.
+ */
+export async function removeLiveQuizParticipant(args: {
+  sessionId: string;
+  participantId: string;
+}): Promise<{ removed: boolean }> {
+  const { data, error } = await supabase.rpc("remove_live_quiz_participant" as never, {
+    _session_id: args.sessionId,
+    _participant_id: args.participantId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as { removed: boolean };
 }
 
 export async function leaveLiveQuizSession(sessionId: string): Promise<void> {
@@ -305,6 +364,8 @@ export function mapLiveQuizError(err: unknown, fallback = "Something went wrong.
   if (msg.includes("session_already_started")) return "That game has already started.";
   if (msg.includes("session_full")) return "That game is full.";
   if (msg.includes("session_finished")) return "That game has already finished.";
+  if (msg.includes("session_expired")) return "That game has expired. Ask your tutor to start a new one.";
+  if (msg.includes("removed_by_host")) return "Your tutor removed you from this game.";
   if (msg.includes("session_state_conflict")) return "The game moved on — refreshing.";
   if (msg.includes("invalid_transition")) return "That action isn't available right now.";
   if (msg.includes("question_not_open")) return "That question is closed.";
