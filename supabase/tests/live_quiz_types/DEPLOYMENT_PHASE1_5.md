@@ -81,7 +81,9 @@ feature flag should stay off until it does not.
 
 The same queries, the flag semantics, and the enablement `UPDATE` are in
 [`PILOT_ENABLEMENT.md`](./PILOT_ENABLEMENT.md); this file is the deploy, that
-one is the rollout.
+one is the rollout. [`ACTIVATE_SRI_SARJANA.sql`](./ACTIVATE_SRI_SARJANA.sql)
+runs the verification and the enablement together in one transaction that
+refuses to enable anything if a check fails.
 
 ```sql
 -- ── 1. All ten migrations recorded, in order ──────────────────────────────

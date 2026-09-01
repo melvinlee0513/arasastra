@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   BarChart3,
+  Library,
+  Radio,
   ArchiveRestore,
   Copy,
   Eye,
@@ -123,6 +125,8 @@ export function ClassQuizzesManager({ variant }: Props) {
 
   const folders: ContentFolder[] = treeQ.data?.folders ?? [];
   const analyticsEnabled = useFeatureEnabled("quizAnalytics");
+  const bankEnabled = useFeatureEnabled("questionBank");
+  const liveEnabled = useFeatureEnabled("liveQuizMultiplayer");
 
   const folderByQuiz = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -217,14 +221,51 @@ export function ClassQuizzesManager({ variant }: Props) {
   ];
 
   const headerRight = (
+    // h-11: the shadcn default is h-10, four pixels under the tap-target floor,
+    // on the primary action of the page.
     <Button
-      className="rounded-full"
+      className="h-11 min-h-[44px] rounded-full"
       onClick={() => navigate(`${basePath}/quizzes/new`)}
       disabled={!canManage}
     >
       <Plus className="w-4 h-4 mr-1.5" />
       New quiz
     </Button>
+  );
+
+  /**
+   * The Question Bank and live hosting had routes but nothing anywhere linked
+   * to them, so turning their flags on left a tutor with no way in short of
+   * typing the URL.
+   *
+   * They sit here rather than in `headerRight`, which ClassShell renders
+   * `shrink-0` beside the class title: a third button there squeezed the title
+   * to "Q.." at 320px. A labelled row also introduces the feature — a tutor
+   * meeting the bank for the first time cannot be expected to read a book icon.
+   */
+  const featureEntryPoints = (bankEnabled || liveEnabled) && canManage && (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {bankEnabled && (
+        <Button
+          variant="outline"
+          className="h-11 min-h-[44px] flex-1 rounded-full text-[13.5px] font-semibold sm:flex-none"
+          onClick={() => navigate(variant === "admin" ? "/admin/question-bank" : "/tutor/question-bank")}
+        >
+          <Library className="mr-1.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          Question bank
+        </Button>
+      )}
+      {liveEnabled && (
+        <Button
+          variant="outline"
+          className="h-11 min-h-[44px] flex-1 rounded-full text-[13.5px] font-semibold sm:flex-none"
+          onClick={() => navigate(`${basePath}/live/new`)}
+        >
+          <Radio className="mr-1.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          Host live quiz
+        </Button>
+      )}
+    </div>
   );
 
   return (
@@ -238,6 +279,7 @@ export function ClassQuizzesManager({ variant }: Props) {
       breadcrumbs={breadcrumbs}
       headerRight={headerRight}
     >
+      {featureEntryPoints}
       {!canManage && !ctx.isLoading ? (
         <TenantEmptyState
           title="Not available"
