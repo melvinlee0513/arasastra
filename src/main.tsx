@@ -5,8 +5,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { registerAppServiceWorker } from "./pwa/registerSW";
+import { clearChunkRetryMarker } from "./lib/lazyWithRetry";
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// The app got as far as mounting, so whatever chunk failed last time is behind
+// us. Clearing the marker here means the NEXT deploy gets its own one-shot
+// reload instead of inheriting a spent one and failing visibly for no reason.
+clearChunkRetryMarker();
 
 // Guarded — refuses to register in dev, iframes, Lovable preview, or with ?sw=off.
 registerAppServiceWorker();

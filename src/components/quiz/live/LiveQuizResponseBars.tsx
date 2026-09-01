@@ -27,7 +27,29 @@ export function LiveQuizResponseBars({
   revealed: boolean;
   className?: string;
 }) {
+  // A multi-select answer counts once per option chosen, so the per-option
+  // counts can exceed the number of players. `answered` is the honest headline.
   const total = stats.options.reduce((sum, o) => sum + o.count, 0);
+
+  // Short answer, numeric and fill-in-the-blank have no options to distribute
+  // over. Rendering an empty bar chart would read as "nobody answered".
+  if (stats.options.length === 0) {
+    return (
+      <ArenaPanel className={cn("p-3", className)}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+            Responses
+          </p>
+          <p className="text-[12px] font-semibold text-quiz-arena-muted tabular-nums">
+            {stats.answered} answered
+          </p>
+        </div>
+        <p className="mt-2 text-[12.5px] text-quiz-arena-muted">
+          This question is answered by typing, so there is no per-option breakdown.
+        </p>
+      </ArenaPanel>
+    );
+  }
 
   return (
     <ArenaPanel className={cn("p-3", className)}>
@@ -36,7 +58,7 @@ export function LiveQuizResponseBars({
           Responses
         </p>
         <p className="text-[12px] font-semibold text-quiz-arena-muted tabular-nums">
-          {total} answered
+          {stats.answered} answered
         </p>
       </div>
 

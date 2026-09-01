@@ -53,6 +53,32 @@ describe("LiveQuizResponseBars", () => {
     expect(container.querySelectorAll(".bg-quiz-correct").length).toBeGreaterThan(0);
   });
 
+  it("says a typed question has no breakdown rather than drawing an empty chart", () => {
+    // short_answer, numeric and fill_blank have no options. Zero bars would
+    // read as "nobody answered", which is the opposite of what is true.
+    const typed: LiveQuizQuestionStats = { question_index: 3, answered: 12, options: [] };
+    render(<LiveQuizResponseBars stats={typed} revealed />);
+    expect(screen.getByText("12 answered")).toBeTruthy();
+    expect(screen.getByText(/answered by typing/)).toBeTruthy();
+  });
+
+  it("headlines the number of players who answered, not the sum of the bars", () => {
+    // A multiple-select answer counts once per option chosen, so the counts
+    // legitimately add up to more than the number of players.
+    const multi: LiveQuizQuestionStats = {
+      question_index: 2,
+      answered: 3,
+      options: [
+        { option_id: "o1", text: "Solar", is_correct: true, count: 3 },
+        { option_id: "o2", text: "Hydro", is_correct: true, count: 2 },
+        { option_id: "o3", text: "Coal", is_correct: false, count: 1 },
+      ],
+    };
+    render(<LiveQuizResponseBars stats={multi} revealed />);
+    expect(screen.getByText("3 answered")).toBeTruthy();
+    expect(screen.queryByText("6 answered")).toBeNull();
+  });
+
   it("survives a question nobody has answered without dividing by zero", () => {
     const empty: LiveQuizQuestionStats = {
       ...stats,
@@ -112,7 +138,13 @@ describe("LiveQuizPlayerList", () => {
     expect(container.textContent).not.toMatch(/connected/i);
     expect(screen.getAllByText("Joined")).toHaveLength(2);
     expect(screen.getByText("Left")).toBeTruthy();
-    expect(screen.getAllByText(/^seen /).length).toBe(3);
+    // Every row still reports a last-seen time. The word itself is now carried
+    // by a screen-reader label beside the clock icon rather than painted, so
+    // the clause fits next to the name and score on a narrow phone.
+    const seenLabels = [...container.querySelectorAll("span.sr-only")].filter(
+      (n) => n.textContent?.trim() === "last seen",
+    );
+    expect(seenLabels).toHaveLength(3);
   });
 
   it("counts only the players still in the game", () => {

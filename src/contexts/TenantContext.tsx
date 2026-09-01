@@ -38,9 +38,23 @@ export type TenantFeatureFlags = {
   googleDrive?: boolean;
   oneDrive?: boolean;
   /**
-   * Live multiplayer quiz sessions (host, lobby, game codes, realtime
-   * leaderboard). NOT implemented — no tables, RPCs or realtime channels exist
-   * for it yet. Defaults OFF and must stay off until that architecture lands.
+   * The Phase 1-5 quiz work. All four default OFF and are enabled per centre by
+   * an UPDATE against `tuition_centers.feature_flags` — never by a hardcoded
+   * centre id or slug.
+   *
+   * The first three are enforced in the database as well as in the router
+   * (20260906000100), so an off flag means the RPCs refuse, not merely that the
+   * screens are unlinked:
+   *   liveQuizMultiplayer  create_live_quiz_session
+   *   quizAnalytics        _quiz_for_analytics, shared by all five RPCs
+   *   questionBank         _my_question_bank_center and _can_use_question_bank,
+   *                        so the RLS policies are gated too
+   *
+   * expandedQuestionTypes is an AUTHORING gate only: it decides which types the
+   * picker offers. It is deliberately not enforced on question_type in the
+   * database, because the builder rewrites a quiz's questions on every save and
+   * a database gate would stop a tutor editing a quiz that already contains
+   * one. Existing content keeps working and keeps grading whatever it says.
    */
   liveQuizMultiplayer?: boolean;
   quizAnalytics?: boolean;

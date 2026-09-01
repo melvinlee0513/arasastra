@@ -8,6 +8,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { AnswerValue } from "@/lib/quizAnswers";
+import { QUESTION_TYPE_LABELS, type QuestionType } from "@/lib/quizzes";
 
 // ─── Canonical types (mirror get_live_quiz_snapshot) ───────────────────────
 
@@ -40,10 +42,24 @@ export interface LiveQuizQuestion {
   id: string;
   index: number;
   question: string;
-  question_type: "mcq" | "true_false";
+  /** The live engine plays every type the solo engine grades. */
+  question_type: QuestionType;
   points: number;
+  /**
+   * Display label for a numeric question ("m/s²"). The numeric answer and its
+   * tolerance are never sent — a visible tolerance is a partial answer key.
+   */
+  answer_unit: string | null;
   /** null until reveal. */
   explanation: string | null;
+  /** null until reveal, and only for short_answer / fill_blank. */
+  accepted_answers: string[] | null;
+  /**
+   * null until reveal, and only for numeric. The tolerance is never sent: at
+   * reveal the answer is already on the host's screen, but a tolerance is a
+   * grading detail that only narrows the search space.
+   */
+  numeric_answer: number | null;
   options: LiveQuizOption[];
 }
 
@@ -212,9 +228,23 @@ export async function advanceLiveQuizSession(args: {
   return data as unknown as { status: LiveQuizStatus; index?: number };
 }
 
+/**
+ * Send one live answer.
+ *
+ * `answer` is the typed value the control produced — a string for a single
+ * choice, true/false, a typed word or a number; an array of option ids for a
+ * multiple select. It goes to the server as JSON and is graded there by the
+ * same `_quiz_answer_is_correct` the solo engine uses, so the two can never
+ * disagree. Correctness is deliberately NOT in the response: the client learns
+ * it at reveal.
+ *
+ * `optionId` and `answerText` remain for the two callers that predate the
+ * expanded types (the dev harness, and any tab still running an older bundle).
+ */
 export async function submitLiveQuizAnswer(args: {
   sessionId: string;
   questionIndex: number;
+  answer?: AnswerValue | null;
   optionId?: string | null;
   answerText?: string | null;
 }): Promise<{ accepted: boolean; duplicate: boolean }> {
@@ -223,6 +253,7 @@ export async function submitLiveQuizAnswer(args: {
     _question_index: args.questionIndex,
     _option_id: args.optionId ?? null,
     _answer_text: args.answerText ?? null,
+    _answer: args.answer ?? null,
   } as never);
   if (error) throw error;
   return data as unknown as { accepted: boolean; duplicate: boolean };
@@ -373,8 +404,19 @@ export function mapLiveQuizError(err: unknown, fallback = "Something went wrong.
   if (msg.includes("invalid_answer")) return "That answer isn't valid.";
   if (msg.includes("not_a_participant")) return "You haven't joined this game.";
   if (msg.includes("quiz_not_published")) return "Publish the quiz before hosting it live.";
-  if (msg.includes("quiz_has_no_playable_questions"))
-    return "This quiz has no multiple-choice or true/false questions to play.";
+  if (msg.includes("quiz_has_no_playable_questions")) return "This quiz has no questions to play.";
+  // The server names the offending type. Passing that through is the whole
+  // point of refusing at create time rather than dropping the question.
+  if (msg.includes("unsupported_live_question_type")) {
+    const raw = msg.split("unsupported_live_question_type:")[1] ?? "";
+    const types = raw
+      .split(",")
+      .map((t) => QUESTION_TYPE_LABELS[t.trim()] ?? t.trim())
+      .filter(Boolean);
+    return types.length
+      ? `This quiz can't be hosted live yet: ${types.join(", ")} questions aren't supported in a live game. Remove them or run it as a normal quiz.`
+      : "This quiz has a question type that can't be hosted live.";
+  }
   if (msg.includes("game_code_unavailable")) return "Couldn't allocate a game code. Try again.";
   return fallback;
 }

@@ -345,6 +345,27 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
                   ))}
                 </ul>
               )}
+              {/* A typed question has no options to mark, so at reveal the host
+                  is shown the key itself — they are the one reading it out.
+                  Withheld before reveal exactly as it is for a player. */}
+              {(snapshot.question?.accepted_answers?.length ||
+                snapshot.question?.numeric_answer != null) && (
+                <div className="mt-3 rounded-2xl border border-quiz-correct/50 bg-quiz-correct/15 px-3 py-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+                    {snapshot.question.accepted_answers &&
+                    snapshot.question.accepted_answers.length > 1
+                      ? "Accepted answers"
+                      : "Correct answer"}
+                  </p>
+                  <p className="mt-0.5 break-words text-[14.5px] font-bold text-emerald-100">
+                    {snapshot.question.accepted_answers?.length
+                      ? snapshot.question.accepted_answers.join(", ")
+                      : `${snapshot.question.numeric_answer}${
+                          snapshot.question.answer_unit ? ` ${snapshot.question.answer_unit}` : ""
+                        }`}
+                  </p>
+                </div>
+              )}
             </ArenaPanel>
 
             {/* Response distribution — host only, and the correct option stays
@@ -400,11 +421,11 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
                     <span className="ml-1.5 hidden sm:inline">Lock</span>
                   </Button>
                   <Button
-                    className="h-12 min-h-[48px] flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
+                    className="h-12 min-h-[48px] min-w-0 flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
                     disabled={advance.isPending}
                     onClick={() => advance.mutate("reveal")}
                   >
-                    <Eye className="mr-1.5 h-4 w-4" aria-hidden="true" /> Reveal answer
+                    <Eye className="mr-1.5 h-4 w-4 shrink-0" aria-hidden="true" /> Reveal answer
                   </Button>
                 </>
               )}
@@ -418,23 +439,28 @@ export function LiveQuizHost({ variant }: { variant: "tutor" | "admin" }) {
                 </Button>
               )}
               {s.status === "answer_reveal" && (
+                // Both buttons are nowrap, so two full labels ran the primary
+                // action off a 320px screen. The secondary one collapses to its
+                // icon instead — the same trade the Lock button above makes.
                 <Button
-                  className="h-12 min-h-[48px] flex-1 rounded-full bg-white/12 text-[14.5px] font-bold text-quiz-arena-foreground hover:bg-white/20"
+                  className="h-12 min-h-[48px] shrink-0 rounded-full bg-white/12 px-4 text-[14.5px] font-bold text-quiz-arena-foreground hover:bg-white/20"
                   disabled={advance.isPending}
                   onClick={() => advance.mutate("leaderboard")}
+                  aria-label="Show the leaderboard"
                 >
-                  <Trophy className="mr-1.5 h-4 w-4" /> Leaderboard
+                  <Trophy className="h-4 w-4" aria-hidden="true" />
+                  <span className="ml-1.5 hidden min-[400px]:inline">Leaderboard</span>
                 </Button>
               )}
               {(s.status === "answer_reveal" || s.status === "leaderboard") && (
                 <Button
-                  className="h-12 min-h-[48px] flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
+                  className="h-12 min-h-[48px] min-w-0 flex-1 rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white"
                   disabled={advance.isPending}
                   onClick={() => advance.mutate("next")}
                 >
                   {advance.isPending
                     ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    : <SkipForward className="mr-1.5 h-4 w-4" />}
+                    : <SkipForward className="mr-1.5 h-4 w-4 shrink-0" />}
                   {idx + 1 >= total ? "Finish game" : "Next question"}
                 </Button>
               )}

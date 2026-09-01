@@ -416,3 +416,289 @@ BEGIN
     public._quiz_answer_is_correct(v_copy, '"9.83"'::jsonb)
     AND NOT public._quiz_answer_is_correct(v_copy, '"9.9"'::jsonb), '');
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- V — RESULTS carry every kind of answer key (20260905000100)
+--
+-- get_quiz_result returned `correct_answer` and per-option `is_correct` and
+-- nothing else, so a student who got a short_answer, numeric or fill_blank
+-- question wrong was told only that they were wrong. Runs on the attempt the
+-- T block submitted.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_stu uuid := '22222222-0000-0000-0000-000000000003';
+  v_att uuid := 'cafeaaaa-0000-0000-0000-0000000000a2';
+  v_res jsonb;
+  q jsonb;
+BEGIN
+  PERFORM qa.as_user(v_stu);
+  v_res := public.get_quiz_result(v_att);
+
+  PERFORM qa.check('V1 the result is shown at all', v_res->>'status' = 'ok', v_res->>'status');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0004-0000-0000-0000-000000000004';   -- short_answer
+  PERFORM qa.check('V2 a short answer carries its accepted answers',
+    q->'accepted_answers' @> '["Newton"]'::jsonb, (q->'accepted_answers')::text);
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0006-0000-0000-0000-000000000006';   -- fill_blank, WRONG
+  PERFORM qa.check('V3 the blank the student got wrong shows what was accepted',
+    jsonb_typeof(q->'accepted_answers') = 'array'
+    AND jsonb_array_length(q->'accepted_answers') > 0,
+    (q->'accepted_answers')::text);
+  PERFORM qa.check('V4 and what the student actually wrote, to compare against',
+    q->>'selected_answer' = 'Chlorophyll', q->>'selected_answer');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0005-0000-0000-0000-000000000005';   -- numeric
+  PERFORM qa.check('V5 a numeric question carries its answer',
+    (q->>'numeric_answer')::numeric IS NOT NULL, q->>'numeric_answer');
+  PERFORM qa.check('V6 and its unit, so the number can be read back',
+    q ? 'answer_unit', (q->'answer_unit')::text);
+
+  PERFORM qa.check('V7 the tolerance is still never sent — it teaches nothing '
+                   'and narrows the search space',
+    v_res::text NOT LIKE '%tolerance%', 'no tolerance');
+
+  SELECT e INTO q FROM jsonb_array_elements(v_res->'questions') e
+   WHERE e->>'question_id' = 'cafe0001-0000-0000-0000-000000000001';   -- mcq
+  PERFORM qa.check('V8 a choice question carries no accepted-answer list for no reason',
+    q->'accepted_answers' IS NULL OR jsonb_typeof(q->'accepted_answers') = 'null',
+    (q->'accepted_answers')::text);
+  PERFORM qa.check('V9 and still marks the correct option, as it always did',
+    (SELECT bool_or((o->>'is_correct')::boolean) FROM jsonb_array_elements(q->'options') o),
+    (q->'options')::text);
+END $$;
+
+-- The keys are behind the visibility gate, not merely behind submission.
+DO $$
+DECLARE
+  v_stu uuid := '22222222-0000-0000-0000-000000000003';
+  v_att uuid := 'cafeaaaa-0000-0000-0000-0000000000a2';
+  v_res jsonb;
+BEGIN
+  UPDATE public.quizzes SET result_visibility = 'never'
+   WHERE id = 'cafe0000-0000-0000-0000-00000000cafe';
+
+  PERFORM qa.as_user(v_stu);
+  v_res := public.get_quiz_result(v_att);
+  PERFORM qa.check('V10 result_visibility=never hides the whole result',
+    v_res->>'status' = 'hidden', v_res->>'status');
+  PERFORM qa.check('V11 and therefore leaks no answer key at all',
+    v_res::text NOT LIKE '%accepted_answers%'
+    AND v_res::text NOT LIKE '%numeric_answer%'
+    AND v_res::text NOT LIKE '%Newton%', v_res::text);
+
+  UPDATE public.quizzes SET result_visibility = 'after_submit'
+   WHERE id = 'cafe0000-0000-0000-0000-00000000cafe';
+END $$;
+
+-- Another student's attempt is not readable, keys or otherwise.
+SELECT qa.expect_error('V12 a student cannot read another student''s result',
+  '22222222-0000-0000-0000-000000000002',
+  $$SELECT public.get_quiz_result('cafeaaaa-0000-0000-0000-0000000000a2'::uuid)$$,
+  'attempt not found');
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- W — THE SCHEMA ADMITS WHAT THE ENGINE GRADES (20260906000000)
+--
+-- quiz_questions_type_ck restricted question_type to mcq / multiple_choice /
+-- true_false and was never widened, so on a real database not one Phase 5 type
+-- could be saved. The fixture now carries the production constraint, so these
+-- are assertions about the schema rather than about the harness.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  t text;
+  v_def text;
+  v_quiz uuid := 'cafe0000-0000-0000-0000-00000000cafe';
+  v_ok boolean;
+  v_missing text := '';
+BEGIN
+  SELECT pg_get_constraintdef(oid) INTO v_def
+    FROM pg_constraint
+   WHERE conname = 'quiz_questions_type_ck'
+     AND conrelid = 'public.quiz_questions'::regclass;
+
+  PERFORM qa.check('W1 the type constraint still exists — it was not simply dropped',
+    v_def IS NOT NULL, COALESCE(v_def, 'missing'));
+
+  FOREACH t IN ARRAY ARRAY['mcq','multiple_choice','true_false',
+                           'multiple_select','short_answer','numeric','fill_blank'] LOOP
+    v_ok := true;
+    BEGIN
+      INSERT INTO public.quiz_questions (quiz_id, question, question_type, order_index)
+      VALUES (v_quiz, '__w_probe__', t, 999);
+    EXCEPTION WHEN check_violation THEN v_ok := false;
+    END;
+    IF NOT v_ok THEN v_missing := v_missing || t || ' '; END IF;
+    PERFORM qa.check(format('W2.%s the schema accepts a %s question', t, t), v_ok, '');
+  END LOOP;
+  DELETE FROM public.quiz_questions WHERE question = '__w_probe__';
+
+  -- And still refuses one the engine cannot grade, so a saveable-but-
+  -- ungradeable type cannot reach a student.
+  v_ok := false;
+  BEGIN
+    INSERT INTO public.quiz_questions (quiz_id, question, question_type, order_index)
+    VALUES (v_quiz, '__w_probe__', 'ordering', 999);
+  EXCEPTION WHEN check_violation THEN v_ok := true;
+  END;
+  DELETE FROM public.quiz_questions WHERE question = '__w_probe__';
+  PERFORM qa.check('W3 a type with no grading branch is still refused', v_ok, '');
+
+  -- The bank had no constraint at all: an ungradeable type saved fine there and
+  -- only failed later, on the copy into a quiz, naming a different table.
+  v_ok := false;
+  BEGIN
+    INSERT INTO public.question_bank_questions (center_id, question, question_type)
+    VALUES ('aaaaaaaa-0000-0000-0000-00000000000a', '__w_probe__', 'ordering');
+  EXCEPTION WHEN check_violation THEN v_ok := true;
+  END;
+  DELETE FROM public.question_bank_questions WHERE question = '__w_probe__';
+  PERFORM qa.check('W4 the bank refuses an ungradeable type where it is authored', v_ok, '');
+END $$;
+
+-- W5: the three places that list the supported types must agree. Three copies
+-- of one list is how a type comes to be saveable, ungradeable and unhostable
+-- all at once.
+DO $$
+DECLARE
+  v_ck   text;
+  v_live text;
+  t      text;
+  v_bad  text := '';
+BEGIN
+  SELECT pg_get_constraintdef(oid) INTO v_ck FROM pg_constraint
+   WHERE conname = 'quiz_questions_type_ck'
+     AND conrelid = 'public.quiz_questions'::regclass;
+
+  SELECT prosrc INTO v_live FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'create_live_quiz_session';
+
+  FOREACH t IN ARRAY ARRAY['mcq','multiple_choice','true_false',
+                           'multiple_select','short_answer','numeric','fill_blank'] LOOP
+    IF position(t in v_ck) = 0 THEN v_bad := v_bad || 'ck:' || t || ' '; END IF;
+    -- create_live_quiz_session is only present when the live migrations ran.
+    IF v_live IS NOT NULL AND position(t in v_live) = 0 THEN
+      v_bad := v_bad || 'live:' || t || ' ';
+    END IF;
+  END LOOP;
+
+  PERFORM qa.check('W5 the schema constraint and the live allow-list carry the same types',
+    v_bad = '', COALESCE(NULLIF(v_bad, ''), 'agree'));
+END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- X — FEATURE FLAGS GATE THE BACKEND, NOT ONLY THE ROUTER (20260906000100)
+--
+-- FeatureRoute hides the screens. These assert that the flag also stops the
+-- RPCs, which is the difference between "not linked" and "not enabled" — and
+-- what makes "turn the flag off" a real answer to a release blocker.
+--
+-- The flags are centre-scoped and live in tuition_centers.feature_flags. Centre
+-- A has them on; every check below flips one for Centre A only and puts it back.
+-- ═══════════════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_ctr   uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_ctr_b uuid := 'bbbbbbbb-0000-0000-0000-00000000000b';
+BEGIN
+  -- Centre B carries {"questionBank": true} and nothing else, so these two are
+  -- genuinely unset rather than explicitly false.
+  PERFORM qa.check('X1 an unset flag is OFF, matching useFeatureEnabled',
+    NOT public.tenant_feature_enabled(v_ctr_b, 'quizAnalytics', false)
+    AND NOT public.tenant_feature_enabled(v_ctr_b, 'liveQuizMultiplayer', false),
+    'unset = off');
+
+  PERFORM qa.check('X2 the pilot centre has them on, by data not by code',
+    public.tenant_feature_enabled(v_ctr, 'questionBank', false)
+    AND public.tenant_feature_enabled(v_ctr, 'quizAnalytics', false)
+    AND public.tenant_feature_enabled(v_ctr, 'liveQuizMultiplayer', false),
+    'pilot centre enabled');
+
+  PERFORM qa.check('X3 a null centre is never enabled',
+    NOT public.tenant_feature_enabled(NULL, 'questionBank', true), '');
+END $$;
+
+-- Analytics: one guard, five RPCs.
+DO $$
+DECLARE
+  v_ctr  uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_quiz uuid := '9012aaaa-0000-0000-0000-00000000000f';
+  v_tut  uuid := '11111111-0000-0000-0000-000000000001';
+  v_ok   boolean;
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"quizAnalytics": false}'::jsonb
+   WHERE id = v_ctr;
+
+  PERFORM qa.as_user(v_tut);
+  v_ok := false;
+  BEGIN
+    PERFORM public.get_quiz_analytics_overview(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := position('feature_disabled' in SQLERRM) > 0;
+  END;
+  PERFORM qa.check('X4 analytics is refused server-side when the flag is off', v_ok, '');
+
+  v_ok := false;
+  BEGIN
+    PERFORM public.get_quiz_question_analytics(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := position('feature_disabled' in SQLERRM) > 0;
+  END;
+  PERFORM qa.check('X5 and so is every other analytics RPC — one shared guard', v_ok, '');
+
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"quizAnalytics": true}'::jsonb
+   WHERE id = v_ctr;
+
+  v_ok := true;
+  BEGIN
+    PERFORM public.get_quiz_analytics_overview(v_quiz);
+  EXCEPTION WHEN OTHERS THEN v_ok := false;
+  END;
+  PERFORM qa.check('X6 turning it back on restores it — the switch works both ways',
+    v_ok, '');
+END $$;
+
+-- Question bank: the guard is in _can_use_question_bank, which the RLS policies
+-- call too, so an off flag means no readable rows rather than no route.
+DO $$
+DECLARE
+  v_ctr uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_tut uuid := '11111111-0000-0000-0000-000000000001';
+  v_ok  boolean;
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": false}'::jsonb
+   WHERE id = v_ctr;
+
+  PERFORM qa.as_user(v_tut);
+  PERFORM qa.check('X7 the bank access predicate is false when the flag is off',
+    NOT public._can_use_question_bank(v_ctr), '');
+
+  v_ok := false;
+  BEGIN
+    PERFORM public.list_question_bank();
+  EXCEPTION WHEN OTHERS THEN v_ok := true;
+  END;
+  PERFORM qa.check('X8 and the bank RPCs refuse', v_ok, '');
+
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": true}'::jsonb
+   WHERE id = v_ctr;
+  PERFORM qa.check('X9 and it comes back on', public._can_use_question_bank(v_ctr), '');
+END $$;
+
+-- The flag must not be readable as a way around tenancy: a foreign tutor is
+-- still refused even when the flag is on.
+DO $$
+DECLARE
+  v_ctr uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+BEGIN
+  PERFORM qa.as_user('33333333-0000-0000-0000-000000000005');   -- Centre B tutor
+  PERFORM qa.check('X10 an enabled flag does not grant cross-centre access',
+    NOT public._can_use_question_bank(v_ctr), '');
+END $$;

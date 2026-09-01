@@ -63,12 +63,14 @@ BEGIN
     'SELECT is_correct FROM public.quiz_options LIMIT 1',
     'permission denied');
 
-  -- L5: the columns that are NOT the answer key still read fine, so nothing
-  -- that legitimately needs option text is broken by the revoke.
-  PERFORM qa.expect_ok(
-    'L5 option text and ordering remain readable',
+  -- L5: NO column of the table reads, not just the key. 20260905000000
+  -- restored the August posture: `authenticated` holds no privilege here at
+  -- all, because nothing outside the database reads this table directly.
+  PERFORM qa.expect_error(
+    'L5 no column of quiz_options is readable directly, not even option text',
     v_student,
-    'SELECT id, question_id, option_text, order_index FROM public.quiz_options LIMIT 1');
+    'SELECT id, question_id, option_text, order_index FROM public.quiz_options LIMIT 1',
+    'permission denied');
 END $$;
 
 -- L6/L7: the SECURITY DEFINER path is unaffected — still redacts before
@@ -154,7 +156,10 @@ BEGIN
   PERFORM public.advance_live_quiz_session(v_sid, 'start', NULL);
   PERFORM qa.as_user(v_s2); PERFORM public.leave_live_quiz_session(v_sid);
   PERFORM qa.expect_error('R4 a player who left cannot submit an answer', v_s2,
-    format('SELECT public.submit_live_quiz_answer(%L, 0, (SELECT o.id FROM public.quiz_options o JOIN public.quiz_questions q ON q.id=o.question_id LIMIT 1), NULL)', v_sid),
+    -- A literal from the seed: `authenticated` cannot read quiz_options to
+    -- find one, and this assertion is about the RPC, not about the lookup.
+    format('SELECT public.submit_live_quiz_answer(%L, 0, %L::uuid, NULL)',
+           v_sid, '0a111111-0000-0000-0000-000000000001'),
     'not_a_participant');
 
   -- R5: host removes a player.
@@ -169,7 +174,8 @@ BEGIN
 
   -- R6: the removed player cannot answer.
   PERFORM qa.expect_error('R6 a removed player cannot submit an answer', v_s1,
-    format('SELECT public.submit_live_quiz_answer(%L, 0, (SELECT o.id FROM public.quiz_options o LIMIT 1), NULL)', v_sid),
+    format('SELECT public.submit_live_quiz_answer(%L, 0, %L::uuid, NULL)',
+           v_sid, '0a111111-0000-0000-0000-000000000001'),
     'removed_by_host');
 
   -- R7: nor rejoin to get around it.
@@ -338,7 +344,8 @@ BEGIN
 
   -- C4: no further answer can change a completed game.
   PERFORM qa.expect_error('C4 a completed session rejects a further answer', v_s1,
-    format('SELECT public.submit_live_quiz_answer(%L, 0, (SELECT id FROM public.quiz_options LIMIT 1), NULL)', v_sid),
+    format('SELECT public.submit_live_quiz_answer(%L, 0, %L::uuid, NULL)',
+           v_sid, '0a111111-0000-0000-0000-000000000001'),
     'question_not_open');
 
   -- C5: and cannot be advanced again.
@@ -501,8 +508,8 @@ DO $$
 BEGIN
   PERFORM qa.check('G1 authenticated cannot select quiz_options.is_correct',
     NOT has_column_privilege('authenticated', 'public.quiz_options', 'is_correct', 'SELECT'), '');
-  PERFORM qa.check('G2 authenticated CAN still select option_text',
-    has_column_privilege('authenticated', 'public.quiz_options', 'option_text', 'SELECT'), '');
+  PERFORM qa.check('G2 authenticated cannot select option_text either',
+    NOT has_column_privilege('authenticated', 'public.quiz_options', 'option_text', 'SELECT'), '');
   PERFORM qa.check('G3 anon holds no select on quiz_options',
     NOT has_table_privilege('anon', 'public.quiz_options', 'SELECT'), '');
   PERFORM qa.check('G4 authenticated may remove a participant',
@@ -564,10 +571,52 @@ BEGIN
     'S2 a SECURITY INVOKER function cannot read is_correct',
     v_stu, 'SELECT qa.invoker_reads_key()', 'permission denied');
 
-  -- S3: writing options is unaffected — a column SELECT revoke is not a
-  -- write revoke, so the quiz builder still saves answer keys.
-  PERFORM qa.check('S3 the builder can still write is_correct',
-    has_column_privilege('authenticated', 'public.quiz_options', 'is_correct', 'INSERT')
-    AND has_column_privilege('authenticated', 'public.quiz_options', 'is_correct', 'UPDATE'),
-    'insert/update on is_correct retained');
+  -- S3: `authenticated` holds NO privilege on either answer-key table. This is
+  -- the posture 20260813072502 established and 20260905000000 restores; the
+  -- builder writes through SECURITY DEFINER RPCs, so it is unaffected. An
+  -- earlier version of this assertion required INSERT/UPDATE to be RETAINED,
+  -- which described the fixture's grants rather than production's.
+  PERFORM qa.check('S3 authenticated holds no privilege at all on quiz_options',
+    NOT has_table_privilege('authenticated', 'public.quiz_options', 'SELECT')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_options', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_options', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_options', 'DELETE'),
+    'no table privilege');
+
+  PERFORM qa.check('S4 nor on quiz_questions, which carries the other keys',
+    NOT has_table_privilege('authenticated', 'public.quiz_questions', 'SELECT')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_questions', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_questions', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.quiz_questions', 'DELETE'),
+    'no table privilege');
+
+  PERFORM qa.check('S5 anon holds nothing either',
+    NOT has_table_privilege('anon', 'public.quiz_options', 'SELECT')
+    AND NOT has_table_privilege('anon', 'public.quiz_questions', 'SELECT'),
+    'no table privilege');
+
+  -- S6: not one stray column grant survives. A column privilege is invisible to
+  -- has_table_privilege, which is how the last widening went unnoticed.
+  PERFORM qa.check('S6 no column-level grant survives on either table',
+    NOT EXISTS (
+      SELECT 1 FROM information_schema.column_privileges
+       WHERE table_schema = 'public'
+         AND table_name IN ('quiz_questions', 'quiz_options')
+         AND grantee IN ('anon', 'authenticated')),
+    (SELECT COALESCE(string_agg(DISTINCT table_name || '.' || column_name, ', '), 'none')
+       FROM information_schema.column_privileges
+      WHERE table_schema = 'public'
+        AND table_name IN ('quiz_questions', 'quiz_options')
+        AND grantee IN ('anon', 'authenticated')));
+END $$;
+
+-- S2 must not be passing because the table is simply gone. The same INVOKER
+-- shape reads a table the role IS granted, to show the harness works.
+DO $$
+DECLARE v_stu uuid := '22222222-0000-0000-0000-000000000002';
+BEGIN
+  PERFORM qa.expect_ok(
+    'S7 the same invoker shape CAN read a table authenticated is granted — '
+    'S2 is a privilege result, not a broken harness',
+    v_stu, 'SELECT count(*) FROM public.quizzes');
 END $$;

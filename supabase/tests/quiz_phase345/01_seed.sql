@@ -2,9 +2,19 @@
 -- analytics assertions can check exact numbers against.
 BEGIN;
 
-INSERT INTO public.tuition_centers (id, name, slug) VALUES
-  ('aaaaaaaa-0000-0000-0000-00000000000a', 'Centre A', 'centre-a'),
-  ('bbbbbbbb-0000-0000-0000-00000000000b', 'Centre B', 'centre-b');
+-- Centre A is the pilot centre: the Phase 1-5 flags are ON for it and unset
+-- for Centre B, which is what enablement actually looks like — one UPDATE
+-- against one centre's row, no hardcoded id or slug anywhere in code.
+INSERT INTO public.tuition_centers (id, name, slug, feature_flags) VALUES
+  ('aaaaaaaa-0000-0000-0000-00000000000a', 'Centre A', 'centre-a',
+   '{"liveQuizMultiplayer": true, "quizAnalytics": true,
+     "questionBank": true, "expandedQuestionTypes": true}'::jsonb),
+  -- Centre B has the BANK on too, so every cross-tenant assertion below tests
+  -- tenancy rather than the flag: a foreign tutor with the feature fully
+  -- enabled must still be refused. Its other flags stay unset, which is what
+  -- an un-enrolled centre looks like.
+  ('bbbbbbbb-0000-0000-0000-00000000000b', 'Centre B', 'centre-b',
+   '{"questionBank": true}'::jsonb);
 
 INSERT INTO auth.users (id) VALUES
   ('11111111-0000-0000-0000-000000000001'), -- tutor A

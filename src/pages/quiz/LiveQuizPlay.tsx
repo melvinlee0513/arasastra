@@ -18,34 +18,42 @@ import {
   ArenaArt, ArenaChip, ArenaCountdown, ArenaPanel, ArenaProgress, ArenaStatusCard, QuizArenaShell,
 } from "@/components/quiz/QuizArena";
 import { QuizExplanationFlipCard } from "@/components/quiz/QuizExplanationFlipCard";
+import { QuizAnswerInput } from "@/components/quiz/QuizAnswerInput";
 import { LiveQuizLeaderboard } from "@/components/quiz/live/LiveQuizLeaderboard";
 import { useLiveQuizSession } from "@/hooks/useLiveQuizSession";
 import { leaveLiveQuizSession, mapLiveQuizError, submitLiveQuizAnswer } from "@/lib/liveQuiz";
+import { hasAnswer, type AnswerValue } from "@/lib/quizAnswers";
 
 export function LiveQuizPlay() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { snapshot, isLoading, isError, error, secondsLeft, refresh } = useLiveQuizSession(sessionId);
 
-  /** Locked the instant the student taps, so a slow network can't double-send. */
-  const [pending, setPending] = useState<string | null>(null);
+  /** Locked the instant the student commits, so a slow network can't double-send. */
+  const [pending, setPending] = useState<AnswerValue | null>(null);
+  /**
+   * What the student has typed or ticked but not yet sent. A single tap on an
+   * option is still send-on-tap — that is the game — but a typed or
+   * multiple-select answer has to be composed first and locked in deliberately.
+   */
+  const [draft, setDraft] = useState<AnswerValue>("");
   const submittedFor = useRef<number | null>(null);
 
   const s = snapshot?.session;
   const idx = s?.current_question_index ?? -1;
 
-  // Clear the local lock when the server moves to a new question.
+  // Clear the local lock and the draft when the server moves to a new question.
   useEffect(() => {
     if (submittedFor.current !== idx) setPending(null);
+    setDraft("");
   }, [idx]);
 
   const answerMut = useMutation({
-    mutationFn: (args: { optionId?: string; answerText?: string }) =>
+    mutationFn: (args: { answer: AnswerValue }) =>
       submitLiveQuizAnswer({
         sessionId: sessionId!,
         questionIndex: idx,
-        optionId: args.optionId ?? null,
-        answerText: args.answerText ?? null,
+        answer: args.answer,
       }),
     onSuccess: () => {
       submittedFor.current = idx;
@@ -60,8 +68,29 @@ export function LiveQuizPlay() {
 
   const myAnswer = snapshot?.my_answer;
   const answered = !!myAnswer?.answered || pending !== null;
+  const qType = snapshot?.question?.question_type;
+  const isSingleChoice = qType === "mcq" || qType === "true_false";
 
-  const chosenId = myAnswer?.selected_option_id ?? myAnswer?.answer_text ?? pending;
+  /**
+   * The option keys this student chose — one for a single choice, several for a
+   * multiple select. Read back from the server's own record where there is one,
+   * so a reconnect shows the real answer rather than a local guess.
+   */
+  const myChosen = useMemo<string[]>(() => {
+    const a = myAnswer;
+    if (!a?.answered) return typeof pending === "string" ? [pending] : (pending ?? []);
+    if (a.selected_option_id) return [a.selected_option_id];
+    if (a.answer_text == null) return [];
+    if (qType === "multiple_select") {
+      try {
+        const parsed: unknown = JSON.parse(a.answer_text);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [a.answer_text];
+  }, [myAnswer, pending, qType]);
 
   const options = useMemo(() => {
     const q = snapshot?.question;
@@ -349,7 +378,8 @@ export function LiveQuizPlay() {
               <p className="mt-0.5 text-[13px] text-quiz-arena-muted">
                 {iWasCorrect
                   ? `+${myAnswer?.points_awarded ?? 0} pts`
-                  : "The correct answer is highlighted below."}
+                  : /* "highlighted" only holds for a question with options. */
+                    "The correct answer is shown below."}
               </p>
             </div>
           </ArenaPanel>
@@ -373,45 +403,124 @@ export function LiveQuizPlay() {
           </div>
         </ArenaPanel>
 
-        {/* Answers */}
-        <div className="mt-4 grid grid-cols-1 gap-2.5">
-          {options.map((o) => {
-            const mine = chosenId === o.key;
-            const correct = o.isCorrect === true;
-            const wrongMine = revealing && mine && o.isCorrect === false;
-            return (
-              <button
-                key={o.key}
-                type="button"
-                aria-pressed={mine}
-                disabled={answered || s.status !== "question_open" || answerMut.isPending}
-                onClick={() => {
-                  if (answered) return;
-                  setPending(o.key);
-                  if (q?.question_type === "true_false") {
-                    answerMut.mutate({ answerText: o.key });
-                  } else {
-                    answerMut.mutate({ optionId: o.key });
+        {/* Answers.
+            Single choice and any revealed question with options use the arena
+            grid, because it is the only one that can colour correctness. A
+            typed or multi-select question in play uses the same control the
+            solo engine uses, so a student meets one design, not two. */}
+        {(isSingleChoice || (revealing && options.length > 0)) && (
+          <div className="mt-4 grid grid-cols-1 gap-2.5">
+            {options.map((o) => {
+              const mine = myChosen.includes(o.key);
+              const correct = o.isCorrect === true;
+              const wrongMine = revealing && mine && o.isCorrect === false;
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  aria-pressed={mine}
+                  disabled={
+                    !isSingleChoice || answered || s.status !== "question_open" || answerMut.isPending
                   }
+                  onClick={() => {
+                    if (answered || !isSingleChoice) return;
+                    setPending(o.key);
+                    answerMut.mutate({ answer: o.key });
+                  }}
+                  className={cn(
+                    "flex min-h-[60px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
+                    "text-[15px] font-bold active:scale-[0.99] disabled:cursor-default",
+                    revealing && correct && "border-quiz-correct bg-quiz-correct/25 text-emerald-50",
+                    wrongMine && "border-quiz-wrong bg-quiz-wrong/25 text-rose-50",
+                    !revealing && mine && "border-quiz-accent bg-quiz-accent/30",
+                    !revealing && !mine && "border-white/12 bg-white/8",
+                    revealing && !correct && !wrongMine && "border-white/10 bg-white/5 text-quiz-arena-muted",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 break-words">{o.text}</span>
+                  {revealing && correct && <Check className="h-5 w-5 shrink-0 text-emerald-300" />}
+                  {wrongMine && <X className="h-5 w-5 shrink-0 text-rose-300" />}
+                  {!revealing && mine && <Check className="h-5 w-5 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Typed and multi-select answers, while the question is in play. */}
+        {q && !isSingleChoice && !revealing && (
+          <div className="mt-4">
+            <QuizAnswerInput
+              question={{
+                id: q.id,
+                question_type: q.question_type,
+                prompt: q.question,
+                points: q.points,
+                answer_unit: q.answer_unit,
+                options: q.options.map((o, i) => ({
+                  id: o.id,
+                  text: o.text,
+                  order_index: i,
+                })),
+              }}
+              value={answered ? currentAnswerValue(myChosen, qType) : draft}
+              onChange={setDraft}
+              disabled={answered || s.status !== "question_open" || answerMut.isPending}
+            />
+            {!answered && s.status === "question_open" && (
+              <Button
+                className="mt-3 h-12 min-h-[48px] w-full rounded-full bg-gradient-to-r from-quiz-accent-pink to-quiz-accent text-[15px] font-extrabold text-white disabled:opacity-50"
+                disabled={!hasAnswer(draft) || answerMut.isPending}
+                onClick={() => {
+                  if (answered || !hasAnswer(draft)) return;
+                  setPending(draft);
+                  answerMut.mutate({ answer: draft });
                 }}
-                className={cn(
-                  "flex min-h-[60px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition",
-                  "text-[15px] font-bold active:scale-[0.99] disabled:cursor-default",
-                  revealing && correct && "border-quiz-correct bg-quiz-correct/25 text-emerald-50",
-                  wrongMine && "border-quiz-wrong bg-quiz-wrong/25 text-rose-50",
-                  !revealing && mine && "border-quiz-accent bg-quiz-accent/30",
-                  !revealing && !mine && "border-white/12 bg-white/8",
-                  revealing && !correct && !wrongMine && "border-white/10 bg-white/5 text-quiz-arena-muted",
-                )}
               >
-                <span className="min-w-0 flex-1 break-words">{o.text}</span>
-                {revealing && correct && <Check className="h-5 w-5 shrink-0 text-emerald-300" />}
-                {wrongMine && <X className="h-5 w-5 shrink-0 text-rose-300" />}
-                {!revealing && mine && <Check className="h-5 w-5 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
+                {answerMut.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Lock in answer"
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Reveal for a typed question: there are no options to colour, so the
+            student is shown what they wrote next to what was accepted. */}
+        {q && revealing && options.length === 0 && (
+          <div className="mt-4 grid gap-2.5">
+            <ArenaPanel
+              className={cn(
+                iWasCorrect === true && "border-quiz-correct/40 bg-quiz-correct/15",
+                iWasCorrect === false && "border-quiz-wrong/40 bg-quiz-wrong/12",
+              )}
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+                Your answer
+              </p>
+              <p className="mt-1 break-words text-[16px] font-bold">
+                {myAnswer?.answer_text?.trim() || "No answer"}
+                {myAnswer?.answer_text && q.answer_unit ? ` ${q.answer_unit}` : ""}
+              </p>
+            </ArenaPanel>
+            {(q.accepted_answers?.length || q.numeric_answer != null) && (
+              <ArenaPanel className="border-quiz-correct/40 bg-quiz-correct/15">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-quiz-arena-muted">
+                  {q.accepted_answers && q.accepted_answers.length > 1
+                    ? "Accepted answers"
+                    : "Correct answer"}
+                </p>
+                <p className="mt-1 break-words text-[16px] font-bold text-emerald-100">
+                  {q.accepted_answers?.length
+                    ? q.accepted_answers.join(", ")
+                    : `${q.numeric_answer}${q.answer_unit ? ` ${q.answer_unit}` : ""}`}
+                </p>
+              </ArenaPanel>
+            )}
+          </div>
+        )}
 
         {/* Waiting / explanation */}
         {!revealing && answered && (
@@ -447,6 +556,14 @@ export function LiveQuizPlay() {
       </div>
     </QuizArenaShell>
   );
+}
+
+/**
+ * The value to show in a locked control: the chosen list for a multiple
+ * select, the single stored response for everything else.
+ */
+function currentAnswerValue(chosen: string[], type: string | undefined): AnswerValue {
+  return type === "multiple_select" ? chosen : (chosen[0] ?? "");
 }
 
 function Stat({ label, value, art }: { label: string; value: string; art: string }) {

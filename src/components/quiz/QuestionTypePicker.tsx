@@ -4,6 +4,10 @@
  * Every type listed here is fully supported end to end: it saves, reloads,
  * previews, publishes, is answered by a student and is graded server-side.
  * Nothing is listed that the engine cannot actually run.
+ *
+ * The four types Phase 5 added are behind the centre's `expandedQuestionTypes`
+ * flag, so a centre that has not been enrolled in them is offered the classic
+ * two rather than a picker full of choices its tutors were not trained on.
  */
 import { ChevronRight } from "lucide-react";
 import {
@@ -11,7 +15,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { QuestionType } from "@/lib/quizzes";
-import { QUESTION_TYPES } from "@/lib/questionTypes";
+import { questionTypesFor } from "@/lib/questionTypes";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 
 export function QuestionTypePicker({
   open,
@@ -22,6 +27,11 @@ export function QuestionTypePicker({
   onOpenChange: (open: boolean) => void;
   onPick: (type: QuestionType) => void;
 }) {
+  // Authoring gate only. A quiz that already contains one of the expanded types
+  // keeps working and keeps grading whatever this says — turning the flag off
+  // must not strand a tutor's existing content.
+  const types = questionTypesFor(useFeatureEnabled("expandedQuestionTypes"));
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -33,7 +43,7 @@ export function QuestionTypePicker({
           <SheetDescription className="text-[13px]">Choose a question type</SheetDescription>
         </SheetHeader>
         <ul className="mt-3 space-y-2">
-          {QUESTION_TYPES.map((t) => {
+          {types.map((t) => {
             const Icon = t.icon;
             return (
               <li key={t.value}>

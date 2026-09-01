@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,10 @@ import { MaintenanceGate } from "@/components/admin/MaintenanceGate";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { FeatureRoute } from "@/components/common/FeatureRoute";
 import { ScrollRestoration } from "@/lib/scrollRestoration";
+import { AppErrorBoundary } from "@/components/common/AppErrorBoundary";
+// Every route is code-split. `lazyWithRetry` is React.lazy plus a one-shot
+// reload when a chunk 404s, which is what a tab left open across a deploy sees.
+import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 
 // Layouts (kept eager – small, used on every page)
@@ -166,6 +170,10 @@ const App = () => (
         <MaintenanceGate>
         <BrowserRouter>
           <ScrollRestoration />
+          {/* Inside the router, so the reload button lands the user back where
+              they were, and outside Suspense, so a chunk that fails on its
+              SECOND attempt shows a message instead of a blank page. */}
+          <AppErrorBoundary>
           <Suspense fallback={<PageLoader />}>
 
           <Routes>
@@ -354,6 +362,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </AppErrorBoundary>
         </BrowserRouter>
         </MaintenanceGate>
       </TooltipProvider>
