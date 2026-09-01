@@ -1284,6 +1284,237 @@ export type Database = {
           },
         ]
       }
+      live_quiz_answers: {
+        Row: {
+          answer_text: string | null
+          answered_at: string
+          id: string
+          is_correct: boolean
+          participant_id: string
+          points_awarded: number
+          question_id: string
+          question_index: number
+          response_time_ms: number
+          selected_option_id: string | null
+          session_id: string
+        }
+        Insert: {
+          answer_text?: string | null
+          answered_at?: string
+          id?: string
+          is_correct: boolean
+          participant_id: string
+          points_awarded?: number
+          question_id: string
+          question_index: number
+          response_time_ms?: number
+          selected_option_id?: string | null
+          session_id: string
+        }
+        Update: {
+          answer_text?: string | null
+          answered_at?: string
+          id?: string
+          is_correct?: boolean
+          participant_id?: string
+          points_awarded?: number
+          question_id?: string
+          question_index?: number
+          response_time_ms?: number
+          selected_option_id?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_answers_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_answers_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_quiz_participants: {
+        Row: {
+          avatar_url: string | null
+          best_streak: number
+          center_id: string
+          correct_count: number
+          display_name: string
+          id: string
+          joined_at: string
+          last_seen_at: string
+          score: number
+          session_id: string
+          status: string
+          streak: number
+          total_time_ms: number
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          best_streak?: number
+          center_id: string
+          correct_count?: number
+          display_name: string
+          id?: string
+          joined_at?: string
+          last_seen_at?: string
+          score?: number
+          session_id: string
+          status?: string
+          streak?: number
+          total_time_ms?: number
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          best_streak?: number
+          center_id?: string
+          correct_count?: number
+          display_name?: string
+          id?: string
+          joined_at?: string
+          last_seen_at?: string
+          score?: number
+          session_id?: string
+          status?: string
+          streak?: number
+          total_time_ms?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_participants_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_quiz_sessions: {
+        Row: {
+          answered_count: number
+          center_id: string
+          class_id: string
+          completed_at: string | null
+          created_at: string
+          current_question_index: number
+          expires_at: string | null
+          game_code: string
+          host_user_id: string
+          id: string
+          max_players: number
+          participant_count: number
+          question_ends_at: string | null
+          question_ids: string[]
+          question_started_at: string | null
+          quiz_id: string
+          seconds_per_question: number
+          show_player_names: boolean
+          started_at: string | null
+          state_revision: number
+          status: Database["public"]["Enums"]["live_quiz_status"]
+        }
+        Insert: {
+          answered_count?: number
+          center_id: string
+          class_id: string
+          completed_at?: string | null
+          created_at?: string
+          current_question_index?: number
+          expires_at?: string | null
+          game_code: string
+          host_user_id: string
+          id?: string
+          max_players?: number
+          participant_count?: number
+          question_ends_at?: string | null
+          question_ids?: string[]
+          question_started_at?: string | null
+          quiz_id: string
+          seconds_per_question?: number
+          show_player_names?: boolean
+          started_at?: string | null
+          state_revision?: number
+          status?: Database["public"]["Enums"]["live_quiz_status"]
+        }
+        Update: {
+          answered_count?: number
+          center_id?: string
+          class_id?: string
+          completed_at?: string | null
+          created_at?: string
+          current_question_index?: number
+          expires_at?: string | null
+          game_code?: string
+          host_user_id?: string
+          id?: string
+          max_players?: number
+          participant_count?: number
+          question_ends_at?: string | null
+          question_ids?: string[]
+          question_started_at?: string | null
+          quiz_id?: string
+          seconds_per_question?: number
+          show_player_names?: boolean
+          started_at?: string | null
+          state_revision?: number
+          status?: Database["public"]["Enums"]["live_quiz_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_quiz_sessions_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_sessions_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_quiz_sessions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
@@ -2760,6 +2991,7 @@ export type Database = {
         Args: { _center_id: string }
         Returns: boolean
       }
+      _can_host_live_quiz: { Args: { _session_id: string }; Returns: boolean }
       _ccf_depth: { Args: { _folder_id: string }; Returns: number }
       _ccf_is_descendant: {
         Args: { _ancestor: string; _candidate: string }
@@ -2821,12 +3053,29 @@ export type Database = {
         }
         Returns: Json
       }
+      _is_live_quiz_participant: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
+      _live_quiz_points: {
+        Args: {
+          _answered_at: string
+          _base_points: number
+          _ends_at: string
+          _started_at: string
+        }
+        Returns: number
+      }
       _quiz_attempt_deadline: {
         Args: {
           _att: Database["public"]["Tables"]["quiz_attempts"]["Row"]
           _q: Database["public"]["Tables"]["quizzes"]["Row"]
         }
         Returns: string
+      }
+      _resync_live_quiz_counts: {
+        Args: { _session_id: string }
+        Returns: undefined
       }
       admin_clear_student_profile: {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
@@ -2844,6 +3093,14 @@ export type Database = {
       admin_delete_class: { Args: { p_class_id: string }; Returns: Json }
       admin_delete_subject: { Args: { p_subject_id: string }; Returns: Json }
       admin_delete_user_account: { Args: { _target: string }; Returns: Json }
+      advance_live_quiz_session: {
+        Args: {
+          _action: string
+          _expected_revision?: number
+          _session_id: string
+        }
+        Returns: Json
+      }
       assign_tutor_role: { Args: { _target_user: string }; Returns: Json }
       auth_user_exists: { Args: { _email: string }; Returns: boolean }
       bulk_enroll_students: {
@@ -2891,6 +3148,16 @@ export type Database = {
           token: string
         }[]
       }
+      create_live_quiz_session: {
+        Args: {
+          _max_players?: number
+          _quiz_id: string
+          _randomize?: boolean
+          _seconds_per_question?: number
+          _show_player_names?: boolean
+        }
+        Returns: Json
+      }
       delete_class_about_section: {
         Args: { p_section_id: string }
         Returns: boolean
@@ -2915,6 +3182,8 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_stale_live_quiz_sessions: { Args: never; Returns: number }
+      find_my_live_quiz_session: { Args: never; Returns: Json }
       get_class_delete_impact: { Args: { p_class_id: string }; Returns: Json }
       get_flashcard_deck_for_manager: {
         Args: { _deck_id: string }
@@ -2940,6 +3209,7 @@ export type Database = {
           subdomain_slug: string
         }[]
       }
+      get_live_quiz_snapshot: { Args: { _session_id: string }; Returns: Json }
       get_profile_id: { Args: never; Returns: string }
       get_public_profiles: {
         Args: { _user_ids: string[] }
@@ -3036,6 +3306,11 @@ export type Database = {
       }
       is_superadmin: { Args: never; Returns: boolean }
       is_tutor_of_class: { Args: { _class_id: string }; Returns: boolean }
+      join_live_quiz_session: { Args: { _game_code: string }; Returns: Json }
+      leave_live_quiz_session: {
+        Args: { _session_id: string }
+        Returns: undefined
+      }
       list_assignable_tutors: {
         Args: { requested_center_id: string }
         Returns: {
@@ -3190,6 +3465,10 @@ export type Database = {
         Returns: boolean
       }
       release_quiz_results: { Args: { _quiz_id: string }; Returns: string }
+      remove_live_quiz_participant: {
+        Args: { _participant_id: string; _session_id: string }
+        Returns: Json
+      }
       reorder_class_about_sections: {
         Args: { p_class_id: string; p_section_ids: string[] }
         Returns: boolean
@@ -3316,6 +3595,15 @@ export type Database = {
         Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
+      submit_live_quiz_answer: {
+        Args: {
+          _answer_text?: string
+          _option_id?: string
+          _question_index: number
+          _session_id: string
+        }
+        Returns: Json
+      }
       submit_quiz_attempt: {
         Args: { _answers?: Json; _attempt_id: string }
         Returns: Json
@@ -3331,6 +3619,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student" | "tutor" | "superadmin"
+      live_quiz_status:
+        | "lobby"
+        | "question_open"
+        | "question_locked"
+        | "answer_reveal"
+        | "leaderboard"
+        | "completed"
+        | "cancelled"
       material_access_level: "exclusive" | "demo"
       video_source_type: "upload" | "youtube" | "zoom"
     }
@@ -3461,6 +3757,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student", "tutor", "superadmin"],
+      live_quiz_status: [
+        "lobby",
+        "question_open",
+        "question_locked",
+        "answer_reveal",
+        "leaderboard",
+        "completed",
+        "cancelled",
+      ],
       material_access_level: ["exclusive", "demo"],
       video_source_type: ["upload", "youtube", "zoom"],
     },
