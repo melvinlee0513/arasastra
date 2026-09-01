@@ -3917,6 +3917,7 @@ export type Database = {
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
       submit_live_quiz_answer: {
         Args: {
+          _answer?: Json
           _answer_text?: string
           _option_id?: string
           _question_index: number
