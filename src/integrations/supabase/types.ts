@@ -1978,6 +1978,9 @@ export type Database = {
       }
       question_bank_questions: {
         Row: {
+          accepted_answers: string[] | null
+          answer_match_mode: string
+          answer_unit: string | null
           archived_at: string | null
           center_id: string
           collection_id: string | null
@@ -1985,6 +1988,8 @@ export type Database = {
           created_by: string | null
           explanation: string | null
           id: string
+          numeric_answer: number | null
+          numeric_tolerance: number | null
           points: number
           question: string
           question_type: string
@@ -1993,6 +1998,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_answers?: string[] | null
+          answer_match_mode?: string
+          answer_unit?: string | null
           archived_at?: string | null
           center_id: string
           collection_id?: string | null
@@ -2000,6 +2008,8 @@ export type Database = {
           created_by?: string | null
           explanation?: string | null
           id?: string
+          numeric_answer?: number | null
+          numeric_tolerance?: number | null
           points?: number
           question: string
           question_type?: string
@@ -2008,6 +2018,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_answers?: string[] | null
+          answer_match_mode?: string
+          answer_unit?: string | null
           archived_at?: string | null
           center_id?: string
           collection_id?: string | null
@@ -2015,6 +2028,8 @@ export type Database = {
           created_by?: string | null
           explanation?: string | null
           id?: string
+          numeric_answer?: number | null
+          numeric_tolerance?: number | null
           points?: number
           question?: string
           question_type?: string
@@ -2163,10 +2178,15 @@ export type Database = {
       }
       quiz_questions: {
         Row: {
+          accepted_answers: string[] | null
+          answer_match_mode: string
+          answer_unit: string | null
           center_id: string | null
           correct_answer: string | null
           explanation: string | null
           id: string
+          numeric_answer: number | null
+          numeric_tolerance: number | null
           options: Json
           order_index: number | null
           points: number
@@ -2178,10 +2198,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_answers?: string[] | null
+          answer_match_mode?: string
+          answer_unit?: string | null
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
           id?: string
+          numeric_answer?: number | null
+          numeric_tolerance?: number | null
           options?: Json
           order_index?: number | null
           points?: number
@@ -2193,10 +2218,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_answers?: string[] | null
+          answer_match_mode?: string
+          answer_unit?: string | null
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
           id?: string
+          numeric_answer?: number | null
+          numeric_tolerance?: number | null
           options?: Json
           order_index?: number | null
           points?: number
@@ -3244,6 +3274,10 @@ export type Database = {
         Returns: number
       }
       _my_question_bank_center: { Args: never; Returns: string }
+      _quiz_answer_is_correct: {
+        Args: { _answer: Json; _question_id: string }
+        Returns: boolean
+      }
       _quiz_attempt_deadline: {
         Args: {
           _att: Database["public"]["Tables"]["quiz_attempts"]["Row"]
@@ -3807,8 +3841,13 @@ export type Database = {
       }
       save_question_bank_question: {
         Args: {
+          _accepted_answers?: string[]
+          _answer_match_mode?: string
+          _answer_unit?: string
           _collection_id: string
           _explanation: string
+          _numeric_answer?: number
+          _numeric_tolerance?: number
           _options: Json
           _points: number
           _question: string
