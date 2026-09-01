@@ -1,7 +1,7 @@
 -- Two centres, so every cross-tenant assertion is against a real second tenant.
 BEGIN;
 
-INSERT INTO public.tuition_centers (id, name, slug) VALUES
+INSERT INTO public.tuition_centers (id, name, subdomain_slug) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'Centre A', 'centre-a'),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'Centre B', 'centre-b');
 

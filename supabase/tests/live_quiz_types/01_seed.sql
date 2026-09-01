@@ -7,7 +7,7 @@ BEGIN;
 -- tenancy rather than the flag: a foreign tutor with the feature fully enabled
 -- must still be refused. Enablement is data on the centre row — there is no
 -- hardcoded id or slug anywhere in the product.
-INSERT INTO public.tuition_centers (id, name, slug, feature_flags) VALUES
+INSERT INTO public.tuition_centers (id, name, subdomain_slug, feature_flags) VALUES
   ('aaaaaaaa-0000-0000-0000-000000000001', 'Centre A', 'centre-a',
    '{"liveQuizMultiplayer": true, "expandedQuestionTypes": true}'::jsonb),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'Centre B', 'centre-b',

@@ -18,12 +18,14 @@ GRANT USAGE ON SCHEMA auth TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
 
 CREATE TABLE IF NOT EXISTS public.tuition_centers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, slug text UNIQUE);
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, subdomain_slug text UNIQUE);
 
+-- profiles.center_id is where this app records a user's centre. It is what
+-- get_user_center() and _admin_can_manage_center() both read.
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE, full_name text NOT NULL,
-  display_name text, avatar_url text);
+  display_name text, avatar_url text, center_id uuid);
 
 CREATE TABLE IF NOT EXISTS public.subjects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,8 +47,13 @@ CREATE TABLE IF NOT EXISTS public.class_enrollments (
   student_user_id uuid NOT NULL, status text NOT NULL DEFAULT 'active',
   PRIMARY KEY (class_id, student_user_id));
 
+-- NO center_id. Production's user_roles is (id, user_id, role, created_at) and
+-- nothing else — confirmed against src/integrations/supabase/types.ts, which is
+-- generated from the live database. An earlier version of this fixture invented
+-- a center_id column here, which is why _my_question_bank_center passed every
+-- test while being unable to run at all in production.
 CREATE TABLE IF NOT EXISTS public.user_roles (
-  user_id uuid NOT NULL, role text NOT NULL, center_id uuid,
+  user_id uuid NOT NULL, role text NOT NULL,
   PRIMARY KEY (user_id, role));
 
 CREATE TABLE IF NOT EXISTS public.quizzes (
@@ -118,11 +125,39 @@ CREATE OR REPLACE FUNCTION public.has_role(_user uuid, _role text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user AND role=_role) $$;
 
-CREATE OR REPLACE FUNCTION public._admin_can_manage_center(_center uuid)
+-- 20260706172344 — the canonical centre resolver. profiles.center_id.
+CREATE OR REPLACE FUNCTION public.get_user_center(_user_id uuid DEFAULT auth.uid())
+RETURNS uuid LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE resolved_center_id uuid;
+BEGIN
+  SELECT center_id FROM public.profiles WHERE user_id = _user_id
+   LIMIT 1 INTO resolved_center_id;
+  RETURN resolved_center_id;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.user_roles r
-     WHERE r.user_id = auth.uid() AND r.role IN ('admin','superadmin')
-       AND (r.center_id IS NULL OR r.center_id = _center)) $$;
+  SELECT EXISTS (SELECT 1 FROM public.user_roles
+                  WHERE user_id = auth.uid() AND role IN ('admin','superadmin')) $$;
+
+CREATE OR REPLACE FUNCTION public.is_superadmin()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM public.user_roles
+                  WHERE user_id = auth.uid() AND role = 'superadmin') $$;
+
+-- 20260717111646, verbatim. Superadmin manages any centre; an admin manages
+-- only the centre on their own profile.
+CREATE OR REPLACE FUNCTION public._admin_can_manage_center(_center_id uuid)
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_caller_center uuid;
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN false; END IF;
+  IF public.is_superadmin() THEN RETURN true; END IF;
+  IF NOT public.is_admin() THEN RETURN false; END IF;
+  SELECT center_id INTO v_caller_center FROM public.profiles
+   WHERE user_id = auth.uid() LIMIT 1;
+  RETURN v_caller_center IS NOT NULL AND v_caller_center = _center_id;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.is_tutor_of_class(_class_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -146,12 +181,12 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 
 CREATE OR REPLACE FUNCTION public.same_center_as_current_user(_center uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.user_roles r
-     WHERE r.user_id = auth.uid() AND (r.center_id IS NULL OR r.center_id = _center)) $$;
+  SELECT public.get_user_center() IS NOT DISTINCT FROM _center $$;
 
 GRANT EXECUTE ON FUNCTION public.can_manage_class(uuid), public.is_enrolled_in_class(uuid),
   public.is_tutor_of_class(uuid), public._admin_can_manage_center(uuid),
-  public.has_role(uuid,text), public.same_center_as_current_user(uuid)
+  public.has_role(uuid,text), public.same_center_as_current_user(uuid),
+  public.get_user_center(uuid), public.is_admin(), public.is_superadmin()
   TO anon, authenticated;
 
 -- Production grants: authenticated gets DML on public tables, RLS decides rows.

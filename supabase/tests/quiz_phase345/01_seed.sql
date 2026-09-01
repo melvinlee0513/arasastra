@@ -5,7 +5,7 @@ BEGIN;
 -- Centre A is the pilot centre: the Phase 1-5 flags are ON for it and unset
 -- for Centre B, which is what enablement actually looks like — one UPDATE
 -- against one centre's row, no hardcoded id or slug anywhere in code.
-INSERT INTO public.tuition_centers (id, name, slug, feature_flags) VALUES
+INSERT INTO public.tuition_centers (id, name, subdomain_slug, feature_flags) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'Centre A', 'centre-a',
    '{"liveQuizMultiplayer": true, "quizAnalytics": true,
      "questionBank": true, "expandedQuestionTypes": true}'::jsonb),
@@ -24,21 +24,32 @@ INSERT INTO auth.users (id) VALUES
   ('22222222-0000-0000-0000-000000000005'), -- student 4 (never attempted)
   ('33333333-0000-0000-0000-000000000006'), -- tutor B (foreign)
   ('44444444-0000-0000-0000-000000000007'), -- admin A
-  ('55555555-0000-0000-0000-000000000008'); -- admin B (foreign)
+  ('55555555-0000-0000-0000-000000000008'), -- admin B (foreign)
+  ('66666666-0000-0000-0000-000000000009'), -- superadmin, centre A on profile
+  ('77777777-0000-0000-0000-00000000000a'); -- superadmin, NO centre anywhere
 
-INSERT INTO public.profiles (user_id, full_name, display_name) VALUES
-  ('11111111-0000-0000-0000-000000000001', 'Tutor Aisyah', NULL),
-  ('22222222-0000-0000-0000-000000000002', 'Aisyah Ahmad', NULL),
-  ('22222222-0000-0000-0000-000000000003', 'Marcus Tan', NULL),
-  ('22222222-0000-0000-0000-000000000004', 'Melvin Lee', NULL),
-  ('22222222-0000-0000-0000-000000000005', 'Sarah Lim', NULL),
-  ('33333333-0000-0000-0000-000000000006', 'Tutor Foreign', NULL),
-  ('44444444-0000-0000-0000-000000000007', 'Admin A', NULL),
-  ('55555555-0000-0000-0000-000000000008', 'Admin B', NULL);
+-- Every user's centre lives on their profile. This is the canonical tenant
+-- membership the whole app reads, and the only place the Question Bank should
+-- resolve an admin's centre from.
+INSERT INTO public.profiles (user_id, full_name, display_name, center_id) VALUES
+  ('11111111-0000-0000-0000-000000000001', 'Tutor Aisyah',   NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('22222222-0000-0000-0000-000000000002', 'Aisyah Ahmad',   NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('22222222-0000-0000-0000-000000000003', 'Marcus Tan',     NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('22222222-0000-0000-0000-000000000004', 'Melvin Lee',     NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('22222222-0000-0000-0000-000000000005', 'Sarah Lim',      NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('33333333-0000-0000-0000-000000000006', 'Tutor Foreign',  NULL, 'bbbbbbbb-0000-0000-0000-00000000000b'),
+  ('44444444-0000-0000-0000-000000000007', 'Admin A',        NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('55555555-0000-0000-0000-000000000008', 'Admin B',        NULL, 'bbbbbbbb-0000-0000-0000-00000000000b'),
+  ('66666666-0000-0000-0000-000000000009', 'Superadmin HQ',  NULL, 'aaaaaaaa-0000-0000-0000-00000000000a'),
+  ('77777777-0000-0000-0000-00000000000a', 'Superadmin Roam', NULL, NULL);
 
-INSERT INTO public.user_roles (user_id, role, center_id) VALUES
-  ('44444444-0000-0000-0000-000000000007', 'admin', 'aaaaaaaa-0000-0000-0000-00000000000a'),
-  ('55555555-0000-0000-0000-000000000008', 'admin', 'bbbbbbbb-0000-0000-0000-00000000000b');
+-- Roles carry NO centre — production's user_roles has no such column. An
+-- admin's centre comes from their profile, via get_user_center().
+INSERT INTO public.user_roles (user_id, role) VALUES
+  ('44444444-0000-0000-0000-000000000007', 'admin'),
+  ('55555555-0000-0000-0000-000000000008', 'admin'),
+  ('66666666-0000-0000-0000-000000000009', 'superadmin'),
+  ('77777777-0000-0000-0000-00000000000a', 'superadmin');
 
 INSERT INTO public.subjects (id, center_id, name) VALUES
   ('5b1e0000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-00000000000a', 'Biology'),

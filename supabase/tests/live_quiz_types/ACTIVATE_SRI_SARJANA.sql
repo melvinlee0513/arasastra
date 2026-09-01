@@ -9,6 +9,9 @@
 --
 -- HOW TO USE
 --   1. Set v_slug below, on the line marked  <<< SET THE CENTRE SLUG HERE.
+--      The column is `subdomain_slug`. Production's tuition_centers has NO
+--      column named `slug` — an earlier draft assumed it did and would have
+--      failed with "column slug does not exist".
 --   2. Paste the whole file into the Supabase SQL Editor and run it.
 --   3. Read the messages. It either enables and prints the resulting flags, or
 --      it raises with the reason and enables NOTHING.
@@ -42,14 +45,16 @@ DECLARE
   v_problems text[] := ARRAY[]::text[];
   t          text;
 BEGIN
-  -- ── The centre, by slug. Never a hardcoded id. ──────────────────────────
+  -- ── The centre, by subdomain_slug. Never a hardcoded id. ────────────────
   SELECT id, name, COALESCE(feature_flags, '{}'::jsonb)
     INTO v_centre, v_name, v_before
     FROM public.tuition_centers
-   WHERE slug = v_slug;
+   WHERE subdomain_slug = v_slug;
 
   IF v_centre IS NULL THEN
-    RAISE EXCEPTION 'No tuition_centers row with slug %. Run: SELECT slug FROM public.tuition_centers ORDER BY slug;', v_slug;
+    RAISE EXCEPTION
+      'No tuition_centers row with subdomain_slug %. Run: '
+      'SELECT id, name, subdomain_slug FROM public.tuition_centers ORDER BY name;', v_slug;
   END IF;
 
   RAISE NOTICE '── Centre ────────────────────────────────────────────';
@@ -58,15 +63,12 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE '── Verification ──────────────────────────────────────';
 
-  -- ── 1. Every migration the three features depend on ─────────────────────
-  FOREACH t IN ARRAY ARRAY['20260901000000','20260902000000','20260903000000',
-                           '20260905000000','20260905000100',
-                           '20260906000000','20260906000100'] LOOP
-    IF NOT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations
-                    WHERE version = t) THEN
-      v_problems := v_problems || ('migration ' || t || ' has not been applied');
-    END IF;
-  END LOOP;
+  -- ── 1. The migrations, checked by EFFECT rather than by version string ──
+  -- Lovable re-applied the ten Phase 1-5 migrations under its own timestamps
+  -- (20260901091617 … 20260901095812), so asserting on this repository's
+  -- filenames would report a false failure on a correctly migrated database.
+  -- Every check below therefore asks whether the schema has the property the
+  -- migration establishes.
 
   -- ── 2. The CHECK that blocked every Phase 5 type ────────────────────────
   SELECT pg_get_constraintdef(oid) INTO v_def
@@ -75,13 +77,12 @@ BEGIN
      AND conrelid = 'public.quiz_questions'::regclass;
 
   IF v_def IS NULL THEN
-    v_problems := v_problems || 'quiz_questions_type_ck is missing entirely';
+    v_problems := v_problems || ARRAY['quiz_questions_type_ck is missing entirely'];
   ELSE
     FOREACH t IN ARRAY ARRAY['multiple_select','short_answer','numeric','fill_blank'] LOOP
       IF position(t in v_def) = 0 THEN
-        v_problems := v_problems
-          || ('quiz_questions_type_ck still rejects ' || t
-              || ' — 20260906000000 has not taken effect');
+        v_problems := v_problems || ARRAY[('quiz_questions_type_ck still rejects ' || t
+              || ' — 20260906000000 has not taken effect')];
       END IF;
     END LOOP;
   END IF;
@@ -94,7 +95,7 @@ BEGIN
      AND table_name IN ('quiz_questions','quiz_options')
      AND grantee IN ('anon','authenticated');
   IF v_bad IS NOT NULL THEN
-    v_problems := v_problems || ('table grants survive on the answer-key tables: ' || v_bad);
+    v_problems := v_problems || ARRAY[('table grants survive on the answer-key tables: ' || v_bad)];
   END IF;
 
   SELECT string_agg(DISTINCT grantee || ' -> ' || table_name || '.' || column_name, ', ')
@@ -104,7 +105,7 @@ BEGIN
      AND table_name IN ('quiz_questions','quiz_options')
      AND grantee IN ('anon','authenticated');
   IF v_bad IS NOT NULL THEN
-    v_problems := v_problems || ('column grants survive on the answer-key tables: ' || v_bad);
+    v_problems := v_problems || ARRAY[('column grants survive on the answer-key tables: ' || v_bad)];
   END IF;
 
   -- ── 4. The RPCs each feature needs, with the right posture ──────────────
@@ -119,7 +120,7 @@ BEGIN
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.proname = t;
     IF v_n = 0 THEN
-      v_problems := v_problems || ('RPC missing: ' || t);
+      v_problems := v_problems || ARRAY[('RPC missing: ' || t)];
     END IF;
   END LOOP;
 
@@ -136,8 +137,7 @@ BEGIN
               AND p.proconfig::text LIKE '%search_path%'
               AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'));
   IF v_bad IS NOT NULL THEN
-    v_problems := v_problems
-      || ('these RPCs are not definer / pinned / anon-blocked: ' || v_bad);
+    v_problems := v_problems || ARRAY[('these RPCs are not definer / pinned / anon-blocked: ' || v_bad)];
   END IF;
 
   -- ── 5. Question Bank tables exist with RLS on ───────────────────────────
@@ -146,7 +146,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_class
                     WHERE relnamespace = 'public'::regnamespace
                       AND relname = t AND relrowsecurity) THEN
-      v_problems := v_problems || ('missing, or RLS is OFF on, public.' || t);
+      v_problems := v_problems || ARRAY[('missing, or RLS is OFF on, public.' || t)];
     END IF;
   END LOOP;
 
@@ -158,8 +158,38 @@ BEGIN
      AND column_name IN ('accepted_answers','answer_match_mode','numeric_answer',
                          'numeric_tolerance','answer_unit');
   IF v_n <> 10 THEN
-    v_problems := v_problems
-      || ('expected 10 Phase 5 columns across the two question tables, found ' || v_n);
+    v_problems := v_problems || ARRAY[('expected 10 Phase 5 columns across the two question tables, found ' || v_n)];
+  END IF;
+
+  -- ── 6b. Question Bank centre resolution ─────────────────────────────────
+  -- _my_question_bank_center() read user_roles.center_id, a column production
+  -- does not have, and it is the FIRST statement in the body — so every bank
+  -- RPC raised, for every role. 20260907000000 moves it to the canonical
+  -- get_user_center(). Without that, enabling questionBank puts a button on
+  -- screen that fails the moment anyone clicks it.
+  SELECT p.prosrc INTO v_bad
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = '_my_question_bank_center';
+
+  IF v_bad IS NULL THEN
+    v_problems := v_problems || ARRAY['_my_question_bank_center is missing'];
+  ELSE
+    IF v_bad LIKE '%user_roles%' THEN
+      v_problems := v_problems || ARRAY[
+        '_my_question_bank_center still reads user_roles.center_id (no such column) '
+        '- apply 20260907000000_question_bank_center_resolution'];
+    END IF;
+    IF v_bad NOT LIKE '%get_user_center%' THEN
+      v_problems := v_problems || ARRAY[
+        '_my_question_bank_center does not use the canonical get_user_center()'];
+    END IF;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema='public' AND table_name='profiles'
+                    AND column_name='center_id') THEN
+    v_problems := v_problems || ARRAY[
+      'profiles.center_id is missing - get_user_center() cannot resolve a centre'];
   END IF;
 
   -- ── 7. Exactly one submit_live_quiz_answer ──────────────────────────────
@@ -186,7 +216,7 @@ BEGIN
       array_length(v_problems, 1);
   END IF;
 
-  RAISE NOTICE '  PASS  all migrations applied';
+  RAISE NOTICE '  PASS  Question Bank resolves its centre canonically';
   RAISE NOTICE '  PASS  quiz_questions_type_ck admits every Phase 5 type';
   RAISE NOTICE '  PASS  answer keys unreachable directly (table and column)';
   RAISE NOTICE '  PASS  every required RPC present, definer, pinned, anon-blocked';
@@ -223,7 +253,7 @@ END $$;
 -- Read the result back as a row, so it lands in the SQL Editor's result grid
 -- and can be pasted into a report. Joined through the temp table rather than
 -- repeating the slug literal, which would be a second place to forget to edit.
-SELECT c.slug, c.name, c.feature_flags
+SELECT c.subdomain_slug, c.name, c.feature_flags
   FROM public.tuition_centers c
   JOIN activation_result r ON r.centre_id = c.id;
 
@@ -236,17 +266,17 @@ COMMIT;
 --   UPDATE public.tuition_centers
 --      SET feature_flags = COALESCE(feature_flags,'{}'::jsonb)
 --                       || '{"quizAnalytics": true}'::jsonb
---    WHERE slug = 'srisarjana' RETURNING slug, feature_flags;
+--    WHERE subdomain_slug = 'srisarjana' RETURNING subdomain_slug, feature_flags;
 --
 --   UPDATE public.tuition_centers
 --      SET feature_flags = COALESCE(feature_flags,'{}'::jsonb)
 --                       || '{"questionBank": true}'::jsonb
---    WHERE slug = 'srisarjana' RETURNING slug, feature_flags;
+--    WHERE subdomain_slug = 'srisarjana' RETURNING subdomain_slug, feature_flags;
 --
 --   UPDATE public.tuition_centers
 --      SET feature_flags = COALESCE(feature_flags,'{}'::jsonb)
 --                       || '{"expandedQuestionTypes": true}'::jsonb
---    WHERE slug = 'srisarjana' RETURNING slug, feature_flags;
+--    WHERE subdomain_slug = 'srisarjana' RETURNING subdomain_slug, feature_flags;
 --
 -- To turn any of them back off, the same statement with false. No deploy is
 -- involved; the client and the RPCs read the same row on the next request.

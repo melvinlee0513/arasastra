@@ -348,3 +348,104 @@ BEGIN
        FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname='public' AND p.proname LIKE '%question_bank%'), '');
 END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Z — WHO CAN RESOLVE A QUESTION BANK CENTRE (20260907000000)
+--
+-- _my_question_bank_center() read user_roles.center_id, a column production
+-- does not have. It is the first statement in the body, so plpgsql could not
+-- plan it and EVERY bank RPC raised for EVERY role — the feature was not
+-- partially broken, it was entirely inert. The fixture had invented that
+-- column, which is why 206 assertions passed over a function that could not
+-- run. The fixture now mirrors production, and these pin the role matrix.
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION qa.bank_centre(_uid uuid)
+RETURNS text LANGUAGE plpgsql AS $$
+DECLARE v uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', COALESCE(_uid::text, ''), true);
+  BEGIN
+    v := public._my_question_bank_center();
+    RETURN 'centre:' || v::text;
+  EXCEPTION WHEN OTHERS THEN RETURN 'error:' || SQLERRM;
+  END;
+END $$;
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+  v_b uuid := 'bbbbbbbb-0000-0000-0000-00000000000b';
+BEGIN
+  PERFORM qa.check('Z1 the centre admin resolves their own centre, from profiles',
+    qa.bank_centre('44444444-0000-0000-0000-000000000007') = 'centre:' || v_a,
+    qa.bank_centre('44444444-0000-0000-0000-000000000007'));
+
+  PERFORM qa.check('Z2 the assigned tutor resolves the centre they teach in',
+    qa.bank_centre('11111111-0000-0000-0000-000000000001') = 'centre:' || v_a,
+    qa.bank_centre('11111111-0000-0000-0000-000000000001'));
+
+  -- A student's profile names a centre exactly as a tutor's does, so resolving
+  -- from profiles alone would hand them the bank. The authorisation predicate
+  -- is what stops it.
+  PERFORM qa.check('Z3 a student is DENIED, even though their profile has a centre',
+    qa.bank_centre('22222222-0000-0000-0000-000000000002') LIKE '%no_question_bank_access%',
+    qa.bank_centre('22222222-0000-0000-0000-000000000002'));
+
+  -- A foreign admin is not denied outright: they get their OWN centre, never
+  -- centre A. That is the isolation that matters — the resolver never takes a
+  -- centre from the caller.
+  PERFORM qa.check('Z4 the foreign admin resolves centre B, never centre A',
+    qa.bank_centre('55555555-0000-0000-0000-000000000008') = 'centre:' || v_b,
+    qa.bank_centre('55555555-0000-0000-0000-000000000008'));
+
+  PERFORM qa.check('Z5 the foreign tutor likewise resolves only centre B',
+    qa.bank_centre('33333333-0000-0000-0000-000000000006') = 'centre:' || v_b,
+    qa.bank_centre('33333333-0000-0000-0000-000000000006'));
+
+  PERFORM qa.check('Z6 an anonymous caller is refused before anything is read',
+    qa.bank_centre(NULL) LIKE '%not_authenticated%', qa.bank_centre(NULL));
+
+  -- Existing semantics: _admin_can_manage_center returns true for a superadmin
+  -- against any centre, so one whose profile names a centre gets that centre.
+  PERFORM qa.check('Z7 a superadmin with a centre on their profile gets that centre',
+    qa.bank_centre('66666666-0000-0000-0000-000000000009') = 'centre:' || v_a,
+    qa.bank_centre('66666666-0000-0000-0000-000000000009'));
+
+  -- And one with no centre anywhere is refused rather than guessed at: the
+  -- bank is centre-scoped and there is no basis to pick one.
+  PERFORM qa.check('Z8 a superadmin with no centre is refused, not guessed at',
+    qa.bank_centre('77777777-0000-0000-0000-00000000000a') LIKE '%no_question_bank_access%',
+    qa.bank_centre('77777777-0000-0000-0000-00000000000a'));
+END $$;
+
+-- Z9-Z11: the shape of the fix, not just its behaviour.
+DO $$
+DECLARE v_src text;
+BEGIN
+  SELECT p.prosrc INTO v_src FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname='public' AND p.proname='_my_question_bank_center';
+
+  PERFORM qa.check('Z9 it no longer reads user_roles at all',
+    v_src NOT LIKE '%user_roles%', 'no user_roles reference');
+  PERFORM qa.check('Z10 it uses the canonical get_user_center()',
+    v_src LIKE '%get_user_center%', 'uses get_user_center');
+  PERFORM qa.check('Z11 it is an internal helper — authenticated cannot call it',
+    NOT has_function_privilege('authenticated','public._my_question_bank_center()','EXECUTE'),
+    '');
+END $$;
+
+-- Z12: the flag still gates it, and says so distinctly.
+DO $$
+DECLARE v_a uuid := 'aaaaaaaa-0000-0000-0000-00000000000a';
+BEGIN
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": false}'::jsonb WHERE id = v_a;
+  PERFORM qa.check('Z12 with the flag off the admin is refused, naming the flag',
+    qa.bank_centre('44444444-0000-0000-0000-000000000007') LIKE '%feature_disabled: questionBank%',
+    qa.bank_centre('44444444-0000-0000-0000-000000000007'));
+  UPDATE public.tuition_centers
+     SET feature_flags = feature_flags || '{"questionBank": true}'::jsonb WHERE id = v_a;
+  PERFORM qa.check('Z13 and enabling it restores the admin',
+    qa.bank_centre('44444444-0000-0000-0000-000000000007') = 'centre:' || v_a,
+    qa.bank_centre('44444444-0000-0000-0000-000000000007'));
+END $$;
