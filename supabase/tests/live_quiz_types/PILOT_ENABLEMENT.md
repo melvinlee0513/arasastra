@@ -157,6 +157,18 @@ ROLLBACK;
 If any of those returns rows, stop: the answer key is readable from a browser
 console and no flag should be turned on until it is not.
 
+## The short way
+
+[`ACTIVATE_SRI_SARJANA.sql`](./ACTIVATE_SRI_SARJANA.sql) does everything in this
+section in one transaction: it runs every verification below, and enables
+`quizAnalytics`, `questionBank` and `expandedQuestionTypes` only if all of them
+pass, leaving `liveQuizMultiplayer` explicitly false. If anything fails it names
+each problem and rolls back, changing nothing. Set the slug on the marked line
+and paste it into the SQL Editor.
+
+The rest of this document is the same work done by hand, for when you want to
+see each step.
+
 ## Enabling one centre
 
 Find the centre by its slug — never hardcode the id:

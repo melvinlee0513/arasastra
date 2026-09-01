@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   HelpCircle, Clock, Calendar, ChevronRight, ChevronDown, Lock, Play, RotateCcw,
-  CheckCircle2, EyeOff, RefreshCw, History,
+  CheckCircle2, EyeOff, RefreshCw, History, Radio,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { ClassHubEmptyState, Illustration } from "@/components/class/ClassHubChr
 import { STATE_ART } from "@/lib/classIllustrations";
 
 import { useClassContext } from "@/hooks/useClassContext";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -63,6 +64,9 @@ export function StudentClassQuizzes() {
   const qc = useQueryClient();
 
   const routeValid = !!classId && UUID_RE.test(classId);
+  // /dashboard/quiz/join was routed but nothing linked to it, so a student had
+  // no way to enter a game code without being sent the URL.
+  const liveEnabled = useFeatureEnabled("liveQuizMultiplayer");
 
   const listQ = useQuery({
     queryKey: quizStudentKeys.list(currentTenantId, classId ?? "", user?.id),
@@ -112,6 +116,18 @@ export function StudentClassQuizzes() {
       materialsPath={`/dashboard/classes/${classId}/materials`}
       breadcrumbs={breadcrumbs}
     >
+      {routeValid && !notEnrolled && liveEnabled && (
+        <Button
+          asChild
+          variant="outline"
+          className="mb-3 h-12 min-h-[48px] w-full rounded-full text-[14.5px] font-bold"
+        >
+          <Link to="/dashboard/quiz/join">
+            <Radio className="mr-2 h-4 w-4" aria-hidden="true" />
+            Join a live quiz
+          </Link>
+        </Button>
+      )}
       {!routeValid ? (
         <ClassHubEmptyState
           art={STATE_ART.lock}
