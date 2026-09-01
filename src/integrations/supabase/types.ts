@@ -3073,6 +3073,42 @@ export type Database = {
         }
         Returns: string
       }
+      _quiz_for_analytics: {
+        Args: { _quiz_id: string }
+        Returns: {
+          access_level: Database["public"]["Enums"]["material_access_level"]
+          attempt_limit: number
+          available_from: string | null
+          center_id: string
+          class_id: string | null
+          created_at: string | null
+          created_by: string | null
+          definition_version: number
+          description: string | null
+          due_at: string | null
+          folder_id: string | null
+          id: string
+          instructions: string | null
+          published_at: string | null
+          result_visibility: string
+          results_released_at: string | null
+          shuffle_options: boolean
+          shuffle_questions: boolean
+          sound_theme: string
+          status: string
+          subject_id: string | null
+          time_limit_seconds: number | null
+          title: string
+          total_points: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "quizzes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _resync_live_quiz_counts: {
         Args: { _session_id: string }
         Returns: undefined
@@ -3238,6 +3274,7 @@ export type Database = {
           specialization: string
         }[]
       }
+      get_quiz_analytics_overview: { Args: { _quiz_id: string }; Returns: Json }
       get_quiz_attempt_for_manager: {
         Args: { _attempt_id: string }
         Returns: Json
@@ -3247,11 +3284,17 @@ export type Database = {
         Returns: Json
       }
       get_quiz_for_attempt: { Args: { _attempt_id: string }; Returns: Json }
+      get_quiz_question_analytics: { Args: { _quiz_id: string }; Returns: Json }
+      get_quiz_question_responses: {
+        Args: { _question_id: string; _quiz_id: string }
+        Returns: Json
+      }
       get_quiz_result: { Args: { _attempt_id: string }; Returns: Json }
       get_quiz_results_for_manager: {
         Args: { _quiz_id: string }
         Returns: Json
       }
+      get_quiz_student_analytics: { Args: { _quiz_id: string }; Returns: Json }
       get_signin_redirect_for_email: {
         Args: { _email: string }
         Returns: {
@@ -3271,6 +3314,10 @@ export type Database = {
       get_student_inbox: { Args: { _limit?: number }; Returns: Json }
       get_student_next_classes: {
         Args: { _horizon_days?: number }
+        Returns: Json
+      }
+      get_student_quiz_report: {
+        Args: { _quiz_id: string; _user_id: string }
         Returns: Json
       }
       get_student_timetable: {
@@ -3428,6 +3475,7 @@ export type Database = {
         }
         Returns: number
       }
+      quiz_difficulty_band: { Args: { _accuracy_pct: number }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
