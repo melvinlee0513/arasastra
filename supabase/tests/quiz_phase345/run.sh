@@ -15,7 +15,8 @@ for m in 20260901000000_quiz_analytics 20260902000000_question_bank \
          20260903000000_question_types 20260905000000_answer_key_least_privilege \
          20260905000100_quiz_result_answer_keys \
          20260906000000_widen_question_type_constraint \
-         20260906000100_feature_flag_enforcement; do
+         20260906000100_feature_flag_enforcement \
+         20260907000000_question_bank_center_resolution; do
   if [ -f "$MIG/$m.sql" ]; then
     echo "→ migration $m"
     psql -d "$DB" -v ON_ERROR_STOP=1 -q -f "$MIG/$m.sql" 2>&1 | grep -vi notice || true

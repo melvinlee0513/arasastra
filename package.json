@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "audit:sw": "node scripts/audit-service-worker.mjs"
+    "audit:sw": "node scripts/audit-service-worker.mjs",
+    "audit:routes": "node scripts/audit-route-entrypoints.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

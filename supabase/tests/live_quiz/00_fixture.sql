@@ -26,7 +26,7 @@ GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
 CREATE TABLE IF NOT EXISTS public.tuition_centers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  slug text UNIQUE
+  subdomain_slug text UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS public.profiles (
