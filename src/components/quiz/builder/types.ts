@@ -29,7 +29,18 @@ export interface QuestionDraft {
   points: number;
   explanation: string;
   options: OptionDraft[];
+  /** short_answer / fill_blank: the answer key, as typed by the tutor. */
+  accepted_answers?: string[];
+  answer_match_mode?: "exact" | "ignore_case";
+  /** numeric: correct value / accepted +- tolerance / unit label, as typed. */
+  numeric_answer?: string;
+  numeric_tolerance?: string;
+  answer_unit?: string;
 }
+
+/** Types that carry options; everything else is typed by the student. */
+export const CHOICE_TYPES: readonly QuestionType[] = ["mcq", "true_false", "multiple_select"];
+export const isChoiceType = (t: QuestionType) => CHOICE_TYPES.includes(t);
 
 export interface MetaDraft {
   title: string;
@@ -74,23 +85,33 @@ export function newOption(text = "", correct = false): OptionDraft {
 }
 
 export function newQuestion(type: QuestionType = "mcq"): QuestionDraft {
+  const base = { id: rid("q"), question: "", points: 1, explanation: "" };
   if (type === "true_false") {
     return {
-      id: rid("q"),
-      question: "",
+      ...base,
       question_type: "true_false",
-      points: 1,
-      explanation: "",
       options: [newOption("True"), newOption("False")],
     };
   }
+  if (type === "mcq" || type === "multiple_select") {
+    return { ...base, question_type: type, options: [newOption(), newOption()] };
+  }
+  if (type === "numeric") {
+    return {
+      ...base,
+      question_type: "numeric",
+      options: [],
+      numeric_answer: "",
+      numeric_tolerance: "0",
+      answer_unit: "",
+    };
+  }
   return {
-    id: rid("q"),
-    question: "",
-    question_type: "mcq",
-    points: 1,
-    explanation: "",
-    options: [newOption(), newOption()],
+    ...base,
+    question_type: type,
+    options: [],
+    accepted_answers: [""],
+    answer_match_mode: "ignore_case",
   };
 }
 
@@ -145,7 +166,7 @@ export function stateFromDefinition(def: QuizDefinitionForManager): BuilderState
     questions: def.questions.map((q) => ({
       id: q.id,
       question: q.question,
-      question_type: q.question_type === "true_false" ? "true_false" : "mcq",
+      question_type: q.question_type,
       points: q.points,
       explanation: q.explanation ?? "",
       options: q.options.map((o) => ({
@@ -153,6 +174,12 @@ export function stateFromDefinition(def: QuizDefinitionForManager): BuilderState
         option_text: o.option_text,
         is_correct: o.is_correct,
       })),
+      accepted_answers:
+        q.accepted_answers && q.accepted_answers.length > 0 ? [...q.accepted_answers] : [""],
+      answer_match_mode: q.answer_match_mode === "exact" ? "exact" : "ignore_case",
+      numeric_answer: q.numeric_answer != null ? String(q.numeric_answer) : "",
+      numeric_tolerance: q.numeric_tolerance != null ? String(q.numeric_tolerance) : "0",
+      answer_unit: q.answer_unit ?? "",
     })),
   };
 }
@@ -242,12 +269,17 @@ export function validateBuilderIssues(state: BuilderState, forPublish: boolean):
       if (!Number.isFinite(q.points) || q.points <= 0) {
         issues.push(at(`Question ${n} needs points greater than zero.`));
       }
-      if (q.question_type === "mcq") {
+      if (q.question_type === "mcq" || q.question_type === "multiple_select") {
         if (q.options.length < 2) issues.push(at(`Question ${n} needs at least 2 options.`));
         if (q.options.some((o) => !o.option_text.trim())) {
           issues.push(at(`Question ${n} has a blank option.`));
         }
-      } else {
+        const correct = q.options.filter((o) => o.is_correct).length;
+        if (correct === 0) issues.push(at(`Question ${n} needs a correct answer.`));
+        if (q.question_type === "mcq" && correct > 1) {
+          issues.push(at(`Question ${n} has more than one correct answer.`));
+        }
+      } else if (q.question_type === "true_false") {
         if (q.options.length !== 2) {
           issues.push(at(`Question ${n} (true/false) needs exactly two options.`));
         }
@@ -256,10 +288,23 @@ export function validateBuilderIssues(state: BuilderState, forPublish: boolean):
         if (t !== 1 || f !== 1) {
           issues.push(at(`Question ${n} (true/false) must have one True and one False option.`));
         }
+        if (q.options.filter((o) => o.is_correct).length !== 1) {
+          issues.push(at(`Question ${n} needs exactly one correct answer.`));
+        }
+      } else if (q.question_type === "numeric") {
+        const v = (q.numeric_answer ?? "").trim();
+        if (!v || !Number.isFinite(Number(v))) {
+          issues.push(at(`Question ${n} needs a correct numeric answer.`));
+        }
+        const tol = (q.numeric_tolerance ?? "").trim();
+        if (tol && (!Number.isFinite(Number(tol)) || Number(tol) < 0)) {
+          issues.push(at(`Question ${n} needs a tolerance of zero or more.`));
+        }
+      } else {
+        if (!(q.accepted_answers ?? []).some((a) => a.trim())) {
+          issues.push(at(`Question ${n} needs at least one accepted answer.`));
+        }
       }
-      const correct = q.options.filter((o) => o.is_correct).length;
-      if (correct === 0) issues.push(at(`Question ${n} needs a correct answer.`));
-      if (correct > 1) issues.push(at(`Question ${n} has more than one correct answer.`));
     });
   }
 
@@ -324,10 +369,20 @@ export function toRpcDefinition(state: BuilderState, locked: boolean) {
       question_type: q.question_type,
       points: q.points,
       explanation: q.explanation || null,
-      options: q.options.map((o) => ({
-        option_text: o.option_text,
-        is_correct: o.is_correct,
-      })),
+      options: isChoiceType(q.question_type)
+        ? q.options.map((o) => ({ option_text: o.option_text, is_correct: o.is_correct }))
+        : [],
+      accepted_answers:
+        q.question_type === "short_answer" || q.question_type === "fill_blank"
+          ? (q.accepted_answers ?? []).map((a) => a.trim()).filter(Boolean)
+          : [],
+      answer_match_mode: q.answer_match_mode === "exact" ? "exact" : "ignore_case",
+      numeric_answer:
+        q.question_type === "numeric" ? ((q.numeric_answer ?? "").trim() || null) : null,
+      numeric_tolerance:
+        q.question_type === "numeric" ? ((q.numeric_tolerance ?? "").trim() || "0") : null,
+      answer_unit:
+        q.question_type === "numeric" ? ((q.answer_unit ?? "").trim() || null) : null,
     })),
   };
 }
