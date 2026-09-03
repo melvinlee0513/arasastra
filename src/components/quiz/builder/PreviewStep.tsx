@@ -32,7 +32,7 @@ import {
   BuilderPill,
   BuilderSection,
 } from "./QuizBuilderChrome";
-import { QUESTION_TYPE_LABEL, totalPoints, type BuilderState } from "./types";
+import { QUESTION_TYPE_LABEL, isChoiceType, totalPoints, type BuilderState } from "./types";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -231,7 +231,31 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
                     )}
                   </li>
                 ))}
-                {active.options.length === 0 && (
+                {/* Typed-answer types show their answer key instead of options. */}
+                {!isChoiceType(active.question_type) && (
+                  <li className="rounded-2xl border border-quiz-correct/50 bg-emerald-50 px-3 py-2.5 text-[14px] text-emerald-900">
+                    <span className="block text-[11px] font-black uppercase tracking-wide text-emerald-700">
+                      Answer key
+                    </span>
+                    <span className="mt-0.5 block break-words font-semibold">
+                      {active.question_type === "numeric"
+                        ? [
+                            (active.numeric_answer ?? "").trim() || "—",
+                            Number(active.numeric_tolerance ?? "0") > 0
+                              ? `± ${active.numeric_tolerance}`
+                              : null,
+                            (active.answer_unit ?? "").trim() || null,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")
+                        : (active.accepted_answers ?? [])
+                            .map((a) => a.trim())
+                            .filter(Boolean)
+                            .join("  ·  ") || "—"}
+                    </span>
+                  </li>
+                )}
+                {isChoiceType(active.question_type) && active.options.length === 0 && (
                   <li className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 px-3 py-3 text-[13px] text-slate-500">
                     <Circle className="h-4 w-4" /> No options added yet.
                   </li>
