@@ -396,7 +396,12 @@ export function ClassQuizBuilder({ variant }: Props) {
   const setCorrect = useCallback((qIdx: number, oIdx: number) => {
     setState((s) => {
       const qs = s.questions.slice();
-      const opts = qs[qIdx].options.map((o, i) => ({ ...o, is_correct: i === oIdx }));
+      // Multiple select toggles; every other choice type is single-answer.
+      const multi = qs[qIdx].question_type === "multiple_select";
+      const opts = qs[qIdx].options.map((o, i) => ({
+        ...o,
+        is_correct: multi ? (i === oIdx ? !o.is_correct : o.is_correct) : i === oIdx,
+      }));
       qs[qIdx] = { ...qs[qIdx], options: opts };
       return { ...s, questions: qs };
     });
@@ -425,18 +430,26 @@ export function ClassQuizBuilder({ variant }: Props) {
     setState((s) => {
       const qs = s.questions.slice();
       const existing = qs[qIdx];
-      qs[qIdx] =
-        type === "true_false"
-          ? {
-              ...existing,
-              question_type: "true_false",
-              options: [newOption("True"), newOption("False")],
-            }
-          : {
-              ...existing,
-              question_type: "mcq",
-              options: existing.options.length >= 2 ? existing.options : [newOption(), newOption()],
-            };
+      if (type === "true_false") {
+        qs[qIdx] = {
+          ...existing,
+          question_type: "true_false",
+          options: [newOption("True"), newOption("False")],
+        };
+      } else if (type === "mcq" || type === "multiple_select") {
+        qs[qIdx] = {
+          ...existing,
+          question_type: type,
+          options:
+            existing.options.length >= 2 && existing.question_type !== "true_false"
+              ? existing.options
+              : [newOption(), newOption()],
+        };
+      } else {
+        // Typed answers: options are irrelevant, so the answer key replaces them.
+        qs[qIdx] = { ...newQuestion(type), id: existing.id, question: existing.question,
+          points: existing.points, explanation: existing.explanation };
+      }
       return { ...s, questions: qs };
     });
     setDirty(true);

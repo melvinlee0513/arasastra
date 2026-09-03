@@ -197,6 +197,11 @@ export interface QuizDefinitionForManager {
     points: number;
     explanation: string | null;
     order_index: number;
+    accepted_answers?: string[] | null;
+    answer_match_mode?: "exact" | "ignore_case" | null;
+    numeric_answer?: number | string | null;
+    numeric_tolerance?: number | string | null;
+    answer_unit?: string | null;
     options: Array<{
       id: string;
       option_text: string;

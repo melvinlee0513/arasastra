@@ -166,7 +166,7 @@ export function stateFromDefinition(def: QuizDefinitionForManager): BuilderState
     questions: def.questions.map((q) => ({
       id: q.id,
       question: q.question,
-      question_type: q.question_type,
+      question_type: (q.question_type as string) === "multiple_choice" ? "mcq" : q.question_type,
       points: q.points,
       explanation: q.explanation ?? "",
       options: q.options.map((o) => ({
@@ -366,7 +366,7 @@ export function toRpcDefinition(state: BuilderState, locked: boolean) {
     },
     questions: state.questions.map((q) => ({
       question: q.question,
-      question_type: q.question_type,
+      question_type: (q.question_type as string) === "multiple_choice" ? "mcq" : q.question_type,
       points: q.points,
       explanation: q.explanation || null,
       options: isChoiceType(q.question_type)

@@ -42,7 +42,9 @@ import {
   BuilderPill,
   BuilderSection,
 } from "./QuizBuilderChrome";
-import { QUESTION_TYPE_LABEL, type QuestionDraft } from "./types";
+import { useFeatureEnabled } from "@/hooks/useFeature";
+import { questionTypesFor } from "@/lib/questionTypes";
+import { QUESTION_TYPE_LABEL, isChoiceType, type QuestionDraft } from "./types";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 const MAX_OPTIONS = 6;
@@ -76,6 +78,9 @@ export function QuestionsStep(props: QuestionsStepProps) {
     invalidIndexes,
     onAddQuestion,
   } = props;
+
+  // Authoring gate only — existing questions of any type keep editing/grading.
+  const availableTypes = questionTypesFor(useFeatureEnabled("expandedQuestionTypes"));
 
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
   const [listSheetOpen, setListSheetOpen] = useState(false);
@@ -129,17 +134,15 @@ export function QuestionsStep(props: QuestionsStepProps) {
                 <SheetHeader className="text-left">
                   <SheetTitle>Add a question</SheetTitle>
                 </SheetHeader>
-                <div className="mt-4 space-y-2">
-                  <QuestionTypeOption
-                    label="Multiple Choice"
-                    description="Two or more options, one correct answer."
-                    onClick={() => addAndFocus("mcq")}
-                  />
-                  <QuestionTypeOption
-                    label="True / False"
-                    description="A single statement students judge true or false."
-                    onClick={() => addAndFocus("true_false")}
-                  />
+                <div className="mt-4 max-h-[62vh] space-y-2 overflow-y-auto">
+                  {availableTypes.map((t) => (
+                    <QuestionTypeOption
+                      key={t.value}
+                      label={t.label}
+                      description={t.hint}
+                      onClick={() => addAndFocus(t.value)}
+                    />
+                  ))}
                 </div>
               </SheetContent>
             </Sheet>
@@ -257,7 +260,7 @@ export function QuestionsStep(props: QuestionsStepProps) {
         <BuilderEmptyState
           art={QUIZ_ART.owlGaming}
           title="No questions yet"
-          description="Add a multiple choice or true/false question to start building this quiz."
+          description="Add your first question to start building this quiz."
           action={
             locked ? undefined : (
               <Button
@@ -276,6 +279,7 @@ export function QuestionsStep(props: QuestionsStepProps) {
           question={active}
           index={activeIndex}
           total={questions.length}
+          availableTypes={availableTypes}
         />
       ) : null}
     </div>
@@ -312,12 +316,14 @@ type QuestionEditorProps = QuestionsStepProps & {
   question: QuestionDraft;
   index: number;
   total: number;
+  availableTypes: ReturnType<typeof questionTypesFor>;
 };
 
 function QuestionEditor({
   question,
   index,
   total,
+  availableTypes,
   locked,
   invalidIndexes,
   onActiveIndexChange,
@@ -332,7 +338,12 @@ function QuestionEditor({
   onRemoveOption,
 }: QuestionEditorProps) {
   const isTrueFalse = question.question_type === "true_false";
-  const noCorrect = !question.options.some((o) => o.is_correct);
+  const isMulti = question.question_type === "multiple_select";
+  const choice = isChoiceType(question.question_type);
+  const noCorrect = choice && !question.options.some((o) => o.is_correct);
+  const accepted = question.accepted_answers ?? [""];
+  const patchAccepted = (next: string[]) =>
+    onPatchQuestion(index, { accepted_answers: next.length ? next : [""] });
   const flagged = invalidIndexes.has(index);
 
   return (
@@ -380,26 +391,28 @@ function QuestionEditor({
 
         {/* Type + points */}
         <div className="grid grid-cols-2 gap-3">
-          <BuilderField label="Type">
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1">
-              {(["mcq", "true_false"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => onChangeType(index, t)}
-                  className={cn(
-                    "min-h-[40px] rounded-xl px-1 text-[12px] font-bold transition",
-                    question.question_type === t
-                      ? "bg-white text-quiz-accent-strong shadow-sm"
-                      : "text-slate-500",
-                    locked && "opacity-60",
-                  )}
-                >
-                  {t === "mcq" ? "Choice" : "True/False"}
-                </button>
+          <BuilderField label="Type" htmlFor={`q-type-${question.id}`}>
+            <select
+              id={`q-type-${question.id}`}
+              value={question.question_type}
+              disabled={locked}
+              onChange={(e) => onChangeType(index, e.target.value as QuestionType)}
+              className={cn(
+                "h-[46px] w-full rounded-2xl border border-slate-200 bg-white px-3 text-[13.5px] font-semibold text-slate-800",
+                locked && "opacity-60",
+              )}
+            >
+              {availableTypes.some((t) => t.value === question.question_type) ? null : (
+                <option value={question.question_type}>
+                  {QUESTION_TYPE_LABEL[question.question_type]}
+                </option>
+              )}
+              {availableTypes.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
               ))}
-            </div>
+            </select>
           </BuilderField>
 
           <BuilderField label="Points">
@@ -430,6 +443,7 @@ function QuestionEditor({
         </BuilderField>
 
         {/* Answers */}
+        {choice ? (
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[13px] font-semibold text-slate-800">
@@ -437,7 +451,7 @@ function QuestionEditor({
             </span>
             {noCorrect && (
               <BuilderPill tone="danger" icon={<AlertCircle className="h-3 w-3" />}>
-                Pick the correct one
+                {isMulti ? "Pick the correct ones" : "Pick the correct one"}
               </BuilderPill>
             )}
           </div>
@@ -458,7 +472,7 @@ function QuestionEditor({
                     type="button"
                     disabled={locked}
                     onClick={() => onSetCorrect(index, oIdx)}
-                    aria-label={`Mark option ${OPTION_LETTERS[oIdx] ?? oIdx + 1} correct`}
+                    aria-label={`Mark option ${OPTION_LETTERS[oIdx] ?? oIdx + 1}${isMulti ? " correct or incorrect" : " correct"}`}
                     aria-pressed={correct}
                     className={cn(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[13px] font-black transition active:scale-95",
@@ -522,6 +536,118 @@ function QuestionEditor({
             </p>
           )}
         </div>
+        ) : question.question_type === "numeric" ? (
+          <div className="space-y-3">
+            <BuilderField label="Correct answer" htmlFor={`q-num-${question.id}`} required>
+              <Input
+                id={`q-num-${question.id}`}
+                inputMode="decimal"
+                value={question.numeric_answer ?? ""}
+                disabled={locked}
+                onChange={(e) =>
+                  onPatchQuestion(index, {
+                    numeric_answer: e.target.value.replace(/[^0-9.+-]/g, "").slice(0, 24),
+                  })
+                }
+                placeholder="42"
+                className="h-[46px] rounded-2xl border-slate-200 bg-white text-[15px] font-bold"
+              />
+            </BuilderField>
+            <div className="grid grid-cols-2 gap-3">
+              <BuilderField
+                label="Tolerance"
+                htmlFor={`q-tol-${question.id}`}
+                hint="Accepts answers within ± this amount."
+              >
+                <Input
+                  id={`q-tol-${question.id}`}
+                  inputMode="decimal"
+                  value={question.numeric_tolerance ?? "0"}
+                  disabled={locked}
+                  onChange={(e) =>
+                    onPatchQuestion(index, {
+                      numeric_tolerance: e.target.value.replace(/[^0-9.]/g, "").slice(0, 12),
+                    })
+                  }
+                  className="h-[46px] rounded-2xl border-slate-200 bg-white text-[15px]"
+                />
+              </BuilderField>
+              <BuilderField label="Unit" htmlFor={`q-unit-${question.id}`} hint="Optional label.">
+                <Input
+                  id={`q-unit-${question.id}`}
+                  value={question.answer_unit ?? ""}
+                  disabled={locked}
+                  onChange={(e) =>
+                    onPatchQuestion(index, { answer_unit: e.target.value.slice(0, 24) })
+                  }
+                  placeholder="cm"
+                  className="h-[46px] rounded-2xl border-slate-200 bg-white text-[15px]"
+                />
+              </BuilderField>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-slate-800">
+                Accepted answers <span className="text-rose-500">*</span>
+              </span>
+              <BuilderPill tone="neutral">Any one matches</BuilderPill>
+            </div>
+            <div className="space-y-2">
+              {accepted.map((a, aIdx) => (
+                <div key={aIdx} className="flex items-center gap-2">
+                  <Input
+                    value={a}
+                    disabled={locked}
+                    onChange={(e) => {
+                      const next = accepted.slice();
+                      next[aIdx] = e.target.value.slice(0, 200);
+                      patchAccepted(next);
+                    }}
+                    placeholder={aIdx === 0 ? "Chlorophyll" : "Another accepted spelling"}
+                    aria-label={`Accepted answer ${aIdx + 1}`}
+                    className="h-11 min-w-0 flex-1 rounded-2xl border-slate-200 bg-white text-[15px]"
+                  />
+                  {!locked && accepted.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove accepted answer ${aIdx + 1}`}
+                      onClick={() => patchAccepted(accepted.filter((_, i) => i !== aIdx))}
+                      className="h-11 w-11 shrink-0 rounded-xl text-slate-400 hover:text-rose-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {!locked && accepted.length < 8 && (
+              <Button
+                variant="outline"
+                onClick={() => patchAccepted([...accepted, ""])}
+                className="mt-2 min-h-[44px] w-full rounded-2xl border-dashed text-[13px] font-semibold"
+              >
+                <Plus className="mr-1.5 h-4 w-4" /> Add accepted answer
+              </Button>
+            )}
+            <label className="mt-3 flex items-center gap-2 text-[12.5px] font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                disabled={locked}
+                checked={question.answer_match_mode === "exact"}
+                onChange={(e) =>
+                  onPatchQuestion(index, {
+                    answer_match_mode: e.target.checked ? "exact" : "ignore_case",
+                  })
+                }
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Match capitalisation exactly
+            </label>
+          </div>
+        )}
 
         <BuilderField
           label="Explanation"
