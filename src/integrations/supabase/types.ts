@@ -3420,6 +3420,10 @@ export type Database = {
         Args: { _question_ids: string[]; _quiz_id: string }
         Returns: Json
       }
+      admin_authorize_email_verification: {
+        Args: { _invitation_id: string }
+        Returns: Json
+      }
       admin_clear_student_profile: {
         Args: { _clear_avatar?: boolean; _clear_bio?: boolean; _target: string }
         Returns: Json

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Copy, RotateCw, Ban, Loader2, Mail, AlertCircle, Send } from "lucide-react";
+import {
+  RefreshCw, Search, Copy, RotateCw, Ban, Loader2, Mail, AlertCircle, Send,
+  MoreHorizontal, ShieldCheck,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { Card } from "@/components/ui/card";
@@ -11,7 +14,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
-import { sendInvitationEmail } from "@/lib/invitations";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { sendInvitationEmail, verifyEmailMessage, verifyInvitedUserEmail } from "@/lib/invitations";
 
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -58,6 +69,18 @@ function emailDelivery(row: Row): { label: string; className: string } | null {
 }
 
 
+/**
+ * Auth-level email verification state. This is NOT the invitation email
+ * delivery state — it reflects auth.users.email_confirmed_at, surfaced by
+ * list_center_invitations as `email_verified`.
+ */
+function emailVerification(row: Row): { label: string; className: string } | null {
+  if (!row.auth_account_created) return null;
+  return row.email_verified
+    ? { label: "Verified", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+    : { label: "Unverified", className: "bg-amber-50 text-amber-700 border-amber-200" };
+}
+
 type ComputedStatus =
   | "pending"
   | "account_created"
@@ -92,6 +115,8 @@ export function InvitationsPanel() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "tutor">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | ComputedStatus>("all");
+  const [verifyTarget, setVerifyTarget] = useState<Row | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const fetchRows = useCallback(async () => {
     if (!currentTenantId) return;
@@ -201,6 +226,34 @@ export function InvitationsPanel() {
     }
   }, [fetchRows]);
 
+  /**
+   * Manual fallback for a user who never received their verification email.
+   * Only marks the Auth email as confirmed — the invitation is untouched.
+   */
+  const confirmVerify = useCallback(async () => {
+    const row = verifyTarget;
+    if (!row) return;
+    setVerifying(true);
+    try {
+      const result = await verifyInvitedUserEmail(row.id);
+      if (result.verified) {
+        toast.success("Email verified", {
+          description: `${row.email} can now sign in to their account.`,
+        });
+        setVerifyTarget(null);
+        await fetchRows();
+      } else {
+        toast.error(verifyEmailMessage(result.code));
+        if (result.code === "already_verified") {
+          setVerifyTarget(null);
+          await fetchRows();
+        }
+      }
+    } finally {
+      setVerifying(false);
+    }
+  }, [verifyTarget, fetchRows]);
+
   const filtered = useMemo(() => {
     if (!rows) return [];
     const q = search.trim().toLowerCase();
@@ -285,6 +338,7 @@ export function InvitationsPanel() {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Email delivery</TableHead>
+                <TableHead>Email verification</TableHead>
 
                 <TableHead>Created</TableHead>
                 <TableHead>Expires</TableHead>
@@ -300,6 +354,13 @@ export function InvitationsPanel() {
                 const canCopy = cs === "pending";
                 const canRegen = cs === "pending" || cs === "expired" || cs === "revoked";
                 const canRevoke = cs === "pending";
+                // Fallback verification only where an Auth account exists, is
+                // still unverified, and the role is an ordinary tenant user.
+                const canVerifyEmail =
+                  row.auth_account_created &&
+                  !row.email_verified &&
+                  !row.revoked_at &&
+                  (row.role === "student" || row.role === "tutor");
                 const busy = busyId === row.id;
                 return (
                   <TableRow key={row.id}>
@@ -328,6 +389,17 @@ export function InvitationsPanel() {
                         );
                       })()}
                     </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const v = emailVerification(row);
+                        if (!v) return <span className="text-slate-500">—</span>;
+                        return (
+                          <Badge variant="outline" className={cn("rounded-full border w-fit", v.className)}>
+                            {v.label}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
 
                     <TableCell className="text-slate-600 whitespace-nowrap">
                       {format(new Date(row.created_at), "dd MMM yyyy")}
@@ -340,45 +412,66 @@ export function InvitationsPanel() {
                       {row.accepted_at ? format(new Date(row.accepted_at), "dd MMM yyyy") : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="inline-flex gap-1">
-                        {canCopy && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
-                            size="sm" variant="ghost" className="rounded-full"
-                            disabled={busy} onClick={() => resend(row)}
-                            title="Resend invitation email"
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-full"
+                            disabled={busy}
+                            aria-label={`Actions for ${row.email}`}
                           >
-                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            {busy
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <MoreHorizontal className="w-4 h-4" />}
                           </Button>
-                        )}
-                        {canCopy && (
-
-                          <Button
-                            size="sm" variant="ghost" className="rounded-full"
-                            disabled={busy} onClick={() => copyLink(row)}
-                            title="Copy invitation link"
-                          >
-                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
-                          </Button>
-                        )}
-                        {canRegen && (
-                          <Button
-                            size="sm" variant="ghost" className="rounded-full"
-                            disabled={busy} onClick={() => regenerate(row)}
-                            title="Regenerate link (invalidates the previous one)"
-                          >
-                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />}
-                          </Button>
-                        )}
-                        {canRevoke && (
-                          <Button
-                            size="sm" variant="ghost" className="rounded-full text-rose-600 hover:text-rose-700"
-                            disabled={busy} onClick={() => revoke(row)}
-                            title="Revoke invitation"
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl">
+                          <DropdownMenuLabel className="text-xs text-slate-500">
+                            {row.email}
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {canVerifyEmail && (
+                            <DropdownMenuItem onSelect={() => setVerifyTarget(row)}>
+                              <ShieldCheck className="w-4 h-4 mr-2" />
+                              Verify email
+                            </DropdownMenuItem>
+                          )}
+                          {canCopy && (
+                            <DropdownMenuItem onSelect={() => void resend(row)}>
+                              <Send className="w-4 h-4 mr-2" />
+                              Resend invitation email
+                            </DropdownMenuItem>
+                          )}
+                          {canCopy && (
+                            <DropdownMenuItem onSelect={() => void copyLink(row)}>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copy invitation link
+                            </DropdownMenuItem>
+                          )}
+                          {canRegen && (
+                            <DropdownMenuItem onSelect={() => void regenerate(row)}>
+                              <RotateCw className="w-4 h-4 mr-2" />
+                              Regenerate link
+                            </DropdownMenuItem>
+                          )}
+                          {canRevoke && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-rose-600 focus:text-rose-700"
+                                onSelect={() => void revoke(row)}
+                              >
+                                <Ban className="w-4 h-4 mr-2" />
+                                Revoke invitation
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {!canVerifyEmail && !canCopy && !canRegen && !canRevoke && (
+                            <DropdownMenuItem disabled>No actions available</DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
@@ -387,6 +480,40 @@ export function InvitationsPanel() {
           </Table>
         </div>
       )}
+
+      <AlertDialog
+        open={verifyTarget !== null}
+        onOpenChange={(open) => { if (!open && !verifying) setVerifyTarget(null); }}
+      >
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Verify this {verifyTarget?.role === "tutor" ? "tutor" : "student"}&apos;s email?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                This will mark <span className="font-medium text-[#0F172A]">{verifyTarget?.email}</span>{" "}
+                as email verified and allow them to sign in without using their email
+                verification link.
+              </span>
+              <span className="block">
+                Only use this when you have confirmed the email address belongs to them.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={verifying} className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={verifying}
+              onClick={(e) => { e.preventDefault(); void confirmVerify(); }}
+              className="rounded-full bg-[#0052FF] hover:bg-[#0047DB]"
+            >
+              {verifying && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Verify email
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
