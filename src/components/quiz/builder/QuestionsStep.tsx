@@ -45,12 +45,15 @@ import {
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { questionTypesFor } from "@/lib/questionTypes";
 import { QUESTION_TYPE_LABEL, isChoiceType, type QuestionDraft } from "./types";
+import { QuestionMediaEditor } from "./QuestionMediaEditor";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 const MAX_OPTIONS = 6;
 const EXPLANATION_MAX = 500;
 
 export interface QuestionsStepProps {
+  /** Centre that owns this quiz — scopes question image uploads. */
+  centerId: string | null;
   questions: QuestionDraft[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
@@ -320,6 +323,7 @@ type QuestionEditorProps = QuestionsStepProps & {
 };
 
 function QuestionEditor({
+  centerId,
   question,
   index,
   total,
@@ -648,6 +652,18 @@ function QuestionEditor({
             </label>
           </div>
         )}
+
+        <QuestionMediaEditor
+          centerId={centerId}
+          questionId={question.id}
+          locked={locked}
+          image_path={question.image_path ?? null}
+          image_width={question.image_width ?? null}
+          image_height={question.image_height ?? null}
+          image_alt={question.image_alt ?? ""}
+          image_crop={question.image_crop ?? null}
+          onChange={(patch) => onPatchQuestion(index, patch)}
+        />
 
         <BuilderField
           label="Explanation"

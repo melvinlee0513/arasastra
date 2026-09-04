@@ -318,6 +318,7 @@ export function StudentQuizResult() {
             </div>
 
             <p className="whitespace-pre-wrap text-[15px] font-bold leading-snug">{q.prompt}</p>
+            {q.image_path && <QuestionMedia media={q} className="mt-3" />}
 
             {q.options.length > 0 ? (
               <ul className="mt-3 space-y-1.5">

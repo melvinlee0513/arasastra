@@ -441,6 +441,7 @@ export function StudentQuizAttempt() {
         <div className="flex items-start gap-3">
           <ArenaArt src={QUIZ_ART.crystalGem} className="h-9 w-9 shrink-0" />
           <h2 className="whitespace-pre-wrap text-[16px] font-bold leading-snug">{q.prompt}</h2>
+          {q.image_path && <QuestionMedia media={q} className="mt-3" />}
         </div>
       </ArenaPanel>
 
