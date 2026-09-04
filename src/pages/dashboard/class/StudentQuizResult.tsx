@@ -32,6 +32,7 @@ import {
   QuizArenaShell,
 } from "@/components/quiz/QuizArena";
 import { QuizExplanationFlipCard } from "@/components/quiz/QuizExplanationFlipCard";
+import { QuestionMedia } from "@/components/quiz/QuestionMedia";
 
 // Bounded polling window used when the attempt is submitted but the async
 // finaliser hasn't produced a scored quiz_results row yet.

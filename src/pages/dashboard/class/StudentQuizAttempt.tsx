@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QUIZ_ART } from "@/lib/quizArt";
 import { QuizAnswerInput } from "@/components/quiz/QuizAnswerInput";
+import { QuestionMedia } from "@/components/quiz/QuestionMedia";
 import { hasAnswer, type AnswerValue } from "@/lib/quizAnswers";
 import {
   ArenaAnswerGrid,

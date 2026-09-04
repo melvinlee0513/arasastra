@@ -618,6 +618,7 @@ export function ClassQuizBuilder({ variant }: Props) {
 
           {step === "questions" && (
             <QuestionsStep
+              centerId={ctx.data?.klass?.center_id ?? currentTenantId ?? null}
               questions={state.questions}
               activeIndex={Math.min(activeQuestion, Math.max(0, state.questions.length - 1))}
               onActiveIndexChange={setActiveQuestion}
