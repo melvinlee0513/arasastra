@@ -3411,6 +3411,7 @@ export type Database = {
         }
       }
       _quiz_media_center: { Args: { _name: string }; Returns: string }
+      _quiz_media_crop: { Args: { _crop: Json }; Returns: Json }
       _resync_live_quiz_counts: {
         Args: { _session_id: string }
         Returns: undefined
@@ -3943,6 +3944,11 @@ export type Database = {
           _answer_unit?: string
           _collection_id: string
           _explanation: string
+          _image_alt?: string
+          _image_crop?: Json
+          _image_height?: number
+          _image_path?: string
+          _image_width?: number
           _numeric_answer?: number
           _numeric_tolerance?: number
           _options: Json
