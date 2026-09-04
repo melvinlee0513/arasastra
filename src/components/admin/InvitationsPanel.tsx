@@ -165,7 +165,24 @@ export function InvitationsPanel() {
     }
   }, [buildLink, fetchRows]);
 
+  /** Re-email the SAME pending invitation — no new token is issued. */
+  const resend = useCallback(async (row: Row) => {
+    setBusyId(row.id);
+    try {
+      const result = await sendInvitationEmail(row.id);
+      if (result.emailed) {
+        toast.success(`Invitation email sent to ${row.email}`);
+      } else {
+        toast.error("The invitation email could not be sent. Copy the link instead.");
+      }
+      await fetchRows();
+    } finally {
+      setBusyId(null);
+    }
+  }, [fetchRows]);
+
   const revoke = useCallback(async (row: Row) => {
+
     if (!confirm(`Revoke the invitation for ${row.email}? The link will stop working immediately.`)) return;
     setBusyId(row.id);
     try {
