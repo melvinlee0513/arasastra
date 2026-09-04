@@ -24,6 +24,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+import { sendInvitationEmail } from "@/lib/invitations";
+
 
 interface InviteUserModalProps {
   open: boolean;
