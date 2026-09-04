@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+import { sendInvitationEmail } from "@/lib/invitations";
+
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
