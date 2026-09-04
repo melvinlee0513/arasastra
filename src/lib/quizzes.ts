@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { QuestionMediaCrop } from "@/lib/quizMedia";
 
 // ─── Canonical types ────────────────────────────────────────────────────────
 export type QuizStatus = "draft" | "published" | "archived";
