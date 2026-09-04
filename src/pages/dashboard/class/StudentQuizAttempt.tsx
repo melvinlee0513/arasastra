@@ -441,10 +441,13 @@ export function StudentQuizAttempt() {
       <ArenaPanel className="mt-4">
         <div className="flex items-start gap-3">
           <ArenaArt src={QUIZ_ART.crystalGem} className="h-9 w-9 shrink-0" />
-          <h2 className="whitespace-pre-wrap text-[16px] font-bold leading-snug">{q.prompt}</h2>
-          {q.image_path && <QuestionMedia media={q} className="mt-3" />}
+          <h2 className="min-w-0 flex-1 whitespace-pre-wrap text-[16px] font-bold leading-snug">
+            {q.prompt}
+          </h2>
         </div>
+        {q.image_path && <QuestionMedia media={q} className="mt-3 w-full" />}
       </ArenaPanel>
+
 
       <div className="mt-4">
         <QuizAnswerInput
