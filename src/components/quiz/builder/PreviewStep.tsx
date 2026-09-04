@@ -194,6 +194,18 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
                 {active.question.trim() || "Untitled question"}
               </p>
 
+              {active.image_path && (
+                <QuestionMedia
+                  media={{
+                    image_path: active.image_path,
+                    image_width: active.image_width,
+                    image_height: active.image_height,
+                    image_alt: active.image_alt,
+                    image_crop: active.image_crop,
+                  }}
+                />
+              )}
+
               <ul className="space-y-2">
                 {active.options.map((o, i) => (
                   <li

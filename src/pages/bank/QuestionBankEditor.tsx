@@ -29,6 +29,8 @@ import {
 import { QUESTION_TYPES } from "@/lib/questionTypes";
 import { AnalyticsShell, Skel } from "@/components/quiz/analytics/AnalyticsChrome";
 import { BuilderSection } from "@/components/quiz/builder/QuizBuilderChrome";
+import { QuestionMediaEditor } from "@/components/quiz/builder/QuestionMediaEditor";
+import { sanitizeCrop, type QuestionMediaCrop } from "@/lib/quizMedia";
 
 interface OptionDraft {
   key: string;
@@ -60,6 +62,13 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
   const [type, setType] = useState<string>("mcq");
   const [points, setPoints] = useState(1);
   const [explanation, setExplanation] = useState("");
+  const [media, setMedia] = useState<{
+    image_path: string | null;
+    image_width: number | null;
+    image_height: number | null;
+    image_alt: string | null;
+    image_crop: QuestionMediaCrop | null;
+  }>({ image_path: null, image_width: null, image_height: null, image_alt: "", image_crop: null });
   const [topic, setTopic] = useState("");
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -95,6 +104,13 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
     setType(d.question_type);
     setPoints(d.points);
     setExplanation(d.explanation ?? "");
+    setMedia({
+      image_path: d.image_path ?? null,
+      image_width: d.image_width ?? null,
+      image_height: d.image_height ?? null,
+      image_alt: d.image_alt ?? "",
+      image_crop: sanitizeCrop(d.image_crop),
+    });
     setTopic(d.topic ?? "");
     setCollectionId(d.collection_id);
     setSubjectId(d.subject_id);
@@ -194,6 +210,11 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
         numericTolerance:
           type === "numeric" && numTolerance.trim() !== "" ? Number(numTolerance) : null,
         answerUnit: type === "numeric" ? unit.trim() || null : null,
+        imagePath: media.image_path,
+        imageWidth: media.image_width,
+        imageHeight: media.image_height,
+        imageAlt: media.image_alt?.trim() || null,
+        imageCrop: media.image_crop,
       }),
     onSuccess: (res) => {
       toast.success(isNew ? "Question added." : "Question saved.");
@@ -572,6 +593,20 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                 className="h-12 rounded-2xl border-slate-200 bg-white text-[14px]"
               />
             </label>
+
+            <div className="mt-3">
+              <QuestionMediaEditor
+                centerId={currentTenantId ?? null}
+                questionId={questionId ?? "new"}
+                locked={false}
+                image_path={media.image_path}
+                image_width={media.image_width}
+                image_height={media.image_height}
+                image_alt={media.image_alt}
+                image_crop={media.image_crop}
+                onChange={(patch) => setMedia((prev) => ({ ...prev, ...patch }))}
+              />
+            </div>
 
             <label className="mt-3 block">
               <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
