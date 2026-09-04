@@ -30,7 +30,31 @@ interface Row {
   profile_created: boolean;
   role_assigned: boolean;
   accepted_at: string | null;
+  email_queued_at: string | null;
+  email_failed_at: string | null;
+  last_send_error: string | null;
+  resend_count: number | null;
+  email_delivery_status: string | null;
 }
+
+/** Truthful invitation-email delivery state, derived from backend records only. */
+function emailDelivery(row: Row): { label: string; className: string } | null {
+  if (row.email_delivery_status === "sent") {
+    return { label: "Email sent", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+  if (
+    row.email_delivery_status === "dlq" ||
+    row.email_delivery_status === "suppressed" ||
+    (row.email_failed_at && !row.email_queued_at)
+  ) {
+    return { label: "Email failed", className: "bg-rose-50 text-rose-700 border-rose-200" };
+  }
+  if (row.email_queued_at) {
+    return { label: "Email queued", className: "bg-sky-50 text-sky-700 border-sky-200" };
+  }
+  return { label: "Not emailed", className: "bg-slate-100 text-slate-600 border-slate-200" };
+}
+
 
 type ComputedStatus =
   | "pending"
