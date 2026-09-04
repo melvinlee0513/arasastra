@@ -209,7 +209,9 @@ Deno.serve(async (req) => {
         text,
         purpose: 'transactional',
         label: 'center-invitation',
-        idempotency_key: `center-invitation-${invitationId}-${resendCount}`,
+        // Unique per attempt: the provider rejects reuse of a key whose run failed.
+        idempotency_key: `center-invitation-${invitationId}-${messageId}`,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })
