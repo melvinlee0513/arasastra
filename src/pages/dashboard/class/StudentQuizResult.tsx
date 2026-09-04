@@ -32,6 +32,7 @@ import {
   QuizArenaShell,
 } from "@/components/quiz/QuizArena";
 import { QuizExplanationFlipCard } from "@/components/quiz/QuizExplanationFlipCard";
+import { QuestionMedia } from "@/components/quiz/QuestionMedia";
 
 // Bounded polling window used when the attempt is submitted but the async
 // finaliser hasn't produced a scored quiz_results row yet.
@@ -318,6 +319,7 @@ export function StudentQuizResult() {
             </div>
 
             <p className="whitespace-pre-wrap text-[15px] font-bold leading-snug">{q.prompt}</p>
+            {q.image_path && <QuestionMedia media={q} className="mt-3" />}
 
             {q.options.length > 0 ? (
               <ul className="mt-3 space-y-1.5">

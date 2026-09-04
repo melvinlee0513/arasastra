@@ -10,6 +10,8 @@
  * existing `quiz-builder:*` localStorage drafts keep restoring without any
  * migration step.
  */
+import type { QuestionMediaCrop } from "@/lib/quizMedia";
+import { sanitizeCrop } from "@/lib/quizMedia";
 import type {
   QuestionType,
   QuizDefinitionForManager,
@@ -36,6 +38,12 @@ export interface QuestionDraft {
   numeric_answer?: string;
   numeric_tolerance?: string;
   answer_unit?: string;
+  /** One optional image per question. Path includes the storage bucket prefix. */
+  image_path?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  image_alt?: string | null;
+  image_crop?: QuestionMediaCrop | null;
 }
 
 /** Types that carry options; everything else is typed by the student. */
@@ -180,6 +188,11 @@ export function stateFromDefinition(def: QuizDefinitionForManager): BuilderState
       numeric_answer: q.numeric_answer != null ? String(q.numeric_answer) : "",
       numeric_tolerance: q.numeric_tolerance != null ? String(q.numeric_tolerance) : "0",
       answer_unit: q.answer_unit ?? "",
+      image_path: q.image_path ?? null,
+      image_width: q.image_width ?? null,
+      image_height: q.image_height ?? null,
+      image_alt: q.image_alt ?? "",
+      image_crop: sanitizeCrop(q.image_crop),
     })),
   };
 }
@@ -383,6 +396,11 @@ export function toRpcDefinition(state: BuilderState, locked: boolean) {
         q.question_type === "numeric" ? ((q.numeric_tolerance ?? "").trim() || "0") : null,
       answer_unit:
         q.question_type === "numeric" ? ((q.answer_unit ?? "").trim() || null) : null,
+      image_path: q.image_path || null,
+      image_width: q.image_path ? (q.image_width ?? null) : null,
+      image_height: q.image_path ? (q.image_height ?? null) : null,
+      image_alt: q.image_path ? ((q.image_alt ?? "").trim() || null) : null,
+      image_crop: q.image_path ? sanitizeCrop(q.image_crop) : null,
     })),
   };
 }
