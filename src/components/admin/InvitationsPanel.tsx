@@ -472,7 +472,6 @@ export function InvitationsPanel() {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      </div>
                     </TableCell>
                   </TableRow>
                 );
