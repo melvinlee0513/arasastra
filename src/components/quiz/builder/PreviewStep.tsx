@@ -33,6 +33,7 @@ import {
   BuilderSection,
 } from "./QuizBuilderChrome";
 import { QUESTION_TYPE_LABEL, isChoiceType, totalPoints, type BuilderState } from "./types";
+import { QuestionMedia } from "@/components/quiz/QuestionMedia";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 

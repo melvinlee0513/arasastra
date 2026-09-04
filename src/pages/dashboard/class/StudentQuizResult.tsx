@@ -275,11 +275,23 @@ export function StudentQuizResult() {
           <ArenaChip art={QUIZ_ART.goldStar} tone="good">
             {correctCount} / {data.total_questions} correct
           </ArenaChip>
+          {data.xp_quiz_max > 0 && (
+            <ArenaChip art={QUIZ_ART.xpHexagon}>
+              {data.xp_awarded > 0 ? `+${data.xp_awarded} XP` : "No new XP"}
+            </ArenaChip>
+          )}
         </div>
         {pct !== null && (
           <div className="mt-4">
             <ArenaProgress value={pct} />
           </div>
+        )}
+        {data.xp_quiz_max > 0 && (
+          <p className="mt-3 text-[12px] text-quiz-arena-muted">
+            {data.xp_awarded > 0
+              ? `Earned ${data.xp_awarded} XP · ${data.xp_quiz_total} of ${data.xp_quiz_max} XP from this quiz so far.`
+              : `You have already earned ${data.xp_quiz_total} of ${data.xp_quiz_max} XP from this quiz. Beat your best score to earn more.`}
+          </p>
         )}
         <p className="mt-3 text-[12px] text-quiz-arena-muted">
           Submitted {new Date(data.completed_at).toLocaleString()}
