@@ -344,6 +344,16 @@ export function InvitationsPanel() {
                         {canCopy && (
                           <Button
                             size="sm" variant="ghost" className="rounded-full"
+                            disabled={busy} onClick={() => resend(row)}
+                            title="Resend invitation email"
+                          >
+                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          </Button>
+                        )}
+                        {canCopy && (
+
+                          <Button
+                            size="sm" variant="ghost" className="rounded-full"
                             disabled={busy} onClick={() => copyLink(row)}
                             title="Copy invitation link"
                           >
