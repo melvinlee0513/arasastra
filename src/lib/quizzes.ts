@@ -202,6 +202,11 @@ export interface QuizDefinitionForManager {
     numeric_answer?: number | string | null;
     numeric_tolerance?: number | string | null;
     answer_unit?: string | null;
+    image_path?: string | null;
+    image_width?: number | null;
+    image_height?: number | null;
+    image_alt?: string | null;
+    image_crop?: QuestionMediaCrop | null;
     options: Array<{
       id: string;
       option_text: string;
@@ -346,6 +351,11 @@ export interface StudentAttemptQuestion {
   points: number;
   display_order: number;
   options: StudentAttemptOption[];
+  image_path?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  image_alt?: string | null;
+  image_crop?: QuestionMediaCrop | null;
 }
 export interface StudentAttemptPayload {
   quiz: {
@@ -447,6 +457,11 @@ export interface QuizResultQuestion {
   numeric_answer: number | null;
   /** Display label for a numeric answer ("m/s²"). */
   answer_unit: string | null;
+  image_path?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  image_alt?: string | null;
+  image_crop?: QuestionMediaCrop | null;
   options: QuizResultOption[];
   selected_option_id: string | null;
   /**
