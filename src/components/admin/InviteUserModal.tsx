@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Check, Copy, ClipboardList, UserPlus, AlertTriangle } from "lucide-react";
+import { Check, Copy, ClipboardList, UserPlus, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,8 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+import { sendInvitationEmail } from "@/lib/invitations";
+
 
 interface InviteUserModalProps {
   open: boolean;
@@ -90,6 +93,9 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [rows, setRows] = useState<InviteRow[] | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [emailState, setEmailState] = useState<
+    Record<string, "sending" | "sent" | "failed">
+  >({});
 
   const emails = useMemo(() => parseEmails(raw), [raw]);
 
@@ -99,12 +105,61 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
     return slug ? tenantHrefFor(slug, path) : hqHrefFor(path);
   };
 
+  /** Ask the backend to email each freshly created invitation. */
+  const deliverEmails = async (created: InviteRow[]) => {
+    if (created.length === 0) return;
+    setEmailState((prev) => {
+      const next = { ...prev };
+      created.forEach((r) => {
+        if (r.invitation_id) next[r.invitation_id] = "sending";
+      });
+      return next;
+    });
+    const results = await Promise.all(
+      created.map(async (r) => ({
+        id: r.invitation_id as string,
+        result: await sendInvitationEmail(r.invitation_id as string),
+      })),
+    );
+    setEmailState((prev) => {
+      const next = { ...prev };
+      results.forEach(({ id, result }) => {
+        next[id] = result.emailed ? "sent" : "failed";
+      });
+      return next;
+    });
+    const failed = results.filter((r) => !r.result.emailed).length;
+    if (failed === 0) {
+      toast.success(
+        `Invitation email sent to ${results.length} recipient${results.length === 1 ? "" : "s"}`,
+      );
+    } else {
+      toast.error(
+        `${failed} invitation email${failed === 1 ? "" : "s"} could not be sent — retry or copy the link.`,
+      );
+    }
+  };
+
+  const retryEmail = async (row: InviteRow) => {
+    if (!row.invitation_id) return;
+    setEmailState((p) => ({ ...p, [row.invitation_id as string]: "sending" }));
+    const result = await sendInvitationEmail(row.invitation_id);
+    setEmailState((p) => ({
+      ...p,
+      [row.invitation_id as string]: result.emailed ? "sent" : "failed",
+    }));
+    if (result.emailed) toast.success(`Invitation email sent to ${row.email}`);
+    else toast.error("Email could not be sent. Copy the invite link instead.");
+  };
+
   const closeAll = () => {
     setRaw("");
     setRows(null);
     setCopied(null);
+    setEmailState({});
     onClose();
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,14 +186,16 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
 
       const result = (data ?? []) as InviteRow[];
       setRows(result);
-      const createdCount = result.filter((r) => r.result === "created").length;
-      if (createdCount > 0) {
+      const createdRows = result.filter((r) => r.result === "created" && r.invitation_id);
+      if (createdRows.length > 0) {
         toast.success(
-          `${createdCount} invitation${createdCount === 1 ? "" : "s"} created`,
+          `${createdRows.length} invitation${createdRows.length === 1 ? "" : "s"} created — sending email…`,
         );
+        void deliverEmails(createdRows);
       } else {
         toast.error("No new invitations were created");
       }
+
     } catch (err) {
       showSupabaseError(err as any, "Failed to create invitations");
     } finally {
@@ -166,9 +223,10 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
             Invite users
           </DialogTitle>
           <DialogDescription className="text-slate-500">
-            Paste one or many email addresses. Each person gets their own single-use
-            signup link for {center?.name ?? "your organization"}.
+            Paste one or many email addresses. Each person is emailed their own
+            single-use signup link for {center?.name ?? "your organization"}.
           </DialogDescription>
+
         </DialogHeader>
 
         {rows ? (
@@ -176,6 +234,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
             <div className="space-y-2">
               {rows.map((row) => {
                 const copyInfo = RESULT_COPY[row.result] ?? RESULT_COPY.invalid_email;
+                const mail = row.invitation_id ? emailState[row.invitation_id] : undefined;
                 return (
                   <div
                     key={`${row.email}-${row.result}`}
@@ -186,17 +245,45 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
                         {row.email || "—"}
                       </p>
                       <p className="text-xs text-slate-500 capitalize">{row.role}</p>
+                      {mail === "sending" && (
+                        <p className="inline-flex items-center gap-1 text-xs text-slate-500">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Sending invitation email…
+                        </p>
+                      )}
+                      {mail === "sent" && (
+                        <p className="text-xs text-emerald-600">
+                          Invitation email sent to {row.email}
+                        </p>
+                      )}
+                      {mail === "failed" && (
+                        <p className="text-xs text-amber-700">
+                          Invitation created, but the email could not be sent.
+                        </p>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge variant="outline" className={`text-[11px] ${copyInfo.tone}`}>
                         {copyInfo.label}
                       </Badge>
+                      {mail === "failed" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-full"
+                          title="Retry invitation email"
+                          onClick={() => retryEmail(row)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                       {row.result === "created" && row.token && (
                         <Button
                           type="button"
                           size="sm"
                           variant="ghost"
                           className="rounded-full"
+                          title="Copy invite link (fallback)"
                           onClick={() => copy(linkFor(row.token as string), row.email)}
                         >
                           {copied === row.email ? (
@@ -208,6 +295,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
                       )}
                     </div>
                   </div>
+
                 );
               })}
             </div>

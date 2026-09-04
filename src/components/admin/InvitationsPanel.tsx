@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { showSupabaseError } from "@/lib/supabaseErrors";
 import { tenantHrefFor, hqHrefFor } from "@/lib/tenantSubdomain";
+import { sendInvitationEmail } from "@/lib/invitations";
+
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -30,7 +32,31 @@ interface Row {
   profile_created: boolean;
   role_assigned: boolean;
   accepted_at: string | null;
+  email_queued_at: string | null;
+  email_failed_at: string | null;
+  last_send_error: string | null;
+  resend_count: number | null;
+  email_delivery_status: string | null;
 }
+
+/** Truthful invitation-email delivery state, derived from backend records only. */
+function emailDelivery(row: Row): { label: string; className: string } | null {
+  if (row.email_delivery_status === "sent") {
+    return { label: "Email sent", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+  if (
+    row.email_delivery_status === "dlq" ||
+    row.email_delivery_status === "suppressed" ||
+    (row.email_failed_at && !row.email_queued_at)
+  ) {
+    return { label: "Email failed", className: "bg-rose-50 text-rose-700 border-rose-200" };
+  }
+  if (row.email_queued_at) {
+    return { label: "Email queued", className: "bg-sky-50 text-sky-700 border-sky-200" };
+  }
+  return { label: "Not emailed", className: "bg-slate-100 text-slate-600 border-slate-200" };
+}
+
 
 type ComputedStatus =
   | "pending"
@@ -139,7 +165,24 @@ export function InvitationsPanel() {
     }
   }, [buildLink, fetchRows]);
 
+  /** Re-email the SAME pending invitation — no new token is issued. */
+  const resend = useCallback(async (row: Row) => {
+    setBusyId(row.id);
+    try {
+      const result = await sendInvitationEmail(row.id);
+      if (result.emailed) {
+        toast.success(`Invitation email sent to ${row.email}`);
+      } else {
+        toast.error("The invitation email could not be sent. Copy the link instead.");
+      }
+      await fetchRows();
+    } finally {
+      setBusyId(null);
+    }
+  }, [fetchRows]);
+
   const revoke = useCallback(async (row: Row) => {
+
     if (!confirm(`Revoke the invitation for ${row.email}? The link will stop working immediately.`)) return;
     setBusyId(row.id);
     try {
@@ -241,6 +284,8 @@ export function InvitationsPanel() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Email delivery</TableHead>
+
                 <TableHead>Created</TableHead>
                 <TableHead>Expires</TableHead>
                 <TableHead>Invited by</TableHead>
@@ -265,6 +310,25 @@ export function InvitationsPanel() {
                         {meta.label}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const d = emailDelivery(row);
+                        if (!d) return <span className="text-slate-500">—</span>;
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={cn("rounded-full border w-fit", d.className)}>
+                              {d.label}
+                            </Badge>
+                            {(row.resend_count ?? 0) > 1 && (
+                              <span className="text-[11px] text-slate-500">
+                                sent {row.resend_count} times
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+
                     <TableCell className="text-slate-600 whitespace-nowrap">
                       {format(new Date(row.created_at), "dd MMM yyyy")}
                     </TableCell>
@@ -278,6 +342,16 @@ export function InvitationsPanel() {
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
                         {canCopy && (
+                          <Button
+                            size="sm" variant="ghost" className="rounded-full"
+                            disabled={busy} onClick={() => resend(row)}
+                            title="Resend invitation email"
+                          >
+                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          </Button>
+                        )}
+                        {canCopy && (
+
                           <Button
                             size="sm" variant="ghost" className="rounded-full"
                             disabled={busy} onClick={() => copyLink(row)}
