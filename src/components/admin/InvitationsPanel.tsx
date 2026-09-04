@@ -284,6 +284,8 @@ export function InvitationsPanel() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Email delivery</TableHead>
+
                 <TableHead>Created</TableHead>
                 <TableHead>Expires</TableHead>
                 <TableHead>Invited by</TableHead>
