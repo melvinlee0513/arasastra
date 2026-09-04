@@ -1239,9 +1239,14 @@ export type Database = {
           center_id: string
           created_at: string
           email: string
+          email_failed_at: string | null
+          email_message_id: string | null
+          email_queued_at: string | null
           expires_at: string
           id: string
           invited_by: string | null
+          last_send_error: string | null
+          resend_count: number
           revoked_at: string | null
           role: string
           status: string
@@ -1252,9 +1257,14 @@ export type Database = {
           center_id: string
           created_at?: string
           email: string
+          email_failed_at?: string | null
+          email_message_id?: string | null
+          email_queued_at?: string | null
           expires_at?: string
           id?: string
           invited_by?: string | null
+          last_send_error?: string | null
+          resend_count?: number
           revoked_at?: string | null
           role?: string
           status?: string
@@ -1265,9 +1275,14 @@ export type Database = {
           center_id?: string
           created_at?: string
           email?: string
+          email_failed_at?: string | null
+          email_message_id?: string | null
+          email_queued_at?: string | null
           expires_at?: string
           id?: string
           invited_by?: string | null
+          last_send_error?: string | null
+          resend_count?: number
           revoked_at?: string | null
           role?: string
           status?: string
@@ -3611,12 +3626,17 @@ export type Database = {
           auth_account_created: boolean
           created_at: string
           email: string
+          email_delivery_status: string
+          email_failed_at: string
+          email_queued_at: string
           email_verified: boolean
           expires_at: string
           id: string
           invited_by: string
           invited_by_name: string
+          last_send_error: string
           profile_created: boolean
+          resend_count: number
           revoked_at: string
           role: string
           role_assigned: boolean
