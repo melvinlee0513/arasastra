@@ -93,6 +93,9 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [rows, setRows] = useState<InviteRow[] | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [emailState, setEmailState] = useState<
+    Record<string, "sending" | "sent" | "failed">
+  >({});
 
   const emails = useMemo(() => parseEmails(raw), [raw]);
 
@@ -102,12 +105,61 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
     return slug ? tenantHrefFor(slug, path) : hqHrefFor(path);
   };
 
+  /** Ask the backend to email each freshly created invitation. */
+  const deliverEmails = async (created: InviteRow[]) => {
+    if (created.length === 0) return;
+    setEmailState((prev) => {
+      const next = { ...prev };
+      created.forEach((r) => {
+        if (r.invitation_id) next[r.invitation_id] = "sending";
+      });
+      return next;
+    });
+    const results = await Promise.all(
+      created.map(async (r) => ({
+        id: r.invitation_id as string,
+        result: await sendInvitationEmail(r.invitation_id as string),
+      })),
+    );
+    setEmailState((prev) => {
+      const next = { ...prev };
+      results.forEach(({ id, result }) => {
+        next[id] = result.emailed ? "sent" : "failed";
+      });
+      return next;
+    });
+    const failed = results.filter((r) => !r.result.emailed).length;
+    if (failed === 0) {
+      toast.success(
+        `Invitation email sent to ${results.length} recipient${results.length === 1 ? "" : "s"}`,
+      );
+    } else {
+      toast.error(
+        `${failed} invitation email${failed === 1 ? "" : "s"} could not be sent — retry or copy the link.`,
+      );
+    }
+  };
+
+  const retryEmail = async (row: InviteRow) => {
+    if (!row.invitation_id) return;
+    setEmailState((p) => ({ ...p, [row.invitation_id as string]: "sending" }));
+    const result = await sendInvitationEmail(row.invitation_id);
+    setEmailState((p) => ({
+      ...p,
+      [row.invitation_id as string]: result.emailed ? "sent" : "failed",
+    }));
+    if (result.emailed) toast.success(`Invitation email sent to ${row.email}`);
+    else toast.error("Email could not be sent. Copy the invite link instead.");
+  };
+
   const closeAll = () => {
     setRaw("");
     setRows(null);
     setCopied(null);
+    setEmailState({});
     onClose();
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
