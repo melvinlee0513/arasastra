@@ -233,6 +233,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
             <div className="space-y-2">
               {rows.map((row) => {
                 const copyInfo = RESULT_COPY[row.result] ?? RESULT_COPY.invalid_email;
+                const mail = row.invitation_id ? emailState[row.invitation_id] : undefined;
                 return (
                   <div
                     key={`${row.email}-${row.result}`}
@@ -243,17 +244,45 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
                         {row.email || "—"}
                       </p>
                       <p className="text-xs text-slate-500 capitalize">{row.role}</p>
+                      {mail === "sending" && (
+                        <p className="inline-flex items-center gap-1 text-xs text-slate-500">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Sending invitation email…
+                        </p>
+                      )}
+                      {mail === "sent" && (
+                        <p className="text-xs text-emerald-600">
+                          Invitation email sent to {row.email}
+                        </p>
+                      )}
+                      {mail === "failed" && (
+                        <p className="text-xs text-amber-700">
+                          Invitation created, but the email could not be sent.
+                        </p>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge variant="outline" className={`text-[11px] ${copyInfo.tone}`}>
                         {copyInfo.label}
                       </Badge>
+                      {mail === "failed" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="rounded-full"
+                          title="Retry invitation email"
+                          onClick={() => retryEmail(row)}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                       {row.result === "created" && row.token && (
                         <Button
                           type="button"
                           size="sm"
                           variant="ghost"
                           className="rounded-full"
+                          title="Copy invite link (fallback)"
                           onClick={() => copy(linkFor(row.token as string), row.email)}
                         >
                           {copied === row.email ? (
@@ -265,6 +294,7 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
                       )}
                     </div>
                   </div>
+
                 );
               })}
             </div>
