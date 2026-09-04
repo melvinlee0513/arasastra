@@ -152,7 +152,39 @@ Deno.serve(async (req) => {
     return json({ emailed: false, error: 'email_not_configured' }, 502)
   }
 
+  // App emails must carry a one-click unsubscribe token (provider requirement).
+  // Reuse the recipient's existing token when present, otherwise mint one.
+  const resolveUnsubscribeToken = async (): Promise<string | null> => {
+    const { data: existing } = await admin
+      .from('email_unsubscribe_tokens')
+      .select('token')
+      .eq('email', invitation.email)
+      .maybeSingle()
+    const found = (existing as { token?: string } | null)?.token
+    if (found) return found
+
+    const token = crypto.randomUUID()
+    const { error } = await admin
+      .from('email_unsubscribe_tokens')
+      .insert({ email: invitation.email, token })
+    if (error) {
+      const { data: retry } = await admin
+        .from('email_unsubscribe_tokens')
+        .select('token')
+        .eq('email', invitation.email)
+        .maybeSingle()
+      return (retry as { token?: string } | null)?.token ?? null
+    }
+    return token
+  }
+
   try {
+    const unsubscribeToken = await resolveUnsubscribeToken()
+    if (!unsubscribeToken) {
+      await markFailure('Could not resolve an unsubscribe token for this recipient')
+      return json({ emailed: false, error: 'unsubscribe_token_unavailable' }, 500)
+    }
+
     const html = await renderAsync(React.createElement(CenterInvitationEmail, props))
     const text = await renderAsync(React.createElement(CenterInvitationEmail, props), {
       plainText: true,
