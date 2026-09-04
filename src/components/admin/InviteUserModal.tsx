@@ -223,9 +223,10 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
             Invite users
           </DialogTitle>
           <DialogDescription className="text-slate-500">
-            Paste one or many email addresses. Each person gets their own single-use
-            signup link for {center?.name ?? "your organization"}.
+            Paste one or many email addresses. Each person is emailed their own
+            single-use signup link for {center?.name ?? "your organization"}.
           </DialogDescription>
+
         </DialogHeader>
 
         {rows ? (
