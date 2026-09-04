@@ -11,6 +11,7 @@
  * published quiz must never change because someone tidied up the bank.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { QuestionMediaCrop } from "@/lib/quizMedia";
 
 export type BankSort = "recent" | "newest" | "oldest" | "most_used" | "az";
 
@@ -108,7 +109,15 @@ export interface BankAnswerConfig {
   answer_unit: string | null;
 }
 
-export interface BankQuestionDetail extends BankAnswerConfig {
+export interface BankQuestionMedia {
+  image_path: string | null;
+  image_width: number | null;
+  image_height: number | null;
+  image_alt: string | null;
+  image_crop: QuestionMediaCrop | null;
+}
+
+export interface BankQuestionDetail extends BankAnswerConfig, BankQuestionMedia {
   id: string;
   question: string;
   question_type: string;
@@ -195,6 +204,11 @@ export async function saveBankQuestion(args: {
   numericAnswer?: number | null;
   numericTolerance?: number | null;
   answerUnit?: string | null;
+  imagePath?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  imageAlt?: string | null;
+  imageCrop?: QuestionMediaCrop | null;
 }): Promise<{ id: string }> {
   const { data, error } = await supabase.rpc("save_question_bank_question" as never, {
     _question_id: args.id ?? null,
@@ -211,6 +225,11 @@ export async function saveBankQuestion(args: {
     _numeric_answer: args.numericAnswer ?? null,
     _numeric_tolerance: args.numericTolerance ?? null,
     _answer_unit: args.answerUnit ?? null,
+    _image_path: args.imagePath ?? null,
+    _image_width: args.imagePath ? (args.imageWidth ?? null) : null,
+    _image_height: args.imagePath ? (args.imageHeight ?? null) : null,
+    _image_alt: args.imagePath ? (args.imageAlt ?? null) : null,
+    _image_crop: args.imagePath ? (args.imageCrop ?? null) : null,
   } as never);
   if (error) throw error;
   return data as unknown as { id: string };

@@ -33,6 +33,7 @@ import {
   BuilderSection,
 } from "./QuizBuilderChrome";
 import { QUESTION_TYPE_LABEL, isChoiceType, totalPoints, type BuilderState } from "./types";
+import { QuestionMedia } from "@/components/quiz/QuestionMedia";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -193,6 +194,18 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
               <p className="whitespace-pre-wrap break-words text-[15.5px] font-bold leading-snug text-slate-900">
                 {active.question.trim() || "Untitled question"}
               </p>
+
+              {active.image_path && (
+                <QuestionMedia
+                  media={{
+                    image_path: active.image_path,
+                    image_width: active.image_width,
+                    image_height: active.image_height,
+                    image_alt: active.image_alt,
+                    image_crop: active.image_crop,
+                  }}
+                />
+              )}
 
               <ul className="space-y-2">
                 {active.options.map((o, i) => (

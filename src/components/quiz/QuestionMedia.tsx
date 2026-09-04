@@ -10,7 +10,7 @@ import {
 } from "@/lib/quizMedia";
 
 export interface QuestionMediaValue {
-  image_path: string | null;
+  image_path?: string | null;
   image_width?: number | null;
   image_height?: number | null;
   image_alt?: string | null;
