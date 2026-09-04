@@ -2003,6 +2003,11 @@ export type Database = {
           created_by: string | null
           explanation: string | null
           id: string
+          image_alt: string | null
+          image_crop: Json | null
+          image_height: number | null
+          image_path: string | null
+          image_width: number | null
           numeric_answer: number | null
           numeric_tolerance: number | null
           points: number
@@ -2023,6 +2028,11 @@ export type Database = {
           created_by?: string | null
           explanation?: string | null
           id?: string
+          image_alt?: string | null
+          image_crop?: Json | null
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           numeric_answer?: number | null
           numeric_tolerance?: number | null
           points?: number
@@ -2043,6 +2053,11 @@ export type Database = {
           created_by?: string | null
           explanation?: string | null
           id?: string
+          image_alt?: string | null
+          image_crop?: Json | null
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           numeric_answer?: number | null
           numeric_tolerance?: number | null
           points?: number
@@ -2200,6 +2215,11 @@ export type Database = {
           correct_answer: string | null
           explanation: string | null
           id: string
+          image_alt: string | null
+          image_crop: Json | null
+          image_height: number | null
+          image_path: string | null
+          image_width: number | null
           numeric_answer: number | null
           numeric_tolerance: number | null
           options: Json
@@ -2220,6 +2240,11 @@ export type Database = {
           correct_answer?: string | null
           explanation?: string | null
           id?: string
+          image_alt?: string | null
+          image_crop?: Json | null
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           numeric_answer?: number | null
           numeric_tolerance?: number | null
           options?: Json
@@ -2240,6 +2265,11 @@ export type Database = {
           correct_answer?: string | null
           explanation?: string | null
           id?: string
+          image_alt?: string | null
+          image_crop?: Json | null
+          image_height?: number | null
+          image_path?: string | null
+          image_width?: number | null
           numeric_answer?: number | null
           numeric_tolerance?: number | null
           options?: Json
@@ -2283,6 +2313,7 @@ export type Database = {
           total_points: number | null
           total_questions: number
           user_id: string
+          xp_awarded: number
         }
         Insert: {
           attempt_id: string
@@ -2297,6 +2328,7 @@ export type Database = {
           total_points?: number | null
           total_questions?: number
           user_id: string
+          xp_awarded?: number
         }
         Update: {
           attempt_id?: string
@@ -2311,6 +2343,7 @@ export type Database = {
           total_points?: number | null
           total_questions?: number
           user_id?: string
+          xp_awarded?: number
         }
         Relationships: [
           {
@@ -2322,6 +2355,47 @@ export type Database = {
           },
           {
             foreignKeyName: "quiz_results_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_xp_awards: {
+        Row: {
+          best_points: number
+          center_id: string
+          created_at: string
+          id: string
+          quiz_id: string
+          student_user_id: string
+          updated_at: string
+          xp_total: number
+        }
+        Insert: {
+          best_points?: number
+          center_id: string
+          created_at?: string
+          id?: string
+          quiz_id: string
+          student_user_id: string
+          updated_at?: string
+          xp_total?: number
+        }
+        Update: {
+          best_points?: number
+          center_id?: string
+          created_at?: string
+          id?: string
+          quiz_id?: string
+          student_user_id?: string
+          updated_at?: string
+          xp_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_xp_awards_quiz_id_fkey"
             columns: ["quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
@@ -3336,6 +3410,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _quiz_media_center: { Args: { _name: string }; Returns: string }
       _resync_live_quiz_counts: {
         Args: { _session_id: string }
         Returns: undefined
@@ -3389,6 +3464,8 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      can_read_quiz_media: { Args: { _name: string }; Returns: boolean }
+      can_write_quiz_media: { Args: { _name: string }; Returns: boolean }
       claim_invitation_for_signup: {
         Args: { _token: string }
         Returns: {
