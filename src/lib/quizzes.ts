@@ -525,6 +525,14 @@ export type QuizResultPayload =
       percentage: number | null;
       submission_reason: string;
       completed_at: string;
+      /** XP this attempt earned (server-authoritative; 0 when nothing new). */
+      xp_awarded: number;
+      /** XP this quiz has paid the student in total. */
+      xp_quiz_total: number;
+      /** Best points already rewarded for this quiz. */
+      xp_quiz_best_points: number;
+      /** Maximum XP this quiz can ever pay (max points × 10). */
+      xp_quiz_max: number;
       questions: QuizResultQuestion[];
     };
 
