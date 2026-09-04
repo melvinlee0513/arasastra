@@ -310,6 +310,25 @@ export function InvitationsPanel() {
                         {meta.label}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const d = emailDelivery(row);
+                        if (!d) return <span className="text-slate-500">—</span>;
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={cn("rounded-full border w-fit", d.className)}>
+                              {d.label}
+                            </Badge>
+                            {(row.resend_count ?? 0) > 1 && (
+                              <span className="text-[11px] text-slate-500">
+                                sent {row.resend_count} times
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+
                     <TableCell className="text-slate-600 whitespace-nowrap">
                       {format(new Date(row.created_at), "dd MMM yyyy")}
                     </TableCell>
