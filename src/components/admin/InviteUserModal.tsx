@@ -186,14 +186,16 @@ export function InviteUserModal({ open, onClose }: InviteUserModalProps) {
 
       const result = (data ?? []) as InviteRow[];
       setRows(result);
-      const createdCount = result.filter((r) => r.result === "created").length;
-      if (createdCount > 0) {
+      const createdRows = result.filter((r) => r.result === "created" && r.invitation_id);
+      if (createdRows.length > 0) {
         toast.success(
-          `${createdCount} invitation${createdCount === 1 ? "" : "s"} created`,
+          `${createdRows.length} invitation${createdRows.length === 1 ? "" : "s"} created — sending email…`,
         );
+        void deliverEmails(createdRows);
       } else {
         toast.error("No new invitations were created");
       }
+
     } catch (err) {
       showSupabaseError(err as any, "Failed to create invitations");
     } finally {
