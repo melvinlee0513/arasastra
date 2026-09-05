@@ -44,7 +44,9 @@ import {
 } from "./QuizBuilderChrome";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { questionTypesFor } from "@/lib/questionTypes";
-import { QUESTION_TYPE_LABEL, isChoiceType, type QuestionDraft } from "./types";
+import { QUESTION_TYPE_LABEL, isChoiceType, type OptionDraft, type QuestionDraft } from "./types";
+import { RichTextEditor } from "@/components/richtext/RichTextEditor";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import { QuestionMediaEditor } from "./QuestionMediaEditor";
 
 const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F"];
@@ -66,7 +68,7 @@ export interface QuestionsStepProps {
   onRemoveQuestion: (index: number) => void;
   onDuplicateQuestion: (index: number) => void;
   onMoveQuestion: (index: number, dir: -1 | 1) => void;
-  onPatchOption: (qIndex: number, oIndex: number, patch: { option_text?: string }) => void;
+  onPatchOption: (qIndex: number, oIndex: number, patch: Partial<OptionDraft>) => void;
   onSetCorrect: (qIndex: number, oIndex: number) => void;
   onAddOption: (qIndex: number) => void;
   onRemoveOption: (qIndex: number, oIndex: number) => void;
@@ -234,7 +236,14 @@ export function QuestionsStep(props: QuestionsStepProps) {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="line-clamp-2 block text-[13.5px] font-semibold leading-snug text-slate-900">
-                            {q.question.trim() || "Untitled question"}
+                            {q.question.trim() ? (
+                              <RichTextRenderer
+                                value={q.question_content ?? null}
+                                fallbackText={q.question}
+                              />
+                            ) : (
+                              "Untitled question"
+                            )}
                           </span>
                           <span className="mt-1 flex flex-wrap items-center gap-1.5">
                             <BuilderPill tone="neutral">
@@ -434,15 +443,16 @@ function QuestionEditor({
           </BuilderField>
         </div>
 
-        <BuilderField label="Question" htmlFor={`q-text-${question.id}`} required>
-          <Textarea
-            id={`q-text-${question.id}`}
-            value={question.question}
+        <BuilderField label="Question" required>
+          <RichTextEditor
+            value={question.question_content ?? null}
+            fallbackText={question.question}
             disabled={locked}
-            onChange={(e) => onPatchQuestion(index, { question: e.target.value })}
+            ariaLabel="Question text"
             placeholder="What is the main pigment used in photosynthesis?"
-            rows={3}
-            className="rounded-2xl text-[15px] bg-white border-slate-200"
+            onChange={(doc, plain) =>
+              onPatchQuestion(index, { question_content: doc, question: plain })
+            }
           />
         </BuilderField>
 
@@ -467,7 +477,7 @@ function QuestionEditor({
                 <div
                   key={opt.id}
                   className={cn(
-                    "flex items-center gap-2 rounded-2xl border p-2 transition",
+                    "flex items-start gap-2 rounded-2xl border p-2 transition",
                     correct ? "border-quiz-correct/50 bg-emerald-50" : "border-slate-200 bg-white",
                   )}
                 >
@@ -498,15 +508,22 @@ function QuestionEditor({
                       {opt.option_text}
                     </span>
                   ) : (
-                    <Input
-                      value={opt.option_text}
-                      disabled={locked}
-                      onChange={(e) =>
-                        onPatchOption(index, oIdx, { option_text: e.target.value })
-                      }
-                      placeholder={`Option ${OPTION_LETTERS[oIdx] ?? oIdx + 1}`}
-                      className="h-11 min-w-0 flex-1 rounded-xl border-0 bg-transparent px-1 text-[15px] shadow-none focus-visible:ring-0"
-                    />
+                    <div className="min-w-0 flex-1">
+                      <RichTextEditor
+                        compact
+                        value={opt.option_content ?? null}
+                        fallbackText={opt.option_text}
+                        disabled={locked}
+                        ariaLabel={`Option ${OPTION_LETTERS[oIdx] ?? oIdx + 1}`}
+                        placeholder={`Option ${OPTION_LETTERS[oIdx] ?? oIdx + 1}`}
+                        onChange={(doc, plain) =>
+                          onPatchOption(index, oIdx, {
+                            option_content: doc,
+                            option_text: plain,
+                          })
+                        }
+                      />
+                    </div>
                   )}
 
                   {!isTrueFalse && !locked && question.options.length > 2 && (
@@ -667,21 +684,23 @@ function QuestionEditor({
 
         <BuilderField
           label="Explanation"
-          htmlFor={`q-exp-${question.id}`}
           hint="Shown with the result when students can see answers. Optional."
         >
-          <div className="relative">
-            <Textarea
-              id={`q-exp-${question.id}`}
-              value={question.explanation}
-              maxLength={EXPLANATION_MAX}
+          <div>
+            <RichTextEditor
+              value={question.explanation_content ?? null}
+              fallbackText={question.explanation}
               disabled={locked}
-              onChange={(e) => onPatchQuestion(index, { explanation: e.target.value })}
+              ariaLabel="Explanation"
               placeholder="Chlorophyll is the primary pigment that captures light energy."
-              rows={2}
-              className="rounded-2xl pb-7 text-[15px] bg-white border-slate-200"
+              onChange={(doc, plain) =>
+                onPatchQuestion(index, {
+                  explanation_content: doc,
+                  explanation: plain.slice(0, EXPLANATION_MAX),
+                })
+              }
             />
-            <span className="pointer-events-none absolute bottom-2.5 right-3 text-[11px] font-medium tabular-nums text-slate-400">
+            <span className="mt-1 block text-right text-[11px] font-medium tabular-nums text-slate-400">
               {question.explanation.length}/{EXPLANATION_MAX}
             </span>
           </div>
