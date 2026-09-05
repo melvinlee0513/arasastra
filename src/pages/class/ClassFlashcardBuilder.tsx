@@ -67,6 +67,9 @@ interface CardRow {
   serverId: string | null;
   front: string;
   back: string;
+  /** Canonical rich content documents (null for untouched legacy cards). */
+  frontDoc: RichDoc | null;
+  backDoc: RichDoc | null;
 }
 
 interface BuilderState {
@@ -83,10 +86,19 @@ interface StoredDraft extends BuilderState {
 let keySeq = 0;
 const nextKey = () => `c${Date.now().toString(36)}-${keySeq++}`;
 
+const newCard = (): CardRow => ({
+  key: nextKey(),
+  serverId: null,
+  front: "",
+  back: "",
+  frontDoc: null,
+  backDoc: null,
+});
+
 const emptyState = (): BuilderState => ({
   title: "",
   description: "",
-  cards: [{ key: nextKey(), serverId: null, front: "", back: "" }],
+  cards: [newCard()],
   definitionVersion: null,
 });
 
@@ -99,10 +111,13 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
       serverId: c.id,
       front: c.front ?? "",
       back: c.back ?? "",
+      frontDoc: parseRichValue(c.front_content ?? null, c.front ?? ""),
+      backDoc: parseRichValue(c.back_content ?? null, c.back ?? ""),
     })),
     definitionVersion: detail.definition_version ?? null,
   };
 }
+
 
 export function ClassFlashcardBuilder({ variant }: Props) {
   const { classId, deckId } = useParams<{ classId: string; deckId?: string }>();
