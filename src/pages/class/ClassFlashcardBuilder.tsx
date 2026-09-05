@@ -246,7 +246,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
             serverId: c.serverId ?? null,
             front: c.front ?? "",
             back: c.back ?? "",
+            frontDoc: parseRichValue(c.frontDoc ?? null, c.front ?? ""),
+            backDoc: parseRichValue(c.backDoc ?? null, c.back ?? ""),
           })),
+
           definitionVersion: parsed.definitionVersion ?? null,
         });
         setDirty(true);
