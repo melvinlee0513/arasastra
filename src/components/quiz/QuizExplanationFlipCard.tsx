@@ -12,10 +12,13 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { QUIZ_ART } from "@/lib/quizArt";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 
 export interface QuizExplanationFlipCardProps {
   /** The question's stored explanation. Nothing renders without one. */
   explanation: string | null | undefined;
+  /** Canonical rich explanation JSON, when the tutor authored formatting. */
+  explanationContent?: unknown;
   /** Front-face artwork. Defaults to the Learning Tip card. */
   art?: string;
   className?: string;
@@ -23,6 +26,7 @@ export interface QuizExplanationFlipCardProps {
 
 export function QuizExplanationFlipCard({
   explanation,
+  explanationContent = null,
   art = QUIZ_ART.learningTip,
   className,
 }: QuizExplanationFlipCardProps) {
@@ -143,9 +147,9 @@ export function QuizExplanationFlipCard({
             <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-quiz-arena-muted">
               <span aria-hidden>💡</span> Explanation
             </p>
-            <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-quiz-arena-foreground">
-              {explanation}
-            </p>
+            <div className="break-words text-[13.5px] leading-relaxed text-quiz-arena-foreground">
+              <RichTextRenderer value={explanationContent} fallbackText={explanation ?? ""} />
+            </div>
             <p className="mt-3 text-[11px] font-semibold text-quiz-arena-muted/80">
               Tap to see Learning Tip
             </p>
