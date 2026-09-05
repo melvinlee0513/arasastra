@@ -584,26 +584,27 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1.5 min-w-0">
-                        <Label htmlFor={`front-${card.key}`}>Front</Label>
-                        <Textarea
-                          id={`front-${card.key}`}
-                          value={card.front}
-                          onChange={(e) => setCard(card.key, "front", e.target.value)}
+                        <Label>Front</Label>
+                        <RichTextEditor
+                          value={card.frontDoc}
+                          fallbackText={card.front}
+                          ariaLabel={`Front of card ${i + 1}`}
                           placeholder="Prompt or question"
-                          className="rounded-2xl min-h-[72px] break-words"
+                          onChange={(doc) => setCardContent(card.key, "front", doc)}
                         />
                       </div>
                       <div className="space-y-1.5 min-w-0">
-                        <Label htmlFor={`back-${card.key}`}>Back</Label>
-                        <Textarea
-                          id={`back-${card.key}`}
-                          value={card.back}
-                          onChange={(e) => setCard(card.key, "back", e.target.value)}
+                        <Label>Back</Label>
+                        <RichTextEditor
+                          value={card.backDoc}
+                          fallbackText={card.back}
+                          ariaLabel={`Back of card ${i + 1}`}
                           placeholder="Answer or explanation"
-                          className="rounded-2xl min-h-[72px] break-words"
+                          onChange={(doc) => setCardContent(card.key, "back", doc)}
                         />
                       </div>
                     </div>
+
                   </li>
                 ))}
               </ol>
