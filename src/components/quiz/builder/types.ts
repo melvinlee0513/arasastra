@@ -10,6 +10,7 @@
  * existing `quiz-builder:*` localStorage drafts keep restoring without any
  * migration step.
  */
+import type { RichDoc } from "@/lib/richContent";
 import type { QuestionMediaCrop } from "@/lib/quizMedia";
 import { sanitizeCrop } from "@/lib/quizMedia";
 import type {
@@ -21,15 +22,20 @@ import type {
 export interface OptionDraft {
   id: string; // local UUID (server always reassigns on save)
   option_text: string;
+  /** Canonical rich content; `option_text` is the plain-text mirror. */
+  option_content?: RichDoc | null;
   is_correct: boolean;
 }
 
 export interface QuestionDraft {
   id: string;
   question: string;
+  /** Canonical rich content; `question` is the plain-text mirror. */
+  question_content?: RichDoc | null;
   question_type: QuestionType;
   points: number;
   explanation: string;
+  explanation_content?: RichDoc | null;
   options: OptionDraft[];
   /** short_answer / fill_blank: the answer key, as typed by the tutor. */
   accepted_answers?: string[];
@@ -174,12 +180,15 @@ export function stateFromDefinition(def: QuizDefinitionForManager): BuilderState
     questions: def.questions.map((q) => ({
       id: q.id,
       question: q.question,
+      question_content: (q.question_content as RichDoc | null) ?? null,
       question_type: (q.question_type as string) === "multiple_choice" ? "mcq" : q.question_type,
       points: q.points,
       explanation: q.explanation ?? "",
+      explanation_content: (q.explanation_content as RichDoc | null) ?? null,
       options: q.options.map((o) => ({
         id: o.id,
         option_text: o.option_text,
+        option_content: (o.option_content as RichDoc | null) ?? null,
         is_correct: o.is_correct,
       })),
       accepted_answers:
@@ -379,11 +388,17 @@ export function toRpcDefinition(state: BuilderState, locked: boolean) {
     },
     questions: state.questions.map((q) => ({
       question: q.question,
+      question_content: q.question_content ?? null,
       question_type: (q.question_type as string) === "multiple_choice" ? "mcq" : q.question_type,
       points: q.points,
       explanation: q.explanation || null,
+      explanation_content: q.explanation ? (q.explanation_content ?? null) : null,
       options: isChoiceType(q.question_type)
-        ? q.options.map((o) => ({ option_text: o.option_text, is_correct: o.is_correct }))
+        ? q.options.map((o) => ({
+            option_text: o.option_text,
+            option_content: o.option_content ?? null,
+            is_correct: o.is_correct,
+          }))
         : [],
       accepted_answers:
         q.question_type === "short_answer" || q.question_type === "fill_blank"
