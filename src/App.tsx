@@ -103,6 +103,8 @@ const LiveQuizHarness = lazy(() => import("@/pages/dev/LiveQuizHarness").then(m 
 const ClassQuizResultsManager = lazy(() => import("@/pages/class/ClassQuizResultsManager").then(m => ({ default: m.ClassQuizResultsManager })));
 const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/StudentClassFlashcards").then(m => ({ default: m.StudentClassFlashcards })));
 const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
+const MyFlashcards = lazy(() => import("@/pages/dashboard/flashcards/MyFlashcards").then(m => ({ default: m.MyFlashcards })));
+const FlashcardReviewSession = lazy(() => import("@/pages/dashboard/flashcards/FlashcardReviewSession").then(m => ({ default: m.FlashcardReviewSession })));
 const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
 const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
@@ -216,7 +218,9 @@ const App = () => (
             {/* Cross-class student quiz hub + library */}
             <Route path="/dashboard/quizzes" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizHub /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/quizzes/library" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><DashboardLayout><QuizLibrary /></DashboardLayout></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
-            <Route path="/dashboard/flashcards" element={<Navigate to="/dashboard/classes" replace />} />
+            {/* Cross-class student flashcard home + spaced-repetition review */}
+            <Route path="/dashboard/flashcards" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><MyFlashcards /></DashboardLayout></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            <Route path="/dashboard/flashcards/review" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><FlashcardReviewSession /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
             {/* Student "More" hub + root-level services reached from it */}
