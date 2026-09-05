@@ -31,10 +31,15 @@ import { AnalyticsShell, Skel } from "@/components/quiz/analytics/AnalyticsChrom
 import { BuilderSection } from "@/components/quiz/builder/QuizBuilderChrome";
 import { QuestionMediaEditor } from "@/components/quiz/builder/QuestionMediaEditor";
 import { sanitizeCrop, type QuestionMediaCrop } from "@/lib/quizMedia";
+import { RichTextEditor } from "@/components/richtext/RichTextEditor";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
+import type { RichDoc } from "@/lib/richContent";
 
 interface OptionDraft {
   key: string;
   option_text: string;
+  /** Canonical rich content; `option_text` stays the plain-text mirror. */
+  option_content?: RichDoc | null;
   is_correct: boolean;
 }
 
@@ -59,9 +64,11 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
   const isNew = !questionId || questionId === "new";
 
   const [question, setQuestion] = useState("");
+  const [questionContent, setQuestionContent] = useState<RichDoc | null>(null);
   const [type, setType] = useState<string>("mcq");
   const [points, setPoints] = useState(1);
   const [explanation, setExplanation] = useState("");
+  const [explanationContent, setExplanationContent] = useState<RichDoc | null>(null);
   const [media, setMedia] = useState<{
     image_path: string | null;
     image_width: number | null;
@@ -101,9 +108,11 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
     if (isNew || hydrated || !existing.data) return;
     const d = existing.data;
     setQuestion(d.question);
+    setQuestionContent((d.question_content as RichDoc | null) ?? null);
     setType(d.question_type);
     setPoints(d.points);
     setExplanation(d.explanation ?? "");
+    setExplanationContent((d.explanation_content as RichDoc | null) ?? null);
     setMedia({
       image_path: d.image_path ?? null,
       image_width: d.image_width ?? null,
@@ -116,7 +125,12 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
     setSubjectId(d.subject_id);
     setOptions(
       d.options.length > 0
-        ? d.options.map((o) => ({ key: o.id, option_text: o.option_text, is_correct: o.is_correct }))
+        ? d.options.map((o) => ({
+            key: o.id,
+            option_text: o.option_text,
+            option_content: (o.option_content as RichDoc | null) ?? null,
+            is_correct: o.is_correct,
+          }))
         : [{ key: rid(), option_text: "", is_correct: true }],
     );
     setAccepted(d.accepted_answers?.length ? d.accepted_answers : [""]);
@@ -195,14 +209,20 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
       saveBankQuestion({
         id: isNew ? null : questionId,
         question: question.trim(),
+        questionContent: questionContent,
         questionType: type,
         points,
         explanation: explanation.trim() || null,
+        explanationContent: explanationContent,
         topic: topic.trim() || null,
         collectionId,
         subjectId,
         options: isChoice
-          ? filled.map((o) => ({ option_text: o.option_text.trim(), is_correct: o.is_correct }))
+          ? filled.map((o) => ({
+              option_text: o.option_text.trim(),
+              option_content: o.option_content ?? null,
+              is_correct: o.is_correct,
+            }))
           : [],
         acceptedAnswers: isTextAnswer ? acceptedFilled : null,
         answerMatchMode: matchMode,
@@ -286,12 +306,15 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
               <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
                 Question text
               </span>
-              <Textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value.slice(0, 2000))}
-                rows={3}
+              <RichTextEditor
+                value={questionContent}
+                fallbackText={question}
+                ariaLabel="Question text"
                 placeholder="What is the unit of force in the SI system?"
-                className="rounded-2xl border-slate-200 bg-white text-[14px]"
+                onChange={(doc, plain) => {
+                  setQuestionContent(doc);
+                  setQuestion(plain.slice(0, 2000));
+                }}
               />
               <span className="mt-1 block text-right text-[11.5px] text-slate-400">
                 {question.length}/2000
@@ -316,7 +339,7 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                 <li
                   key={o.key}
                   className={cn(
-                    "flex items-center gap-2 rounded-2xl border p-2",
+                    "flex items-start gap-2 rounded-2xl border p-2",
                     o.is_correct ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-white",
                   )}
                 >
@@ -339,17 +362,26 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                   >
                     {o.is_correct ? <Check className="h-4 w-4" aria-hidden="true" /> : (LETTERS[i] ?? i + 1)}
                   </button>
-                  <Input
-                    value={o.option_text}
-                    onChange={(e) =>
-                      setOptions((prev) =>
-                        prev.map((x, j) => (j === i ? { ...x, option_text: e.target.value } : x)))
-                    }
-                    disabled={type === "true_false"}
-                    aria-label={`Option ${LETTERS[i] ?? i + 1} text`}
-                    placeholder={`Option ${LETTERS[i] ?? i + 1}`}
-                    className="h-11 min-w-0 flex-1 rounded-xl border-slate-200 bg-white text-[14px] disabled:opacity-70"
-                  />
+                  {type === "true_false" ? (
+                    <span className="min-w-0 flex-1 px-1 text-[14px] font-semibold text-slate-800">
+                      {o.option_text}
+                    </span>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <RichTextEditor
+                        compact
+                        value={o.option_content ?? null}
+                        fallbackText={o.option_text}
+                        ariaLabel={`Option ${LETTERS[i] ?? i + 1} text`}
+                        placeholder={`Option ${LETTERS[i] ?? i + 1}`}
+                        onChange={(doc, plain) =>
+                          setOptions((prev) =>
+                            prev.map((x, j) =>
+                              j === i ? { ...x, option_content: doc, option_text: plain } : x))
+                        }
+                      />
+                    </div>
+                  )}
                   {type !== "true_false" && options.length > 2 && (
                     <button
                       type="button"
@@ -450,11 +482,15 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
                 <p className="text-[11.5px] font-bold uppercase tracking-wide text-slate-500">
                   Student preview
                 </p>
-                <p className="mt-1.5 text-[13.5px] text-slate-700">
-                  {type === "fill_blank"
-                    ? (question.trim() || "Plants use ______ to absorb light energy.")
-                    : (question.trim() || "Your question appears here.")}
-                </p>
+                <div className="mt-1.5 text-[13.5px] text-slate-700">
+                  {question.trim() ? (
+                    <RichTextRenderer value={questionContent} fallbackText={question} />
+                  ) : type === "fill_blank" ? (
+                    "Plants use ______ to absorb light energy."
+                  ) : (
+                    "Your question appears here."
+                  )}
+                </div>
                 <div className="mt-2 flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-[13.5px] text-slate-400">
                   Your answer
                 </div>
@@ -612,12 +648,15 @@ export function QuestionBankEditor({ variant }: { variant: "tutor" | "admin" }) 
               <span className="mb-1.5 block text-[12.5px] font-semibold text-slate-700">
                 Explanation <span className="font-normal text-slate-400">(optional)</span>
               </span>
-              <Textarea
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value.slice(0, 500))}
-                rows={3}
+              <RichTextEditor
+                value={explanationContent}
+                fallbackText={explanation}
+                ariaLabel="Explanation"
                 placeholder="Shown to students after the answer is revealed."
-                className="rounded-2xl border-slate-200 bg-white text-[14px]"
+                onChange={(doc, plain) => {
+                  setExplanationContent(doc);
+                  setExplanation(plain.slice(0, 500));
+                }}
               />
               <span className="mt-1 block text-right text-[11.5px] text-slate-400">
                 {explanation.length}/500
