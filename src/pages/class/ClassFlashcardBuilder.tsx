@@ -30,8 +30,10 @@ import {
   folderKeys,
   moveContentItem,
 } from "@/lib/contentFolders";
+import { Textarea } from "@/components/ui/textarea";
 import { RichTextEditor } from "@/components/richtext/RichTextEditor";
 import { parseRichValue, richDocToPlainText, type RichDoc } from "@/lib/richContent";
+
 
 import {
   AlertDialog,
