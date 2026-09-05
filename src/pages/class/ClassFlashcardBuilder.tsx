@@ -31,6 +31,12 @@ import {
   moveContentItem,
 } from "@/lib/contentFolders";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/richtext/RichTextEditor";
+import { parseRichValue, richDocToPlainText, type RichDoc } from "@/lib/richContent";
+import type { Json } from "@/integrations/supabase/types";
+
+
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +73,9 @@ interface CardRow {
   serverId: string | null;
   front: string;
   back: string;
+  /** Canonical rich content documents (null for untouched legacy cards). */
+  frontDoc: RichDoc | null;
+  backDoc: RichDoc | null;
 }
 
 interface BuilderState {
@@ -83,10 +92,19 @@ interface StoredDraft extends BuilderState {
 let keySeq = 0;
 const nextKey = () => `c${Date.now().toString(36)}-${keySeq++}`;
 
+const newCard = (): CardRow => ({
+  key: nextKey(),
+  serverId: null,
+  front: "",
+  back: "",
+  frontDoc: null,
+  backDoc: null,
+});
+
 const emptyState = (): BuilderState => ({
   title: "",
   description: "",
-  cards: [{ key: nextKey(), serverId: null, front: "", back: "" }],
+  cards: [newCard()],
   definitionVersion: null,
 });
 
@@ -99,10 +117,13 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
       serverId: c.id,
       front: c.front ?? "",
       back: c.back ?? "",
+      frontDoc: parseRichValue(c.front_content ?? null, c.front ?? ""),
+      backDoc: parseRichValue(c.back_content ?? null, c.back ?? ""),
     })),
     definitionVersion: detail.definition_version ?? null,
   };
 }
+
 
 export function ClassFlashcardBuilder({ variant }: Props) {
   const { classId, deckId } = useParams<{ classId: string; deckId?: string }>();
@@ -227,7 +248,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
             serverId: c.serverId ?? null,
             front: c.front ?? "",
             back: c.back ?? "",
+            frontDoc: parseRichValue(c.frontDoc ?? null, c.front ?? ""),
+            backDoc: parseRichValue(c.backDoc ?? null, c.back ?? ""),
           })),
+
           definitionVersion: parsed.definitionVersion ?? null,
         });
         setDirty(true);
@@ -244,7 +268,14 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       const definition = {
         title: state.title,
         description: state.description,
-        cards: state.cards.map((c) => ({ id: c.serverId, front: c.front, back: c.back })),
+        cards: state.cards.map((c) => ({
+          id: c.serverId,
+          front: c.front,
+          back: c.back,
+          front_content: (c.frontDoc ?? null) as unknown as Json,
+          back_content: (c.backDoc ?? null) as unknown as Json,
+        })),
+
       };
       if (args.publish) {
         const v = validateFlashcardDeck(definition);
@@ -318,18 +349,35 @@ export function ClassFlashcardBuilder({ variant }: Props) {
     setDirty(true);
   };
 
-  const setCard = (key: string, field: "front" | "back", value: string) =>
-    patch((s) => ({ ...s, cards: s.cards.map((c) => (c.key === key ? { ...c, [field]: value } : c)) }));
+  /** Rich content edit: keeps the plain-text mirror in sync for validation. */
+  const setCardContent = (key: string, side: "front" | "back", doc: RichDoc) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? side === "front"
+            ? { ...c, frontDoc: doc, front: richDocToPlainText(doc) }
+            : { ...c, backDoc: doc, back: richDocToPlainText(doc) }
+          : c,
+      ),
+    }));
 
-  const addCard = () =>
-    patch((s) => ({ ...s, cards: [...s.cards, { key: nextKey(), serverId: null, front: "", back: "" }] }));
+  const addCard = () => patch((s) => ({ ...s, cards: [...s.cards, newCard()] }));
 
   const duplicateCard = (key: string) =>
     patch((s) => {
       const i = s.cards.findIndex((c) => c.key === key);
       if (i < 0) return s;
       const src = s.cards[i];
-      const copy: CardRow = { key: nextKey(), serverId: null, front: src.front, back: src.back };
+      const copy: CardRow = {
+        key: nextKey(),
+        serverId: null,
+        front: src.front,
+        back: src.back,
+        frontDoc: src.frontDoc,
+        backDoc: src.backDoc,
+      };
+
       const cards = [...s.cards];
       cards.splice(i + 1, 0, copy);
       return { ...s, cards };
@@ -545,26 +593,27 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1.5 min-w-0">
-                        <Label htmlFor={`front-${card.key}`}>Front</Label>
-                        <Textarea
-                          id={`front-${card.key}`}
-                          value={card.front}
-                          onChange={(e) => setCard(card.key, "front", e.target.value)}
+                        <Label>Front</Label>
+                        <RichTextEditor
+                          value={card.frontDoc}
+                          fallbackText={card.front}
+                          ariaLabel={`Front of card ${i + 1}`}
                           placeholder="Prompt or question"
-                          className="rounded-2xl min-h-[72px] break-words"
+                          onChange={(doc) => setCardContent(card.key, "front", doc)}
                         />
                       </div>
                       <div className="space-y-1.5 min-w-0">
-                        <Label htmlFor={`back-${card.key}`}>Back</Label>
-                        <Textarea
-                          id={`back-${card.key}`}
-                          value={card.back}
-                          onChange={(e) => setCard(card.key, "back", e.target.value)}
+                        <Label>Back</Label>
+                        <RichTextEditor
+                          value={card.backDoc}
+                          fallbackText={card.back}
+                          ariaLabel={`Back of card ${i + 1}`}
                           placeholder="Answer or explanation"
-                          className="rounded-2xl min-h-[72px] break-words"
+                          onChange={(doc) => setCardContent(card.key, "back", doc)}
                         />
                       </div>
                     </div>
+
                   </li>
                 ))}
               </ol>

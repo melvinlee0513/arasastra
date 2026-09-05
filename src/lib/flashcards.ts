@@ -29,6 +29,9 @@ export interface FlashcardCard {
   id: string;
   front: string;
   back: string;
+  /** Canonical rich content (TipTap JSON). Null for legacy plain-text cards. */
+  front_content?: Json | null;
+  back_content?: Json | null;
   display_order: number;
 }
 
@@ -37,7 +40,10 @@ export interface FlashcardCardDraft {
   id?: string | null;
   front: string;
   back: string;
+  front_content?: Json | null;
+  back_content?: Json | null;
 }
+
 
 export interface FlashcardDeckManagerRow {
   id: string;
@@ -303,7 +309,10 @@ export async function saveFlashcardDeck(args: {
         id: c.id ?? null,
         front: c.front,
         back: c.back,
+        front_content: c.front_content ?? null,
+        back_content: c.back_content ?? null,
       })),
+
     },
     _deck_id: args.deckId ?? undefined,
     _publish: args.publish ?? false,

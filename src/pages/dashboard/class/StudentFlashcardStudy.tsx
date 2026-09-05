@@ -12,6 +12,8 @@ import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
+
 import {
   flashcardStudentKeys,
   isFlashcardProgressConflict,
@@ -329,9 +331,12 @@ export function StudentFlashcardStudy() {
                     <span className="text-[11px] uppercase tracking-wide text-slate-400">
                       {revealed ? "Back" : "Front"}
                     </span>
-                    <p className="mt-3 text-lg sm:text-xl font-medium text-slate-900 whitespace-pre-wrap break-words">
-                      {revealed ? currentCard.back : currentCard.front}
-                    </p>
+                    <RichTextRenderer
+                      className="mt-3 text-lg sm:text-xl font-medium text-slate-900"
+                      value={revealed ? currentCard.back_content ?? null : currentCard.front_content ?? null}
+                      fallbackText={revealed ? currentCard.back : currentCard.front}
+                    />
+
                     {!revealed && (
                       <span className="mt-6 text-xs text-slate-400">Tap the card to reveal the answer</span>
                     )}

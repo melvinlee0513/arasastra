@@ -1188,30 +1188,36 @@ export type Database = {
       }
       flashcards: {
         Row: {
+          back_content: Json | null
           back_text: string
           center_id: string
           created_at: string
           deck_id: string
+          front_content: Json | null
           front_text: string
           id: string
           sort_order: number
           updated_at: string
         }
         Insert: {
+          back_content?: Json | null
           back_text: string
           center_id: string
           created_at?: string
           deck_id: string
+          front_content?: Json | null
           front_text: string
           id?: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          back_content?: Json | null
           back_text?: string
           center_id?: string
           created_at?: string
           deck_id?: string
+          front_content?: Json | null
           front_text?: string
           id?: string
           sort_order?: number
