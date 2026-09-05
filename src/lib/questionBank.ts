@@ -87,6 +87,8 @@ export interface BankSearchResult {
 export interface BankOption {
   id: string;
   option_text: string;
+  /** Canonical rich content; `option_text` is the plain-text mirror. */
+  option_content?: unknown;
   is_correct: boolean;
   order_index: number;
 }
@@ -120,9 +122,12 @@ export interface BankQuestionMedia {
 export interface BankQuestionDetail extends BankAnswerConfig, BankQuestionMedia {
   id: string;
   question: string;
+  /** Canonical rich content; `question` is the plain-text mirror. */
+  question_content?: unknown;
   question_type: string;
   points: number;
   explanation: string | null;
+  explanation_content?: unknown;
   topic: string | null;
   collection_id: string | null;
   subject_id: string | null;
@@ -192,13 +197,15 @@ export async function getBankQuestion(id: string): Promise<BankQuestionDetail> {
 export async function saveBankQuestion(args: {
   id?: string | null;
   question: string;
+  questionContent?: unknown;
   questionType: string;
   points: number;
   explanation?: string | null;
+  explanationContent?: unknown;
   topic?: string | null;
   collectionId?: string | null;
   subjectId?: string | null;
-  options: { option_text: string; is_correct: boolean }[];
+  options: { option_text: string; is_correct: boolean; option_content?: unknown }[];
   acceptedAnswers?: string[] | null;
   answerMatchMode?: "exact" | "ignore_case";
   numericAnswer?: number | null;
@@ -230,6 +237,8 @@ export async function saveBankQuestion(args: {
     _image_height: args.imagePath ? (args.imageHeight ?? null) : null,
     _image_alt: args.imagePath ? (args.imageAlt ?? null) : null,
     _image_crop: args.imagePath ? (args.imageCrop ?? null) : null,
+    _question_content: args.questionContent ?? null,
+    _explanation_content: args.explanation ? (args.explanationContent ?? null) : null,
   } as never);
   if (error) throw error;
   return data as unknown as { id: string };
