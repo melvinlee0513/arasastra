@@ -309,7 +309,10 @@ export async function saveFlashcardDeck(args: {
         id: c.id ?? null,
         front: c.front,
         back: c.back,
+        front_content: c.front_content ?? null,
+        back_content: c.back_content ?? null,
       })),
+
     },
     _deck_id: args.deckId ?? undefined,
     _publish: args.publish ?? false,
