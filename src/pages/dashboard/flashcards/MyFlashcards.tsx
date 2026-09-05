@@ -40,6 +40,7 @@ export function MyFlashcards() {
   const goal = data?.daily_goal ?? 20;
   const done = Math.min(data?.reviewed_today ?? 0, goal);
   const pct = goal > 0 ? Math.round((done / goal) * 100) : 0;
+  const newCount = (data?.decks ?? []).reduce((n, d) => n + (d.new_count ?? 0), 0);
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 pb-24 pt-4 sm:px-6">
@@ -89,7 +90,7 @@ export function MyFlashcards() {
                   </span>
                 </p>
                 <p className="mt-1 text-[13px] text-white/80">
-                  {(data?.new_count ?? 0) > 0
+                  {newCount > 0
                     ? "Plus new cards waiting to be learned."
                     : "Keep your streak alive with a quick session."}
                 </p>
@@ -112,7 +113,7 @@ export function MyFlashcards() {
               className="mt-4 h-12 w-full rounded-full bg-white text-[15px] font-extrabold text-[hsl(214,90%,44%)] hover:bg-white/90"
             >
               <Link to="/dashboard/flashcards/review">
-                {(data?.due_count ?? 0) + (data?.new_count ?? 0) > 0
+                {(data?.due_count ?? 0) + newCount > 0
                   ? "Start review"
                   : "Practise anyway"}
               </Link>
