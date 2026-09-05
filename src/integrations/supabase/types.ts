@@ -1958,6 +1958,7 @@ export type Database = {
           created_at: string
           id: string
           is_correct: boolean
+          option_content: Json | null
           option_text: string
           order_index: number
           question_id: string
@@ -1967,6 +1968,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text: string
           order_index?: number
           question_id: string
@@ -1976,6 +1978,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text?: string
           order_index?: number
           question_id?: string
@@ -2008,6 +2011,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           explanation: string | null
+          explanation_content: Json | null
           id: string
           image_alt: string | null
           image_crop: Json | null
@@ -2018,6 +2022,7 @@ export type Database = {
           numeric_tolerance: number | null
           points: number
           question: string
+          question_content: Json | null
           question_type: string
           subject_id: string | null
           topic: string | null
@@ -2033,6 +2038,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2043,6 +2049,7 @@ export type Database = {
           numeric_tolerance?: number | null
           points?: number
           question: string
+          question_content?: Json | null
           question_type?: string
           subject_id?: string | null
           topic?: string | null
@@ -2058,6 +2065,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2068,6 +2076,7 @@ export type Database = {
           numeric_tolerance?: number | null
           points?: number
           question?: string
+          question_content?: Json | null
           question_type?: string
           subject_id?: string | null
           topic?: string | null
@@ -2180,6 +2189,7 @@ export type Database = {
           created_at: string
           id: string
           is_correct: boolean
+          option_content: Json | null
           option_text: string
           order_index: number
           question_id: string
@@ -2189,6 +2199,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text: string
           order_index?: number
           question_id: string
@@ -2198,6 +2209,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text?: string
           order_index?: number
           question_id?: string
@@ -2220,6 +2232,7 @@ export type Database = {
           center_id: string | null
           correct_answer: string | null
           explanation: string | null
+          explanation_content: Json | null
           id: string
           image_alt: string | null
           image_crop: Json | null
@@ -2232,6 +2245,7 @@ export type Database = {
           order_index: number | null
           points: number
           question: string
+          question_content: Json | null
           question_type: string
           quiz_id: string
           sort_order: number | null
@@ -2245,6 +2259,7 @@ export type Database = {
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2257,6 +2272,7 @@ export type Database = {
           order_index?: number | null
           points?: number
           question: string
+          question_content?: Json | null
           question_type?: string
           quiz_id: string
           sort_order?: number | null
@@ -2270,6 +2286,7 @@ export type Database = {
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2282,6 +2299,7 @@ export type Database = {
           order_index?: number | null
           points?: number
           question?: string
+          question_content?: Json | null
           question_type?: string
           quiz_id?: string
           sort_order?: number | null
@@ -3422,6 +3440,7 @@ export type Database = {
         Args: { _session_id: string }
         Returns: undefined
       }
+      _rich_content: { Args: { _value: Json }; Returns: Json }
       add_question_bank_questions_to_quiz: {
         Args: { _question_ids: string[]; _quiz_id: string }
         Returns: Json
@@ -3954,6 +3973,7 @@ export type Database = {
           _answer_unit?: string
           _collection_id: string
           _explanation: string
+          _explanation_content?: Json
           _image_alt?: string
           _image_crop?: Json
           _image_height?: number
@@ -3964,6 +3984,7 @@ export type Database = {
           _options: Json
           _points: number
           _question: string
+          _question_content?: Json
           _question_id: string
           _question_type: string
           _subject_id: string
