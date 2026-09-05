@@ -1,0 +1,1 @@
+ALTER FUNCTION public.quiz_difficulty_band(numeric) SET search_path = public, pg_temp;
