@@ -1186,6 +1186,102 @@ export type Database = {
           },
         ]
       }
+      flashcard_review_rewards: {
+        Row: {
+          card_id: string | null
+          center_id: string
+          created_at: string
+          id: string
+          reward_date: string
+          reward_kind: string
+          student_user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          card_id?: string | null
+          center_id: string
+          created_at?: string
+          id?: string
+          reward_date?: string
+          reward_kind: string
+          student_user_id: string
+          xp_amount?: number
+        }
+        Update: {
+          card_id?: string | null
+          center_id?: string
+          created_at?: string
+          id?: string
+          reward_date?: string
+          reward_kind?: string
+          student_user_id?: string
+          xp_amount?: number
+        }
+        Relationships: []
+      }
+      flashcard_reviews: {
+        Row: {
+          card_id: string
+          center_id: string
+          class_id: string
+          created_at: string
+          deck_id: string
+          due_at: string
+          ease: number
+          id: string
+          interval_days: number
+          lapses: number
+          last_rating: string | null
+          last_reviewed_at: string | null
+          mastered_at: string | null
+          mastery: string
+          repetitions: number
+          review_count: number
+          student_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          center_id: string
+          class_id: string
+          created_at?: string
+          deck_id: string
+          due_at?: string
+          ease?: number
+          id?: string
+          interval_days?: number
+          lapses?: number
+          last_rating?: string | null
+          last_reviewed_at?: string | null
+          mastered_at?: string | null
+          mastery?: string
+          repetitions?: number
+          review_count?: number
+          student_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          deck_id?: string
+          due_at?: string
+          ease?: number
+          id?: string
+          interval_days?: number
+          lapses?: number
+          last_rating?: string | null
+          last_reviewed_at?: string | null
+          mastered_at?: string | null
+          mastery?: string
+          repetitions?: number
+          review_count?: number
+          student_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flashcards: {
         Row: {
           back_content: Json | null
@@ -3566,6 +3662,7 @@ export type Database = {
       }
       expire_stale_live_quiz_sessions: { Args: never; Returns: number }
       find_my_live_quiz_session: { Args: never; Returns: Json }
+      flashcard_daily_goal: { Args: never; Returns: number }
       get_class_delete_impact: { Args: { p_class_id: string }; Returns: Json }
       get_flashcard_deck_for_manager: {
         Args: { _deck_id: string }
@@ -3651,6 +3748,11 @@ export type Database = {
           destination: string
           subdomain_slug: string
         }[]
+      }
+      get_student_flashcard_overview: { Args: never; Returns: Json }
+      get_student_flashcard_review_queue: {
+        Args: { _limit?: number }
+        Returns: Json
       }
       get_student_home_feed: {
         Args: {
@@ -4049,6 +4151,10 @@ export type Database = {
         Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
+      submit_flashcard_review: {
+        Args: { _card_id: string; _rating: string }
+        Returns: Json
+      }
       submit_live_quiz_answer: {
         Args: {
           _answer?: Json
