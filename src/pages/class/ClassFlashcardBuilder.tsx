@@ -266,7 +266,14 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       const definition = {
         title: state.title,
         description: state.description,
-        cards: state.cards.map((c) => ({ id: c.serverId, front: c.front, back: c.back })),
+        cards: state.cards.map((c) => ({
+          id: c.serverId,
+          front: c.front,
+          back: c.back,
+          front_content: (c.frontDoc ?? null) as unknown as Json,
+          back_content: (c.backDoc ?? null) as unknown as Json,
+        })),
+
       };
       if (args.publish) {
         const v = validateFlashcardDeck(definition);
