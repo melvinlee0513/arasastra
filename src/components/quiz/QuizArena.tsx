@@ -7,6 +7,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import { QUIZ_ART } from "@/lib/quizArt";
 
 export function ArenaArt({
@@ -146,7 +147,7 @@ export function ArenaAnswerGrid({
   onSelect,
   disabled,
 }: {
-  options: Array<{ id: string; text: string }>;
+  options: Array<{ id: string; text: string; content?: unknown }>;
   selectedId: string | null;
   onSelect: (id: string) => void;
   disabled?: boolean;
@@ -178,8 +179,8 @@ export function ArenaAnswerGrid({
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/25 text-[13px] font-black">
               {OPTION_LABELS[i] ?? i + 1}
             </span>
-            <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[14.5px] leading-snug">
-              {option.text}
+            <span className="min-w-0 flex-1 break-words text-[14.5px] leading-snug">
+              <RichTextRenderer value={option.content ?? null} fallbackText={option.text} />
             </span>
           </button>
         );

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import { QUIZ_ART } from "@/lib/quizArt";
 import { formatDateTime, RESULT_VISIBILITY_LABEL } from "@/lib/quizzes";
 import {
@@ -191,9 +192,16 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
                 </BuilderPill>
               </div>
 
-              <p className="whitespace-pre-wrap break-words text-[15.5px] font-bold leading-snug text-slate-900">
-                {active.question.trim() || "Untitled question"}
-              </p>
+              <div className="break-words text-[15.5px] font-bold leading-snug text-slate-900">
+                {active.question.trim() ? (
+                  <RichTextRenderer
+                    value={active.question_content ?? null}
+                    fallbackText={active.question}
+                  />
+                ) : (
+                  "Untitled question"
+                )}
+              </div>
 
               {active.image_path && (
                 <QuestionMedia
@@ -232,8 +240,13 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
                         (OPTION_LETTERS[i] ?? i + 1)
                       )}
                     </span>
-                    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                      {o.option_text || (
+                    <span className="min-w-0 flex-1 break-words">
+                      {o.option_text.trim() ? (
+                        <RichTextRenderer
+                          value={o.option_content ?? null}
+                          fallbackText={o.option_text}
+                        />
+                      ) : (
                         <span className="italic text-slate-400">Empty option</span>
                       )}
                     </span>
@@ -282,9 +295,12 @@ export function PreviewStep({ state, publishIssues, onGoToQuestions }: PreviewSt
                     <p className="text-[11px] font-black uppercase tracking-wide text-quiz-accent-strong">
                       Explanation
                     </p>
-                    <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-snug text-slate-700">
-                      {active.explanation}
-                    </p>
+                    <div className="mt-0.5 text-[13px] leading-snug text-slate-700">
+                      <RichTextRenderer
+                        value={active.explanation_content ?? null}
+                        fallbackText={active.explanation}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

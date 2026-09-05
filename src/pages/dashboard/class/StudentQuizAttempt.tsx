@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { QUIZ_ART } from "@/lib/quizArt";
 import { QuizAnswerInput } from "@/components/quiz/QuizAnswerInput";
 import { QuestionMedia } from "@/components/quiz/QuestionMedia";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import { hasAnswer, type AnswerValue } from "@/lib/quizAnswers";
 import {
   ArenaAnswerGrid,
@@ -441,8 +442,8 @@ export function StudentQuizAttempt() {
       <ArenaPanel className="mt-4">
         <div className="flex items-start gap-3">
           <ArenaArt src={QUIZ_ART.crystalGem} className="h-9 w-9 shrink-0" />
-          <h2 className="min-w-0 flex-1 whitespace-pre-wrap text-[16px] font-bold leading-snug">
-            {q.prompt}
+          <h2 className="min-w-0 flex-1 text-[16px] font-bold leading-snug">
+            <RichTextRenderer value={q.prompt_content ?? null} fallbackText={q.prompt} />
           </h2>
         </div>
         {q.image_path && <QuestionMedia media={q} className="mt-3 w-full" />}
