@@ -1186,6 +1186,102 @@ export type Database = {
           },
         ]
       }
+      flashcard_review_rewards: {
+        Row: {
+          card_id: string | null
+          center_id: string
+          created_at: string
+          id: string
+          reward_date: string
+          reward_kind: string
+          student_user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          card_id?: string | null
+          center_id: string
+          created_at?: string
+          id?: string
+          reward_date?: string
+          reward_kind: string
+          student_user_id: string
+          xp_amount?: number
+        }
+        Update: {
+          card_id?: string | null
+          center_id?: string
+          created_at?: string
+          id?: string
+          reward_date?: string
+          reward_kind?: string
+          student_user_id?: string
+          xp_amount?: number
+        }
+        Relationships: []
+      }
+      flashcard_reviews: {
+        Row: {
+          card_id: string
+          center_id: string
+          class_id: string
+          created_at: string
+          deck_id: string
+          due_at: string
+          ease: number
+          id: string
+          interval_days: number
+          lapses: number
+          last_rating: string | null
+          last_reviewed_at: string | null
+          mastered_at: string | null
+          mastery: string
+          repetitions: number
+          review_count: number
+          student_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          center_id: string
+          class_id: string
+          created_at?: string
+          deck_id: string
+          due_at?: string
+          ease?: number
+          id?: string
+          interval_days?: number
+          lapses?: number
+          last_rating?: string | null
+          last_reviewed_at?: string | null
+          mastered_at?: string | null
+          mastery?: string
+          repetitions?: number
+          review_count?: number
+          student_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          center_id?: string
+          class_id?: string
+          created_at?: string
+          deck_id?: string
+          due_at?: string
+          ease?: number
+          id?: string
+          interval_days?: number
+          lapses?: number
+          last_rating?: string | null
+          last_reviewed_at?: string | null
+          mastered_at?: string | null
+          mastery?: string
+          repetitions?: number
+          review_count?: number
+          student_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flashcards: {
         Row: {
           back_content: Json | null
@@ -1958,6 +2054,7 @@ export type Database = {
           created_at: string
           id: string
           is_correct: boolean
+          option_content: Json | null
           option_text: string
           order_index: number
           question_id: string
@@ -1967,6 +2064,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text: string
           order_index?: number
           question_id: string
@@ -1976,6 +2074,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text?: string
           order_index?: number
           question_id?: string
@@ -2008,6 +2107,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           explanation: string | null
+          explanation_content: Json | null
           id: string
           image_alt: string | null
           image_crop: Json | null
@@ -2018,6 +2118,7 @@ export type Database = {
           numeric_tolerance: number | null
           points: number
           question: string
+          question_content: Json | null
           question_type: string
           subject_id: string | null
           topic: string | null
@@ -2033,6 +2134,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2043,6 +2145,7 @@ export type Database = {
           numeric_tolerance?: number | null
           points?: number
           question: string
+          question_content?: Json | null
           question_type?: string
           subject_id?: string | null
           topic?: string | null
@@ -2058,6 +2161,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2068,6 +2172,7 @@ export type Database = {
           numeric_tolerance?: number | null
           points?: number
           question?: string
+          question_content?: Json | null
           question_type?: string
           subject_id?: string | null
           topic?: string | null
@@ -2180,6 +2285,7 @@ export type Database = {
           created_at: string
           id: string
           is_correct: boolean
+          option_content: Json | null
           option_text: string
           order_index: number
           question_id: string
@@ -2189,6 +2295,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text: string
           order_index?: number
           question_id: string
@@ -2198,6 +2305,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_correct?: boolean
+          option_content?: Json | null
           option_text?: string
           order_index?: number
           question_id?: string
@@ -2220,6 +2328,7 @@ export type Database = {
           center_id: string | null
           correct_answer: string | null
           explanation: string | null
+          explanation_content: Json | null
           id: string
           image_alt: string | null
           image_crop: Json | null
@@ -2232,6 +2341,7 @@ export type Database = {
           order_index: number | null
           points: number
           question: string
+          question_content: Json | null
           question_type: string
           quiz_id: string
           sort_order: number | null
@@ -2245,6 +2355,7 @@ export type Database = {
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2257,6 +2368,7 @@ export type Database = {
           order_index?: number | null
           points?: number
           question: string
+          question_content?: Json | null
           question_type?: string
           quiz_id: string
           sort_order?: number | null
@@ -2270,6 +2382,7 @@ export type Database = {
           center_id?: string | null
           correct_answer?: string | null
           explanation?: string | null
+          explanation_content?: Json | null
           id?: string
           image_alt?: string | null
           image_crop?: Json | null
@@ -2282,6 +2395,7 @@ export type Database = {
           order_index?: number | null
           points?: number
           question?: string
+          question_content?: Json | null
           question_type?: string
           quiz_id?: string
           sort_order?: number | null
@@ -3422,6 +3536,7 @@ export type Database = {
         Args: { _session_id: string }
         Returns: undefined
       }
+      _rich_content: { Args: { _value: Json }; Returns: Json }
       add_question_bank_questions_to_quiz: {
         Args: { _question_ids: string[]; _quiz_id: string }
         Returns: Json
@@ -3547,6 +3662,7 @@ export type Database = {
       }
       expire_stale_live_quiz_sessions: { Args: never; Returns: number }
       find_my_live_quiz_session: { Args: never; Returns: Json }
+      flashcard_daily_goal: { Args: never; Returns: number }
       get_class_delete_impact: { Args: { p_class_id: string }; Returns: Json }
       get_flashcard_deck_for_manager: {
         Args: { _deck_id: string }
@@ -3632,6 +3748,11 @@ export type Database = {
           destination: string
           subdomain_slug: string
         }[]
+      }
+      get_student_flashcard_overview: { Args: never; Returns: Json }
+      get_student_flashcard_review_queue: {
+        Args: { _limit?: number }
+        Returns: Json
       }
       get_student_home_feed: {
         Args: {
@@ -3954,6 +4075,7 @@ export type Database = {
           _answer_unit?: string
           _collection_id: string
           _explanation: string
+          _explanation_content?: Json
           _image_alt?: string
           _image_crop?: Json
           _image_height?: number
@@ -3964,6 +4086,7 @@ export type Database = {
           _options: Json
           _points: number
           _question: string
+          _question_content?: Json
           _question_id: string
           _question_type: string
           _subject_id: string
@@ -4028,6 +4151,10 @@ export type Database = {
         Returns: Json
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
+      submit_flashcard_review: {
+        Args: { _card_id: string; _rating: string }
+        Returns: Json
+      }
       submit_live_quiz_answer: {
         Args: {
           _answer?: Json

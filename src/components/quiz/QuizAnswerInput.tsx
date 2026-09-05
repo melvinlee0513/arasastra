@@ -13,6 +13,7 @@ import { useId } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ArenaAnswerGrid } from "@/components/quiz/QuizArena";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import type { AnswerValue } from "@/lib/quizAnswers";
 
 export type { AnswerValue };
@@ -23,7 +24,8 @@ export interface AttemptQuestion {
   prompt: string;
   points: number;
   answer_unit?: string | null;
-  options: { id: string; text: string; order_index: number }[];
+  prompt_content?: unknown;
+  options: { id: string; text: string; order_index: number; content?: unknown }[];
 }
 
 const LETTERS = "ABCDEFGH";
@@ -50,7 +52,7 @@ export function QuizAnswerInput({
     const opts =
       type === "true_false"
         ? [{ id: "true", text: "True" }, { id: "false", text: "False" }]
-        : question.options.map((o) => ({ id: o.id, text: o.text }));
+        : question.options.map((o) => ({ id: o.id, text: o.text, content: o.content }));
     return (
       <ArenaAnswerGrid
         options={opts}
@@ -99,7 +101,7 @@ export function QuizAnswerInput({
                     {on ? <Check className="h-4 w-4" strokeWidth={3} /> : (LETTERS[i] ?? i + 1)}
                   </span>
                   <span className="min-w-0 flex-1 break-words text-[14.5px] font-semibold">
-                    {o.text}
+                    <RichTextRenderer value={o.content ?? null} fallbackText={o.text} />
                   </span>
                 </button>
               </li>

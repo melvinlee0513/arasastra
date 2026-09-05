@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 import { QUIZ_ART } from "@/lib/quizArt";
 import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -155,7 +156,9 @@ export function QuestionBankDetail({ variant }: { variant: "tutor" | "admin" }) 
           </div>
 
           <section className="mt-3 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <h2 className="text-[16px] font-extrabold leading-snug text-slate-900">{d.question}</h2>
+            <h2 className="text-[16px] font-extrabold leading-snug text-slate-900">
+              <RichTextRenderer value={d.question_content ?? null} fallbackText={d.question} />
+            </h2>
             <p className="mt-1 text-[12.5px] text-slate-500">
               {d.points} point{d.points === 1 ? "" : "s"}
             </p>
@@ -184,7 +187,10 @@ export function QuestionBankDetail({ variant }: { variant: "tutor" | "admin" }) 
                         o.is_correct ? "font-bold text-emerald-900" : "text-slate-700",
                       )}
                     >
-                      {o.option_text}
+                      <RichTextRenderer
+                        value={o.option_content ?? null}
+                        fallbackText={o.option_text}
+                      />
                     </span>
                     {o.is_correct && (
                       <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label="Correct answer" />
@@ -206,7 +212,10 @@ export function QuestionBankDetail({ variant }: { variant: "tutor" | "admin" }) 
                 <span className="min-w-0">
                   <span className="block text-[13px] font-bold text-slate-900">Explanation</span>
                   <span className="mt-0.5 block text-[12.5px] leading-snug text-slate-700">
-                    {d.explanation}
+                    <RichTextRenderer
+                      value={d.explanation_content ?? null}
+                      fallbackText={d.explanation}
+                    />
                   </span>
                 </span>
               </div>

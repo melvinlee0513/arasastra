@@ -437,3 +437,124 @@ export function isFlashcardProgressConflict(err: unknown): boolean {
   return /flashcard_progress_conflict/i.test(errMessage(err));
 }
 
+
+// ─── Spaced repetition (student review flow) ────────────────────────────────
+
+export type FlashcardRating = "again" | "hard" | "good" | "easy";
+export type FlashcardMastery = "new" | "learning" | "review" | "mastered";
+
+export const FLASHCARD_RATINGS: { value: FlashcardRating; label: string; hint: string }[] = [
+  { value: "again", label: "Again", hint: "Very soon" },
+  { value: "hard", label: "Hard", hint: "Short gap" },
+  { value: "good", label: "Good", hint: "Normal gap" },
+  { value: "easy", label: "Easy", hint: "Long gap" },
+];
+
+export interface FlashcardOverviewDeck {
+  id: string;
+  title: string;
+  class_id: string;
+  class_title: string;
+  subject_name: string | null;
+  card_count: number;
+  mastered_count: number;
+  due_count: number;
+  new_count: number;
+  last_reviewed_at: string | null;
+}
+
+export interface FlashcardOverview {
+  decks: FlashcardOverviewDeck[];
+  tracked_count: number;
+  mastered_count: number;
+  learning_count: number;
+  due_count: number;
+  reviewed_today: number;
+  daily_goal: number;
+  current_streak: number;
+  longest_streak: number;
+}
+
+export interface FlashcardReviewCard {
+  card_id: string;
+  front_text: string;
+  back_text: string;
+  front_content?: Json | null;
+  back_content?: Json | null;
+  deck_id: string;
+  deck_title: string;
+  class_id: string;
+  class_title: string;
+  due_at: string | null;
+  mastery: FlashcardMastery | null;
+  repetitions: number | null;
+  interval_days: number | null;
+}
+
+export interface FlashcardReviewQueue {
+  cards: FlashcardReviewCard[];
+  due_count: number;
+  new_count: number;
+  reviewed_today: number;
+  daily_goal: number;
+}
+
+export interface FlashcardReviewResult {
+  card_id: string;
+  rating: FlashcardRating;
+  due_at: string;
+  interval_days: number;
+  mastery: FlashcardMastery;
+  newly_mastered: boolean;
+  xp_awarded: number;
+  reviewed_today: number;
+  daily_goal: number;
+  daily_goal_reached: boolean;
+}
+
+export const flashcardReviewKeys = {
+  overview: (tenantId: string | null | undefined, userId: string | null | undefined) =>
+    ["flashcard-review", "overview", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+  queue: (tenantId: string | null | undefined, userId: string | null | undefined) =>
+    ["flashcard-review", "queue", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+};
+
+export async function getStudentFlashcardOverview(): Promise<FlashcardOverview> {
+  const { data, error } = await supabase.rpc("get_student_flashcard_overview" as never, {} as never);
+  if (error) throw error;
+  return data as unknown as FlashcardOverview;
+}
+
+export async function getStudentFlashcardReviewQueue(limit = 40): Promise<FlashcardReviewQueue> {
+  const { data, error } = await supabase.rpc("get_student_flashcard_review_queue" as never, {
+    _limit: limit,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardReviewQueue;
+}
+
+export async function submitFlashcardReview(
+  cardId: string,
+  rating: FlashcardRating,
+): Promise<FlashcardReviewResult> {
+  const { data, error } = await supabase.rpc("submit_flashcard_review" as never, {
+    _card_id: cardId,
+    _rating: rating,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardReviewResult;
+}
+
+/** Human label for a card's mastery stage. */
+export function flashcardMasteryLabel(m: FlashcardMastery | null | undefined): string {
+  switch (m) {
+    case "mastered":
+      return "Mastered";
+    case "review":
+      return "Reviewing";
+    case "learning":
+      return "Learning";
+    default:
+      return "New";
+  }
+}

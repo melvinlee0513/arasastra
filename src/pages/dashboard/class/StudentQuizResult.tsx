@@ -33,6 +33,7 @@ import {
 } from "@/components/quiz/QuizArena";
 import { QuizExplanationFlipCard } from "@/components/quiz/QuizExplanationFlipCard";
 import { QuestionMedia } from "@/components/quiz/QuestionMedia";
+import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
 
 // Bounded polling window used when the attempt is submitted but the async
 // finaliser hasn't produced a scored quiz_results row yet.
@@ -330,7 +331,9 @@ export function StudentQuizResult() {
               )}
             </div>
 
-            <p className="whitespace-pre-wrap text-[15px] font-bold leading-snug">{q.prompt}</p>
+            <div className="text-[15px] font-bold leading-snug">
+              <RichTextRenderer value={q.prompt_content ?? null} fallbackText={q.prompt} />
+            </div>
             {q.image_path && <QuestionMedia media={q} className="mt-3" />}
 
             {q.options.length > 0 ? (
@@ -360,7 +363,9 @@ export function StudentQuizResult() {
                       ) : (
                         <Circle className="mt-0.5 h-4 w-4 shrink-0 opacity-60" />
                       )}
-                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{o.text}</span>
+                      <span className="min-w-0 flex-1 break-words">
+                        <RichTextRenderer value={o.content ?? null} fallbackText={o.text} />
+                      </span>
                       {isSelected && (
                         <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide">
                           You
@@ -399,7 +404,10 @@ export function StudentQuizResult() {
               </div>
             )}
 
-            <QuizExplanationFlipCard explanation={q.explanation} />
+            <QuizExplanationFlipCard
+              explanation={q.explanation}
+              explanationContent={q.explanation_content ?? null}
+            />
           </ArenaPanel>
         ))}
       </div>
