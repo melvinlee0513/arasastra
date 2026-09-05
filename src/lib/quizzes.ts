@@ -47,13 +47,17 @@ export interface QuizManagerRow {
 
 export interface QuizOptionDraft {
   option_text: string;
+  /** Canonical rich content (TipTap JSON). option_text stays the plain mirror. */
+  option_content?: unknown;
   is_correct: boolean;
 }
 export interface QuizQuestionDraft {
   question: string;
+  question_content?: unknown;
   question_type: QuestionType;
   points: number;
   explanation?: string | null;
+  explanation_content?: unknown;
   options: QuizOptionDraft[];
 }
 export interface QuizMetaDraft {
@@ -194,9 +198,11 @@ export interface QuizDefinitionForManager {
   questions: Array<{
     id: string;
     question: string;
+    question_content?: unknown;
     question_type: QuestionType;
     points: number;
     explanation: string | null;
+    explanation_content?: unknown;
     order_index: number;
     accepted_answers?: string[] | null;
     answer_match_mode?: "exact" | "ignore_case" | null;
@@ -211,6 +217,7 @@ export interface QuizDefinitionForManager {
     options: Array<{
       id: string;
       option_text: string;
+      option_content?: unknown;
       is_correct: boolean;
       order_index: number;
     }>;
@@ -343,12 +350,15 @@ export async function listStudentClassQuizzes(
 export interface StudentAttemptOption {
   id: string;
   text: string;
+  /** Canonical rich content for the option (maths, formatting). */
+  content?: unknown;
   order_index: number;
 }
 export interface StudentAttemptQuestion {
   id: string;
   question_type: QuestionType;
   prompt: string;
+  prompt_content?: unknown;
   points: number;
   display_order: number;
   options: StudentAttemptOption[];
@@ -442,15 +452,18 @@ export async function submitQuizAttempt(args: {
 export interface QuizResultOption {
   id: string;
   text: string;
+  content?: unknown;
   is_correct: boolean;
   order_index: number;
 }
 export interface QuizResultQuestion {
   question_id: string;
   prompt: string;
+  prompt_content?: unknown;
   question_type: string;
   points: number;
   explanation: string | null;
+  explanation_content?: unknown;
   correct_answer: string | null;
   /** short_answer / fill_blank only. Every form the grader would have accepted. */
   accepted_answers: string[] | null;
@@ -668,9 +681,11 @@ export async function getQuizResultsForManager(quizId: string): Promise<ManagerR
 export interface ManagerAttemptQuestion {
   question_id: string;
   prompt: string;
+  prompt_content?: unknown;
   question_type: string;
   points: number;
   explanation: string | null;
+  explanation_content?: unknown;
   order_index: number | null;
   correct_answer: string | null;
   options: QuizResultOption[];
