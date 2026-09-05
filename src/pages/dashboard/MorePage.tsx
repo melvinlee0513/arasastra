@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, Inbox, Trophy, BarChart3, LifeBuoy, ShieldCheck } from "lucide-react";
+import { CalendarDays, Inbox, Trophy, BarChart3, LifeBuoy, ShieldCheck, Layers } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -36,6 +36,7 @@ export function MorePage() {
   const inboxOn = useFeatureEnabled("studentInbox");
   const gamificationOn = useFeatureEnabled("gamification");
   const leaderboardsOn = useFeatureEnabled("leaderboards");
+  const flashcardsOn = useFeatureEnabled("flashcards");
 
   const achievementsOn = gamificationOn;
   const leaderboardOn = gamificationOn && leaderboardsOn;
@@ -43,6 +44,13 @@ export function MorePage() {
   const studentServices: ServiceTile[] = [
     { to: "/timetable", label: "Timetable", hint: "Weekly schedule", icon: CalendarDays, enabled: true },
     { to: "/inbox", label: "Inbox", hint: "Messages", icon: Inbox, enabled: inboxOn },
+    {
+      to: "/dashboard/flashcards",
+      label: "My Flashcards",
+      hint: "Daily review",
+      icon: Layers,
+      enabled: flashcardsOn,
+    },
     {
       to: "/dashboard/achievements",
       label: "Achievements",
