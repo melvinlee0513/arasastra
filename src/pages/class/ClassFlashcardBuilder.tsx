@@ -340,18 +340,35 @@ export function ClassFlashcardBuilder({ variant }: Props) {
     setDirty(true);
   };
 
-  const setCard = (key: string, field: "front" | "back", value: string) =>
-    patch((s) => ({ ...s, cards: s.cards.map((c) => (c.key === key ? { ...c, [field]: value } : c)) }));
+  /** Rich content edit: keeps the plain-text mirror in sync for validation. */
+  const setCardContent = (key: string, side: "front" | "back", doc: RichDoc) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? side === "front"
+            ? { ...c, frontDoc: doc, front: richDocToPlainText(doc) }
+            : { ...c, backDoc: doc, back: richDocToPlainText(doc) }
+          : c,
+      ),
+    }));
 
-  const addCard = () =>
-    patch((s) => ({ ...s, cards: [...s.cards, { key: nextKey(), serverId: null, front: "", back: "" }] }));
+  const addCard = () => patch((s) => ({ ...s, cards: [...s.cards, newCard()] }));
 
   const duplicateCard = (key: string) =>
     patch((s) => {
       const i = s.cards.findIndex((c) => c.key === key);
       if (i < 0) return s;
       const src = s.cards[i];
-      const copy: CardRow = { key: nextKey(), serverId: null, front: src.front, back: src.back };
+      const copy: CardRow = {
+        key: nextKey(),
+        serverId: null,
+        front: src.front,
+        back: src.back,
+        frontDoc: src.frontDoc,
+        backDoc: src.backDoc,
+      };
+
       const cards = [...s.cards];
       cards.splice(i + 1, 0, copy);
       return { ...s, cards };
