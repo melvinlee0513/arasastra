@@ -134,6 +134,18 @@ export function RichTextEditor({
     if (editor) editor.setEditable(!disabled);
   }, [editor, disabled]);
 
+  /**
+   * Re-hydrate when the incoming value changes outside of typing (e.g. a record
+   * loads after the editor mounted). Skipped while focused so we never fight
+   * the user's cursor, and skipped when the document already matches.
+   */
+  useEffect(() => {
+    if (!editor || editor.isFocused) return;
+    const next = parseRichValue(value, fallbackText);
+    if (JSON.stringify(editor.getJSON()) === JSON.stringify(next)) return;
+    editor.commands.setContent(next, { emitUpdate: false });
+  }, [editor, value, fallbackText]);
+
   const openEquationEditor = useCallback((instance: Editor) => {
     const node = instance.state.selection.$from.nodeAfter;
     const selectedName = node?.type.name;
