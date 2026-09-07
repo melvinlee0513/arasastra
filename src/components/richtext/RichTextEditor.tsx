@@ -143,7 +143,7 @@ export function RichTextEditor({
     if (!editor || editor.isFocused) return;
     const next = parseRichValue(value, fallbackText);
     if (JSON.stringify(editor.getJSON()) === JSON.stringify(next)) return;
-    editor.commands.setContent(next, false);
+    editor.commands.setContent(next, { emitUpdate: false });
   }, [editor, value, fallbackText]);
 
   const openEquationEditor = useCallback((instance: Editor) => {
