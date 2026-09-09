@@ -57,7 +57,9 @@ export function StudentFlashcardStudy() {
   const revisionRef = useRef<number>(0);
   const completionClaimed = useRef(false);
 
-  const libraryPath = `/dashboard/classes/${classId}/flashcards`;
+  // Studying can be entered from a class hub or from My Flashcards.
+  const libraryPath = classId ? `/dashboard/classes/${classId}/flashcards` : "/dashboard/flashcards";
+
 
   const applySession = useCallback((next: FlashcardStudySession) => {
     setSession(next);
