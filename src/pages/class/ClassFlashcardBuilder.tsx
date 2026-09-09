@@ -770,6 +770,13 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                           placeholder="Prompt or question"
                           onChange={(doc) => setCardContent(card.key, "front", doc)}
                         />
+                        <FlashcardMediaEditor
+                          centerId={centerId}
+                          fieldId={`card-${card.key}-front-image`}
+                          label="Front image"
+                          value={card.frontImage}
+                          onChange={(p) => setCardImage(card.key, "front", p)}
+                        />
                       </div>
                       <div className="space-y-1.5 min-w-0">
                         <Label>Back</Label>
@@ -780,8 +787,28 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                           placeholder="Answer or explanation"
                           onChange={(doc) => setCardContent(card.key, "back", doc)}
                         />
+                        <FlashcardMediaEditor
+                          centerId={centerId}
+                          fieldId={`card-${card.key}-back-image`}
+                          label="Back image"
+                          value={card.backImage}
+                          onChange={(p) => setCardImage(card.key, "back", p)}
+                        />
                       </div>
                     </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`card-${card.key}-tags`}>Tags (optional)</Label>
+                      <Input
+                        id={`card-${card.key}-tags`}
+                        value={card.tags.join(", ")}
+                        onChange={(e) => setCardTags(card.key, e.target.value)}
+                        placeholder="Comma separated, e.g. definitions, chapter 3"
+                        className="rounded-2xl"
+                      />
+                    </div>
+
+
 
                   </li>
                 ))}
