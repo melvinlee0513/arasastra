@@ -189,6 +189,9 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const managerPath = `${basePath}/flashcards`;
   const materialsPath = `${basePath}/resources`;
   const canManage = !!ctx.data?.canManage;
+  /** Images are uploaded into the centre's private folder. */
+  const centerId = ctx.data?.klass?.center_id ?? currentTenantId ?? null;
+
 
   const deckQ = useQuery({
     queryKey: flashcardManagerKeys.definition(currentTenantId, classId ?? "", deckId ?? "new", user?.id),
