@@ -53,6 +53,9 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, hasRole } = useAuth();
+  const flashcardsOn = useFeatureEnabled("flashcards");
+  const items = navItems.filter((i) => i.feature !== "flashcards" || flashcardsOn);
+
 
 
   const isActive = (path: string, exact?: boolean) => {
