@@ -63,7 +63,7 @@ export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const active = isActive(item.path, item.exact);
           return (
             <NavLink
