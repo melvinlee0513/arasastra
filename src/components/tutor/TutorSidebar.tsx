@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calendar,
+  Layers,
   User,
   ChevronLeft,
   ChevronRight,
@@ -10,7 +11,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import owlMascot from "@/assets/owl-mascot.png";
+
 
 interface TutorSidebarProps {
   collapsed: boolean;
