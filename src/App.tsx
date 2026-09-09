@@ -309,7 +309,11 @@ const App = () => (
             <Route path="/admin/classes/:classId/live/:sessionId" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizHost variant="admin" /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             {/* Class flashcards (Phase 3B1) — tenant `flashcards` flag gated; server enforces role/tenant */}
+            {/* Centre-wide flashcard libraries */}
+            <Route path="/admin/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><FlashcardLibrary variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/flashcards" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><FlashcardLibrary variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardsManager variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+
             <Route path="/admin/classes/:classId/flashcards/new" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/flashcards/:deckId/edit" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/flashcards" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><ClassFlashcardsManager variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
