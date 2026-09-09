@@ -1074,16 +1074,20 @@ export type Database = {
       flashcard_decks: {
         Row: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          award_xp: boolean
           center_id: string
           class_id: string | null
+          cover_path: string | null
           created_at: string
           created_by: string | null
           definition_version: number
           description: string | null
           display_order: number
           folder_id: string | null
+          form_level: string | null
           id: string
           published_at: string | null
+          show_progress: boolean
           status: string
           subject_id: string | null
           title: string
@@ -1091,16 +1095,20 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          award_xp?: boolean
           center_id: string
           class_id?: string | null
+          cover_path?: string | null
           created_at?: string
           created_by?: string | null
           definition_version?: number
           description?: string | null
           display_order?: number
           folder_id?: string | null
+          form_level?: string | null
           id?: string
           published_at?: string | null
+          show_progress?: boolean
           status?: string
           subject_id?: string | null
           title: string
@@ -1108,16 +1116,20 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["material_access_level"]
+          award_xp?: boolean
           center_id?: string
           class_id?: string | null
+          cover_path?: string | null
           created_at?: string
           created_by?: string | null
           definition_version?: number
           description?: string | null
           display_order?: number
           folder_id?: string | null
+          form_level?: string | null
           id?: string
           published_at?: string | null
+          show_progress?: boolean
           status?: string
           subject_id?: string | null
           title?: string
@@ -1285,38 +1297,71 @@ export type Database = {
       flashcards: {
         Row: {
           back_content: Json | null
+          back_image_alt: string | null
+          back_image_crop: Json | null
+          back_image_height: number | null
+          back_image_path: string | null
+          back_image_width: number | null
           back_text: string
           center_id: string
           created_at: string
           deck_id: string
           front_content: Json | null
+          front_image_alt: string | null
+          front_image_crop: Json | null
+          front_image_height: number | null
+          front_image_path: string | null
+          front_image_width: number | null
           front_text: string
           id: string
           sort_order: number
+          tags: string[]
           updated_at: string
         }
         Insert: {
           back_content?: Json | null
+          back_image_alt?: string | null
+          back_image_crop?: Json | null
+          back_image_height?: number | null
+          back_image_path?: string | null
+          back_image_width?: number | null
           back_text: string
           center_id: string
           created_at?: string
           deck_id: string
           front_content?: Json | null
+          front_image_alt?: string | null
+          front_image_crop?: Json | null
+          front_image_height?: number | null
+          front_image_path?: string | null
+          front_image_width?: number | null
           front_text: string
           id?: string
           sort_order?: number
+          tags?: string[]
           updated_at?: string
         }
         Update: {
           back_content?: Json | null
+          back_image_alt?: string | null
+          back_image_crop?: Json | null
+          back_image_height?: number | null
+          back_image_path?: string | null
+          back_image_width?: number | null
           back_text?: string
           center_id?: string
           created_at?: string
           deck_id?: string
           front_content?: Json | null
+          front_image_alt?: string | null
+          front_image_crop?: Json | null
+          front_image_height?: number | null
+          front_image_path?: string | null
+          front_image_width?: number | null
           front_text?: string
           id?: string
           sort_order?: number
+          tags?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -3424,6 +3469,7 @@ export type Database = {
         Args: { _class_id: string }
         Returns: string
       }
+      _flashcard_media_center: { Args: { _name: string }; Returns: string }
       _flashcard_progress_json: {
         Args: {
           _row: Database["public"]["Tables"]["flashcard_deck_progress"]["Row"]
@@ -3434,16 +3480,20 @@ export type Database = {
         Args: { _deck_id: string }
         Returns: {
           access_level: Database["public"]["Enums"]["material_access_level"]
+          award_xp: boolean
           center_id: string
           class_id: string | null
+          cover_path: string | null
           created_at: string
           created_by: string | null
           definition_version: number
           description: string | null
           display_order: number
           folder_id: string | null
+          form_level: string | null
           id: string
           published_at: string | null
+          show_progress: boolean
           status: string
           subject_id: string | null
           title: string
@@ -3590,7 +3640,9 @@ export type Database = {
         Returns: Json
       }
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
+      can_read_flashcard_media: { Args: { _name: string }; Returns: boolean }
       can_read_quiz_media: { Args: { _name: string }; Returns: boolean }
+      can_write_flashcard_media: { Args: { _name: string }; Returns: boolean }
       can_write_quiz_media: { Args: { _name: string }; Returns: boolean }
       claim_invitation_for_signup: {
         Args: { _token: string }
@@ -3896,6 +3948,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      list_flashcard_decks_for_manager: { Args: never; Returns: Json }
       list_my_quiz_attempts: { Args: { _quiz_id: string }; Returns: Json }
       list_question_bank: { Args: never; Returns: Json }
       list_quizzes_for_question_bank: { Args: never; Returns: Json }
@@ -3917,6 +3970,7 @@ export type Database = {
           title: string
         }[]
       }
+      list_student_flashcard_decks: { Args: never; Returns: Json }
       move_class_content_folder: {
         Args: { _folder_id: string; _new_parent_id?: string }
         Returns: Json

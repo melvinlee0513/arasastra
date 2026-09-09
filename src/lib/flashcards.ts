@@ -25,6 +25,15 @@ import { showSupabaseError } from "@/lib/supabaseErrors";
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type FlashcardDeckStatus = "draft" | "published" | "archived";
 
+/** One optional image per card face (private, tenant-scoped storage). */
+export interface FlashcardFaceMedia {
+  image_path?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  image_alt?: string | null;
+  image_crop?: { x: number; y: number; w: number; h: number } | null;
+}
+
 export interface FlashcardCard {
   id: string;
   front: string;
@@ -32,6 +41,17 @@ export interface FlashcardCard {
   /** Canonical rich content (TipTap JSON). Null for legacy plain-text cards. */
   front_content?: Json | null;
   back_content?: Json | null;
+  front_image_path?: string | null;
+  front_image_width?: number | null;
+  front_image_height?: number | null;
+  front_image_alt?: string | null;
+  front_image_crop?: FlashcardFaceMedia["image_crop"];
+  back_image_path?: string | null;
+  back_image_width?: number | null;
+  back_image_height?: number | null;
+  back_image_alt?: string | null;
+  back_image_crop?: FlashcardFaceMedia["image_crop"];
+  tags?: string[] | null;
   display_order: number;
 }
 
@@ -42,10 +62,32 @@ export interface FlashcardCardDraft {
   back: string;
   front_content?: Json | null;
   back_content?: Json | null;
+  front_image_path?: string | null;
+  front_image_width?: number | null;
+  front_image_height?: number | null;
+  front_image_alt?: string | null;
+  front_image_crop?: FlashcardFaceMedia["image_crop"];
+  back_image_path?: string | null;
+  back_image_width?: number | null;
+  back_image_height?: number | null;
+  back_image_alt?: string | null;
+  back_image_crop?: FlashcardFaceMedia["image_crop"];
+  tags?: string[] | null;
 }
 
 
-export interface FlashcardDeckManagerRow {
+
+/** Deck-level presentation + simple study settings (all optional/legacy-safe). */
+export interface FlashcardDeckMeta {
+  cover_path?: string | null;
+  form_level?: string | null;
+  show_progress?: boolean;
+  award_xp?: boolean;
+  class_title?: string | null;
+  subject_name?: string | null;
+}
+
+export interface FlashcardDeckManagerRow extends FlashcardDeckMeta {
   id: string;
   center_id: string;
   class_id: string;
@@ -60,10 +102,12 @@ export interface FlashcardDeckManagerRow {
   updated_at: string;
   card_count: number;
   valid_card_count: number;
-  has_learning_history: boolean;
+  has_learning_history?: boolean;
+  students_accessed?: number;
+  total_reviews?: number;
 }
 
-export interface FlashcardDeckManagerDetail {
+export interface FlashcardDeckManagerDetail extends FlashcardDeckMeta {
   id: string;
   center_id: string;
   class_id: string;
@@ -76,10 +120,12 @@ export interface FlashcardDeckManagerDetail {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  students_accessed?: number;
+  total_reviews?: number;
   cards: FlashcardCard[];
 }
 
-export interface FlashcardDeckStudentRow {
+export interface FlashcardDeckStudentRow extends FlashcardDeckMeta {
   id: string;
   class_id: string;
   title: string;
@@ -91,6 +137,7 @@ export interface FlashcardDeckStudentRow {
   completed: boolean;
   /** Cards marked "Got It" in the current study run. */
   completed_card_count: number;
+  reviewed_card_count?: number;
   /** True once the student has opened the deck at least once. */
   started: boolean;
   /** Set when the current run reached the end of the queue. */
@@ -98,7 +145,7 @@ export interface FlashcardDeckStudentRow {
   last_studied_at: string | null;
 }
 
-export interface FlashcardDeckStudy {
+export interface FlashcardDeckStudy extends FlashcardDeckMeta {
   id: string;
   class_id: string;
   title: string;
@@ -108,10 +155,11 @@ export interface FlashcardDeckStudy {
   cards: FlashcardCard[];
 }
 
-export interface FlashcardDeckDefinition {
+export interface FlashcardDeckDefinition extends FlashcardDeckMeta {
   title: string;
   description?: string | null;
   cards: FlashcardCardDraft[];
+
 }
 
 // ─── Status helpers ─────────────────────────────────────────────────────────
@@ -300,24 +348,42 @@ export async function saveFlashcardDeck(args: {
   /** Loaded definition_version — omit for new decks. */
   expectedVersion?: number | null;
 }): Promise<SaveFlashcardDeckResult> {
+  const def = args.definition;
+  const payload: Record<string, unknown> = {
+    title: def.title,
+    description: def.description ?? null,
+    cards: def.cards.map((c) => ({
+      id: c.id ?? null,
+      front: c.front,
+      back: c.back,
+      front_content: c.front_content ?? null,
+      back_content: c.back_content ?? null,
+      front_image_path: c.front_image_path ?? null,
+      front_image_width: c.front_image_width ?? null,
+      front_image_height: c.front_image_height ?? null,
+      front_image_alt: c.front_image_alt ?? null,
+      front_image_crop: c.front_image_crop ?? null,
+      back_image_path: c.back_image_path ?? null,
+      back_image_width: c.back_image_width ?? null,
+      back_image_height: c.back_image_height ?? null,
+      back_image_alt: c.back_image_alt ?? null,
+      back_image_crop: c.back_image_crop ?? null,
+      tags: c.tags ?? [],
+    })),
+  };
+  if (def.cover_path !== undefined) payload.cover_path = def.cover_path;
+  if (def.form_level !== undefined) payload.form_level = def.form_level;
+  if (def.show_progress !== undefined) payload.show_progress = def.show_progress;
+  if (def.award_xp !== undefined) payload.award_xp = def.award_xp;
+
   const { data, error } = await supabase.rpc("save_flashcard_deck", {
     _class_id: args.classId,
-    _definition: {
-      title: args.definition.title,
-      description: args.definition.description ?? null,
-      cards: args.definition.cards.map((c) => ({
-        id: c.id ?? null,
-        front: c.front,
-        back: c.back,
-        front_content: c.front_content ?? null,
-        back_content: c.back_content ?? null,
-      })),
-
-    },
+    _definition: payload as unknown as Json,
     _deck_id: args.deckId ?? undefined,
     _publish: args.publish ?? false,
     _expected_version: args.expectedVersion ?? undefined,
   });
+
   if (error) throw error;
   return unwrap<SaveFlashcardDeckResult>(data);
 }
@@ -557,4 +623,39 @@ export function flashcardMasteryLabel(m: FlashcardMastery | null | undefined): s
     default:
       return "New";
   }
+}
+
+// ─── Centre-wide listings (Flashcards 2.0 library + student home) ───────────
+
+export const flashcardLibraryKeys = {
+  manager: (tenantId: string | null | undefined, userId: string | null | undefined) =>
+    ["flashcard-library", "manager", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+  student: (tenantId: string | null | undefined, userId: string | null | undefined) =>
+    ["flashcard-library", "student", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+};
+
+/** Every deck the signed-in tutor/admin can manage across their classes. */
+export async function listFlashcardDecksForManager(): Promise<FlashcardDeckManagerRow[]> {
+  const { data, error } = await supabase.rpc("list_flashcard_decks_for_manager" as never, {} as never);
+  if (error) throw error;
+  return (data ?? []) as unknown as FlashcardDeckManagerRow[];
+}
+
+/** Every published deck from the student's actively enrolled classes. */
+export async function listStudentFlashcardDecks(): Promise<FlashcardDeckStudentRow[]> {
+  const { data, error } = await supabase.rpc("list_student_flashcard_decks" as never, {} as never);
+  if (error) throw error;
+  return (data ?? []) as unknown as FlashcardDeckStudentRow[];
+}
+
+/** Cards on a face count as complete when they carry text or an image. */
+export function isFlashcardComplete(card: {
+  front: string;
+  back: string;
+  front_image_path?: string | null;
+  back_image_path?: string | null;
+}): boolean {
+  const frontOk = card.front.trim().length > 0 || !!card.front_image_path;
+  const backOk = card.back.trim().length > 0 || !!card.back_image_path;
+  return frontOk && backOk;
 }
