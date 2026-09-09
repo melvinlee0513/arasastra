@@ -47,10 +47,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  FlashcardMediaEditor,
+  type FlashcardImageValue,
+} from "@/components/flashcards/FlashcardMediaEditor";
 import {
   FLASHCARD_DRAFT_PREFIX,
   FLASHCARD_DRAFT_TTL_MS,
   FLASHCARD_STATUS_LABEL,
+  type FlashcardDeckDefinition,
   type FlashcardDeckManagerDetail,
   flashcardManagerKeys,
   getFlashcardDeckForManager,
@@ -59,6 +65,7 @@ import {
   saveFlashcardDeck,
   validateFlashcardDeck,
 } from "@/lib/flashcards";
+
 
 type Variant = "tutor" | "admin";
 
