@@ -105,6 +105,9 @@ const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/Studen
 const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
 const MyFlashcards = lazy(() => import("@/pages/dashboard/flashcards/MyFlashcards").then(m => ({ default: m.MyFlashcards })));
 const FlashcardReviewSession = lazy(() => import("@/pages/dashboard/flashcards/FlashcardReviewSession").then(m => ({ default: m.FlashcardReviewSession })));
+const StudentFlashcardDeck = lazy(() => import("@/pages/dashboard/flashcards/StudentFlashcardDeck").then(m => ({ default: m.StudentFlashcardDeck })));
+const FlashcardLibrary = lazy(() => import("@/pages/flashcards/FlashcardLibrary").then(m => ({ default: m.FlashcardLibrary })));
+
 const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
 const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
