@@ -66,6 +66,14 @@ interface Props {
   variant: Variant;
 }
 
+const emptyImage = (): FlashcardImageValue => ({
+  image_path: null,
+  image_width: null,
+  image_height: null,
+  image_alt: null,
+  image_crop: null,
+});
+
 /** Local card row. `serverId` is null for cards not yet persisted. */
 interface CardRow {
   /** Stable React key that survives typing and reordering. */
@@ -76,11 +84,18 @@ interface CardRow {
   /** Canonical rich content documents (null for untouched legacy cards). */
   frontDoc: RichDoc | null;
   backDoc: RichDoc | null;
+  frontImage: FlashcardImageValue;
+  backImage: FlashcardImageValue;
+  tags: string[];
 }
 
 interface BuilderState {
   title: string;
   description: string;
+  coverPath: string | null;
+  formLevel: string;
+  showProgress: boolean;
+  awardXp: boolean;
   cards: CardRow[];
   definitionVersion: number | null;
 }
@@ -99,11 +114,18 @@ const newCard = (): CardRow => ({
   back: "",
   frontDoc: null,
   backDoc: null,
+  frontImage: emptyImage(),
+  backImage: emptyImage(),
+  tags: [],
 });
 
 const emptyState = (): BuilderState => ({
   title: "",
   description: "",
+  coverPath: null,
+  formLevel: "",
+  showProgress: true,
+  awardXp: true,
   cards: [newCard()],
   definitionVersion: null,
 });
@@ -112,6 +134,10 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
   return {
     title: detail.title ?? "",
     description: detail.description ?? "",
+    coverPath: detail.cover_path ?? null,
+    formLevel: detail.form_level ?? "",
+    showProgress: detail.show_progress ?? true,
+    awardXp: detail.award_xp ?? true,
     cards: (detail.cards ?? []).map((c) => ({
       key: `s-${c.id}`,
       serverId: c.id,
@@ -119,10 +145,26 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
       back: c.back ?? "",
       frontDoc: parseRichValue(c.front_content ?? null, c.front ?? ""),
       backDoc: parseRichValue(c.back_content ?? null, c.back ?? ""),
+      frontImage: {
+        image_path: c.front_image_path ?? null,
+        image_width: c.front_image_width ?? null,
+        image_height: c.front_image_height ?? null,
+        image_alt: c.front_image_alt ?? null,
+        image_crop: c.front_image_crop ?? null,
+      },
+      backImage: {
+        image_path: c.back_image_path ?? null,
+        image_width: c.back_image_width ?? null,
+        image_height: c.back_image_height ?? null,
+        image_alt: c.back_image_alt ?? null,
+        image_crop: c.back_image_crop ?? null,
+      },
+      tags: c.tags ?? [],
     })),
     definitionVersion: detail.definition_version ?? null,
   };
 }
+
 
 
 export function ClassFlashcardBuilder({ variant }: Props) {
