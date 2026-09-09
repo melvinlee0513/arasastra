@@ -317,34 +317,22 @@ export function StudentFlashcardStudy() {
         ) : (
           currentCard && (
             <>
-              <div className="relative">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.button
-                    key={`${currentCard.id}-${revealed ? "back" : "front"}`}
-                    type="button"
-                    onClick={() => setRevealed((r) => !r)}
-                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, rotateX: -12 }}
-                    animate={reduceMotion ? { opacity: 1 } : { opacity: 1, rotateX: 0 }}
-                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, rotateX: 12 }}
-                    transition={{ duration: reduceMotion ? 0.12 : 0.22 }}
-                    aria-label={revealed ? "Show front of card" : "Reveal answer"}
-                    className="w-full text-left bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 min-h-[240px] flex flex-col justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                      {revealed ? "Back" : "Front"}
-                    </span>
-                    <RichTextRenderer
-                      className="mt-3 text-lg sm:text-xl font-medium text-slate-900"
-                      value={revealed ? currentCard.back_content ?? null : currentCard.front_content ?? null}
-                      fallbackText={revealed ? currentCard.back : currentCard.front}
-                    />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentCard.id}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                  animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                  transition={{ duration: reduceMotion ? 0.12 : 0.22 }}
+                >
+                  <FlipCard
+                    card={currentCard}
+                    flipped={revealed}
+                    onFlip={() => setRevealed((r) => !r)}
+                  />
+                </motion.div>
+              </AnimatePresence>
 
-                    {!revealed && (
-                      <span className="mt-6 text-xs text-slate-400">Tap the card to reveal the answer</span>
-                    )}
-                  </motion.button>
-                </AnimatePresence>
-              </div>
 
               {revealed ? (
                 <div className="grid grid-cols-2 gap-3">
