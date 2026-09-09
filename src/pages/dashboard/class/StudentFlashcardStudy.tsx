@@ -272,8 +272,10 @@ export function StudentFlashcardStudy() {
 
   const pct = Math.round((doneCount / total) * 100);
 
+  const showProgress = session.deck.show_progress ?? true;
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-violet-50">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-5">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" className="rounded-full -ml-2" onClick={() => navigate(libraryPath)}>
@@ -285,15 +287,18 @@ export function StudentFlashcardStudy() {
           <SaveIndicator state={saveState} />
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>
-              {doneCount} of {total} mastered
-            </span>
-            <span>{queue.length} left</span>
+        {showProgress && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>
+                {doneCount} of {total} mastered
+              </span>
+              <span>{queue.length} left</span>
+            </div>
+            <Progress value={pct} className="h-2" aria-label={`${pct}% mastered`} />
           </div>
-          <Progress value={pct} className="h-2" aria-label={`${pct}% mastered`} />
-        </div>
+        )}
+
 
         {finished ? (
           <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 text-center">
