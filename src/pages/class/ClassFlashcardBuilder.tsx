@@ -627,7 +627,61 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                 className="rounded-2xl min-h-[80px]"
               />
             </div>
+
+            <FlashcardMediaEditor
+              centerId={centerId}
+              fieldId="deck-cover"
+              folder="covers"
+              label="Deck cover (optional)"
+              hint="Shown on the deck card in the library. JPG, PNG or WebP up to 10 MB."
+              value={{
+                image_path: state.coverPath,
+                image_width: null,
+                image_height: null,
+                image_alt: null,
+                image_crop: null,
+              }}
+              onChange={(p) => {
+                if ("image_path" in p) patch((s) => ({ ...s, coverPath: p.image_path ?? null }));
+              }}
+            />
+
+            <div className="space-y-2">
+              <Label htmlFor="deck-form">Form level (optional)</Label>
+              <Input
+                id="deck-form"
+                value={state.formLevel}
+                onChange={(e) => patch((s) => ({ ...s, formLevel: e.target.value }))}
+                placeholder="e.g. Form 4"
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-800">Study settings</p>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="deck-show-progress" className="text-sm font-normal text-slate-600">
+                  Show progress while studying
+                </Label>
+                <Switch
+                  id="deck-show-progress"
+                  checked={state.showProgress}
+                  onCheckedChange={(v) => patch((s) => ({ ...s, showProgress: v }))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="deck-award-xp" className="text-sm font-normal text-slate-600">
+                  Award XP for finishing this deck
+                </Label>
+                <Switch
+                  id="deck-award-xp"
+                  checked={state.awardXp}
+                  onCheckedChange={(v) => patch((s) => ({ ...s, awardXp: v }))}
+                />
+              </div>
+            </div>
           </section>
+
 
           {/* Cards */}
           <section className="space-y-3">
