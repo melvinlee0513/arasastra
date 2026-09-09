@@ -179,9 +179,10 @@ function DeckRow({ deck }: { deck: FlashcardOverviewDeck }) {
   const pct = total > 0 ? Math.round((deck.mastered_count / total) * 100) : 0;
   return (
     <Link
-      to={`/dashboard/classes/${deck.class_id}/flashcards`}
+      to={`/dashboard/flashcards/${deck.id}`}
       className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-3.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition active:scale-[0.99]"
     >
+
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(214,90%,96%)] text-[hsl(214,90%,44%)]">
         <Layers className="h-5 w-5" aria-hidden="true" />
       </span>
