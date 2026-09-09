@@ -224,6 +224,10 @@ const App = () => (
             {/* Cross-class student flashcard home + spaced-repetition review */}
             <Route path="/dashboard/flashcards" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><MyFlashcards /></DashboardLayout></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/flashcards/review" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><FlashcardReviewSession /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            {/* Deck detail + sequential deck study reached from My Flashcards */}
+            <Route path="/dashboard/flashcards/:deckId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><StudentFlashcardDeck /></DashboardLayout></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            <Route path="/dashboard/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
             {/* Student "More" hub + root-level services reached from it */}
