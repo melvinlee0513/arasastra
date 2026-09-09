@@ -12,7 +12,7 @@ import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
-import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
+import { FlipCard } from "@/components/flashcards/FlipCard";
 
 import {
   flashcardStudentKeys,
