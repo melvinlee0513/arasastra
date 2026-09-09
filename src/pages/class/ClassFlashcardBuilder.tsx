@@ -285,6 +285,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         setState({
           title: parsed.title ?? "",
           description: parsed.description ?? "",
+          coverPath: parsed.coverPath ?? null,
+          formLevel: parsed.formLevel ?? "",
+          showProgress: parsed.showProgress ?? true,
+          awardXp: parsed.awardXp ?? true,
           cards: (parsed.cards ?? []).map((c) => ({
             key: c.key || nextKey(),
             serverId: c.serverId ?? null,
@@ -292,10 +296,13 @@ export function ClassFlashcardBuilder({ variant }: Props) {
             back: c.back ?? "",
             frontDoc: parseRichValue(c.frontDoc ?? null, c.front ?? ""),
             backDoc: parseRichValue(c.backDoc ?? null, c.back ?? ""),
+            frontImage: c.frontImage ?? emptyImage(),
+            backImage: c.backImage ?? emptyImage(),
+            tags: c.tags ?? [],
           })),
-
           definitionVersion: parsed.definitionVersion ?? null,
         });
+
         setDirty(true);
       }
     } catch {
