@@ -20,6 +20,7 @@ interface TutorSidebarProps {
 const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
+  { path: "/tutor/flashcards", icon: Layers, label: "Flashcards", feature: "flashcards" as const },
   { path: "/tutor/account", icon: User, label: "Account" },
 ];
 
@@ -28,6 +29,9 @@ export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, isAdmin } = useAuth();
+  const flashcardsOn = useFeatureEnabled("flashcards");
+  const items = navItems.filter((i) => i.feature !== "flashcards" || flashcardsOn);
+
 
 
   const isActive = (path: string, exact?: boolean) => {
