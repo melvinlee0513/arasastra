@@ -17,11 +17,14 @@ import {
   Video,
   BookOpen,
   GraduationCap,
+  Layers,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import owlMascot from "@/assets/owl-mascot.png";
+
 
 interface AdminSidebarProps {
   collapsed: boolean;
