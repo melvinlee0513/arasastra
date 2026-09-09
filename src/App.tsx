@@ -105,6 +105,9 @@ const StudentClassFlashcards = lazy(() => import("@/pages/dashboard/class/Studen
 const StudentFlashcardStudy = lazy(() => import("@/pages/dashboard/class/StudentFlashcardStudy").then(m => ({ default: m.StudentFlashcardStudy })));
 const MyFlashcards = lazy(() => import("@/pages/dashboard/flashcards/MyFlashcards").then(m => ({ default: m.MyFlashcards })));
 const FlashcardReviewSession = lazy(() => import("@/pages/dashboard/flashcards/FlashcardReviewSession").then(m => ({ default: m.FlashcardReviewSession })));
+const StudentFlashcardDeck = lazy(() => import("@/pages/dashboard/flashcards/StudentFlashcardDeck").then(m => ({ default: m.StudentFlashcardDeck })));
+const FlashcardLibrary = lazy(() => import("@/pages/flashcards/FlashcardLibrary").then(m => ({ default: m.FlashcardLibrary })));
+
 const ClassFlashcardsManager = lazy(() => import("@/pages/class/ClassFlashcardsManager").then(m => ({ default: m.ClassFlashcardsManager })));
 const ClassFlashcardBuilder = lazy(() => import("@/pages/class/ClassFlashcardBuilder").then(m => ({ default: m.ClassFlashcardBuilder })));
 const TutorQuestions = lazy(() => import("@/pages/tutor/TutorQuestions").then(m => ({ default: m.TutorQuestions })));
@@ -221,6 +224,10 @@ const App = () => (
             {/* Cross-class student flashcard home + spaced-repetition review */}
             <Route path="/dashboard/flashcards" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><MyFlashcards /></DashboardLayout></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
             <Route path="/dashboard/flashcards/review" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><FlashcardReviewSession /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            {/* Deck detail + sequential deck study reached from My Flashcards */}
+            <Route path="/dashboard/flashcards/:deckId" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><DashboardLayout><StudentFlashcardDeck /></DashboardLayout></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+            <Route path="/dashboard/flashcards/:deckId/study" element={<ProtectedRoute requiredRole="authenticated"><StudentWorkspaceRoute><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><StudentFlashcardStudy /></FeatureRoute></TenantGuard></StudentWorkspaceRoute></ProtectedRoute>} />
+
             <Route path="/dashboard/replays" element={<Navigate to="/dashboard/classes" replace />} />
 
             {/* Student "More" hub + root-level services reached from it */}
@@ -302,7 +309,11 @@ const App = () => (
             <Route path="/admin/classes/:classId/live/:sessionId" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="liveQuizMultiplayer" label="Live quiz"><LiveQuizHost variant="admin" /></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/quizzes/:quizId/results/:attemptId" element={<ProtectedRoute adminOnly><TenantGuard><AdminLayout><ClassQuizResultsManager variant="admin" /></AdminLayout></TenantGuard></ProtectedRoute>} />
             {/* Class flashcards (Phase 3B1) — tenant `flashcards` flag gated; server enforces role/tenant */}
+            {/* Centre-wide flashcard libraries */}
+            <Route path="/admin/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><FlashcardLibrary variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+            <Route path="/tutor/flashcards" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><FlashcardLibrary variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/flashcards" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardsManager variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
+
             <Route path="/admin/classes/:classId/flashcards/new" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/admin/classes/:classId/flashcards/:deckId/edit" element={<ProtectedRoute adminOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><AdminLayout><ClassFlashcardBuilder variant="admin" /></AdminLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />
             <Route path="/tutor/classes/:classId/flashcards" element={<ProtectedRoute tutorOnly><TenantGuard><FeatureRoute flag="flashcards" label="Flashcards"><TutorLayout><ClassFlashcardsManager variant="tutor" /></TutorLayout></FeatureRoute></TenantGuard></ProtectedRoute>} />

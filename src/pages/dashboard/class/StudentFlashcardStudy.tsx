@@ -12,7 +12,7 @@ import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
-import { RichTextRenderer } from "@/components/richtext/RichTextRenderer";
+import { FlipCard } from "@/components/flashcards/FlipCard";
 
 import {
   flashcardStudentKeys,
@@ -57,7 +57,9 @@ export function StudentFlashcardStudy() {
   const revisionRef = useRef<number>(0);
   const completionClaimed = useRef(false);
 
-  const libraryPath = `/dashboard/classes/${classId}/flashcards`;
+  // Studying can be entered from a class hub or from My Flashcards.
+  const libraryPath = classId ? `/dashboard/classes/${classId}/flashcards` : "/dashboard/flashcards";
+
 
   const applySession = useCallback((next: FlashcardStudySession) => {
     setSession(next);
@@ -270,8 +272,10 @@ export function StudentFlashcardStudy() {
 
   const pct = Math.round((doneCount / total) * 100);
 
+  const showProgress = session.deck.show_progress ?? true;
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-violet-50">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-5">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" className="rounded-full -ml-2" onClick={() => navigate(libraryPath)}>
@@ -283,15 +287,18 @@ export function StudentFlashcardStudy() {
           <SaveIndicator state={saveState} />
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>
-              {doneCount} of {total} mastered
-            </span>
-            <span>{queue.length} left</span>
+        {showProgress && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>
+                {doneCount} of {total} mastered
+              </span>
+              <span>{queue.length} left</span>
+            </div>
+            <Progress value={pct} className="h-2" aria-label={`${pct}% mastered`} />
           </div>
-          <Progress value={pct} className="h-2" aria-label={`${pct}% mastered`} />
-        </div>
+        )}
+
 
         {finished ? (
           <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 text-center">
@@ -315,34 +322,22 @@ export function StudentFlashcardStudy() {
         ) : (
           currentCard && (
             <>
-              <div className="relative">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.button
-                    key={`${currentCard.id}-${revealed ? "back" : "front"}`}
-                    type="button"
-                    onClick={() => setRevealed((r) => !r)}
-                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, rotateX: -12 }}
-                    animate={reduceMotion ? { opacity: 1 } : { opacity: 1, rotateX: 0 }}
-                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, rotateX: 12 }}
-                    transition={{ duration: reduceMotion ? 0.12 : 0.22 }}
-                    aria-label={revealed ? "Show front of card" : "Reveal answer"}
-                    className="w-full text-left bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-8 min-h-[240px] flex flex-col justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                      {revealed ? "Back" : "Front"}
-                    </span>
-                    <RichTextRenderer
-                      className="mt-3 text-lg sm:text-xl font-medium text-slate-900"
-                      value={revealed ? currentCard.back_content ?? null : currentCard.front_content ?? null}
-                      fallbackText={revealed ? currentCard.back : currentCard.front}
-                    />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={currentCard.id}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                  animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                  transition={{ duration: reduceMotion ? 0.12 : 0.22 }}
+                >
+                  <FlipCard
+                    card={currentCard}
+                    flipped={revealed}
+                    onFlip={() => setRevealed((r) => !r)}
+                  />
+                </motion.div>
+              </AnimatePresence>
 
-                    {!revealed && (
-                      <span className="mt-6 text-xs text-slate-400">Tap the card to reveal the answer</span>
-                    )}
-                  </motion.button>
-                </AnimatePresence>
-              </div>
 
               {revealed ? (
                 <div className="grid grid-cols-2 gap-3">

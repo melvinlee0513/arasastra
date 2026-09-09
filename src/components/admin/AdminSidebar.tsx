@@ -17,11 +17,14 @@ import {
   Video,
   BookOpen,
   GraduationCap,
+  Layers,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import owlMascot from "@/assets/owl-mascot.png";
+
 
 interface AdminSidebarProps {
   collapsed: boolean;
@@ -32,6 +35,8 @@ const navItems = [
   { path: "/admin", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/admin/leads", icon: UserCheck, label: "Leads CRM" },
   { path: "/admin/curriculum", icon: BookOpen, label: "Curriculum" },
+  { path: "/admin/flashcards", icon: Layers, label: "Flashcards", feature: "flashcards" as const },
+
   { path: "/admin/enrollment-matrix", icon: GraduationCap, label: "Enrollment Matrix" },
   { path: "/admin/content", icon: FileEdit, label: "Content CMS" },
   { path: "/admin/users", icon: Users, label: "Users" },
@@ -48,6 +53,9 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, hasRole } = useAuth();
+  const flashcardsOn = useFeatureEnabled("flashcards");
+  const items = navItems.filter((i) => i.feature !== "flashcards" || flashcardsOn);
+
 
 
   const isActive = (path: string, exact?: boolean) => {
@@ -76,7 +84,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const active = isActive(item.path, item.exact);
           return (
             <NavLink

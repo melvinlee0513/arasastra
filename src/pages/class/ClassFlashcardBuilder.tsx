@@ -47,10 +47,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  FlashcardMediaEditor,
+  type FlashcardImageValue,
+} from "@/components/flashcards/FlashcardMediaEditor";
 import {
   FLASHCARD_DRAFT_PREFIX,
   FLASHCARD_DRAFT_TTL_MS,
   FLASHCARD_STATUS_LABEL,
+  type FlashcardDeckDefinition,
   type FlashcardDeckManagerDetail,
   flashcardManagerKeys,
   getFlashcardDeckForManager,
@@ -60,11 +66,20 @@ import {
   validateFlashcardDeck,
 } from "@/lib/flashcards";
 
+
 type Variant = "tutor" | "admin";
 
 interface Props {
   variant: Variant;
 }
+
+const emptyImage = (): FlashcardImageValue => ({
+  image_path: null,
+  image_width: null,
+  image_height: null,
+  image_alt: null,
+  image_crop: null,
+});
 
 /** Local card row. `serverId` is null for cards not yet persisted. */
 interface CardRow {
@@ -76,11 +91,18 @@ interface CardRow {
   /** Canonical rich content documents (null for untouched legacy cards). */
   frontDoc: RichDoc | null;
   backDoc: RichDoc | null;
+  frontImage: FlashcardImageValue;
+  backImage: FlashcardImageValue;
+  tags: string[];
 }
 
 interface BuilderState {
   title: string;
   description: string;
+  coverPath: string | null;
+  formLevel: string;
+  showProgress: boolean;
+  awardXp: boolean;
   cards: CardRow[];
   definitionVersion: number | null;
 }
@@ -99,11 +121,18 @@ const newCard = (): CardRow => ({
   back: "",
   frontDoc: null,
   backDoc: null,
+  frontImage: emptyImage(),
+  backImage: emptyImage(),
+  tags: [],
 });
 
 const emptyState = (): BuilderState => ({
   title: "",
   description: "",
+  coverPath: null,
+  formLevel: "",
+  showProgress: true,
+  awardXp: true,
   cards: [newCard()],
   definitionVersion: null,
 });
@@ -112,6 +141,10 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
   return {
     title: detail.title ?? "",
     description: detail.description ?? "",
+    coverPath: detail.cover_path ?? null,
+    formLevel: detail.form_level ?? "",
+    showProgress: detail.show_progress ?? true,
+    awardXp: detail.award_xp ?? true,
     cards: (detail.cards ?? []).map((c) => ({
       key: `s-${c.id}`,
       serverId: c.id,
@@ -119,10 +152,26 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
       back: c.back ?? "",
       frontDoc: parseRichValue(c.front_content ?? null, c.front ?? ""),
       backDoc: parseRichValue(c.back_content ?? null, c.back ?? ""),
+      frontImage: {
+        image_path: c.front_image_path ?? null,
+        image_width: c.front_image_width ?? null,
+        image_height: c.front_image_height ?? null,
+        image_alt: c.front_image_alt ?? null,
+        image_crop: c.front_image_crop ?? null,
+      },
+      backImage: {
+        image_path: c.back_image_path ?? null,
+        image_width: c.back_image_width ?? null,
+        image_height: c.back_image_height ?? null,
+        image_alt: c.back_image_alt ?? null,
+        image_crop: c.back_image_crop ?? null,
+      },
+      tags: c.tags ?? [],
     })),
     definitionVersion: detail.definition_version ?? null,
   };
 }
+
 
 
 export function ClassFlashcardBuilder({ variant }: Props) {
@@ -140,6 +189,9 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const managerPath = `${basePath}/flashcards`;
   const materialsPath = `${basePath}/resources`;
   const canManage = !!ctx.data?.canManage;
+  /** Images are uploaded into the centre's private folder. */
+  const centerId = ctx.data?.klass?.center_id ?? currentTenantId ?? null;
+
 
   const deckQ = useQuery({
     queryKey: flashcardManagerKeys.definition(currentTenantId, classId ?? "", deckId ?? "new", user?.id),
@@ -243,6 +295,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         setState({
           title: parsed.title ?? "",
           description: parsed.description ?? "",
+          coverPath: parsed.coverPath ?? null,
+          formLevel: parsed.formLevel ?? "",
+          showProgress: parsed.showProgress ?? true,
+          awardXp: parsed.awardXp ?? true,
           cards: (parsed.cards ?? []).map((c) => ({
             key: c.key || nextKey(),
             serverId: c.serverId ?? null,
@@ -250,10 +306,13 @@ export function ClassFlashcardBuilder({ variant }: Props) {
             back: c.back ?? "",
             frontDoc: parseRichValue(c.frontDoc ?? null, c.front ?? ""),
             backDoc: parseRichValue(c.backDoc ?? null, c.back ?? ""),
+            frontImage: c.frontImage ?? emptyImage(),
+            backImage: c.backImage ?? emptyImage(),
+            tags: c.tags ?? [],
           })),
-
           definitionVersion: parsed.definitionVersion ?? null,
         });
+
         setDirty(true);
       }
     } catch {
@@ -265,22 +324,37 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   // ── Mutations ─────────────────────────────────────────────────────────
   const saveMut = useMutation({
     mutationFn: async (args: { publish: boolean }) => {
-      const definition = {
+      const definition: FlashcardDeckDefinition = {
         title: state.title,
         description: state.description,
+        cover_path: state.coverPath,
+        form_level: state.formLevel.trim() || null,
+        show_progress: state.showProgress,
+        award_xp: state.awardXp,
         cards: state.cards.map((c) => ({
           id: c.serverId,
           front: c.front,
           back: c.back,
           front_content: (c.frontDoc ?? null) as unknown as Json,
           back_content: (c.backDoc ?? null) as unknown as Json,
+          front_image_path: c.frontImage.image_path,
+          front_image_width: c.frontImage.image_width,
+          front_image_height: c.frontImage.image_height,
+          front_image_alt: c.frontImage.image_alt,
+          front_image_crop: c.frontImage.image_crop,
+          back_image_path: c.backImage.image_path,
+          back_image_width: c.backImage.image_width,
+          back_image_height: c.backImage.image_height,
+          back_image_alt: c.backImage.image_alt,
+          back_image_crop: c.backImage.image_crop,
+          tags: c.tags,
         })),
-
       };
       if (args.publish) {
-        const v = validateFlashcardDeck(definition);
+        const v = validateFlashcardDeck(validationInput);
         if (!v.canPublish) throw new Error(v.errors.join("\n"));
       }
+
       const res = await saveFlashcardDeck({
         classId: classId!,
         deckId: deckId ?? null,
@@ -376,6 +450,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         back: src.back,
         frontDoc: src.frontDoc,
         backDoc: src.backDoc,
+        // Duplicated cards intentionally reference the same stored image.
+        frontImage: { ...src.frontImage },
+        backImage: { ...src.backImage },
+        tags: [...src.tags],
       };
 
       const cards = [...s.cards];
@@ -397,11 +475,48 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       return { ...s, cards };
     });
 
-  const validation = validateFlashcardDeck({
+  const setCardImage = (
+    key: string,
+    side: "front" | "back",
+    patchValue: Partial<FlashcardImageValue>,
+  ) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? side === "front"
+            ? { ...c, frontImage: { ...c.frontImage, ...patchValue } }
+            : { ...c, backImage: { ...c.backImage, ...patchValue } }
+          : c,
+      ),
+    }));
+
+  const setCardTags = (key: string, raw: string) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? { ...c, tags: raw.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 10) }
+          : c,
+      ),
+    }));
+
+  /**
+   * A side counts as filled when it has text OR an image, so picture-only
+   * cards can be published.
+   */
+  const validationInput = {
     title: state.title,
     description: state.description,
-    cards: state.cards.map((c) => ({ id: c.serverId, front: c.front, back: c.back })),
-  });
+    cards: state.cards.map((c) => ({
+      id: c.serverId,
+      front: c.front.trim() || (c.frontImage.image_path ? "Image" : ""),
+      back: c.back.trim() || (c.backImage.image_path ? "Image" : ""),
+    })),
+  };
+
+  const validation = validateFlashcardDeck(validationInput);
+
 
   const breadcrumbs = [
     { label: variant === "admin" ? "Admin" : "Tutor", to: variant === "admin" ? "/admin" : "/tutor" },
@@ -515,7 +630,61 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                 className="rounded-2xl min-h-[80px]"
               />
             </div>
+
+            <FlashcardMediaEditor
+              centerId={centerId}
+              fieldId="deck-cover"
+              folder="covers"
+              label="Deck cover (optional)"
+              hint="Shown on the deck card in the library. JPG, PNG or WebP up to 10 MB."
+              value={{
+                image_path: state.coverPath,
+                image_width: null,
+                image_height: null,
+                image_alt: null,
+                image_crop: null,
+              }}
+              onChange={(p) => {
+                if ("image_path" in p) patch((s) => ({ ...s, coverPath: p.image_path ?? null }));
+              }}
+            />
+
+            <div className="space-y-2">
+              <Label htmlFor="deck-form">Form level (optional)</Label>
+              <Input
+                id="deck-form"
+                value={state.formLevel}
+                onChange={(e) => patch((s) => ({ ...s, formLevel: e.target.value }))}
+                placeholder="e.g. Form 4"
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-800">Study settings</p>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="deck-show-progress" className="text-sm font-normal text-slate-600">
+                  Show progress while studying
+                </Label>
+                <Switch
+                  id="deck-show-progress"
+                  checked={state.showProgress}
+                  onCheckedChange={(v) => patch((s) => ({ ...s, showProgress: v }))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="deck-award-xp" className="text-sm font-normal text-slate-600">
+                  Award XP for finishing this deck
+                </Label>
+                <Switch
+                  id="deck-award-xp"
+                  checked={state.awardXp}
+                  onCheckedChange={(v) => patch((s) => ({ ...s, awardXp: v }))}
+                />
+              </div>
+            </div>
           </section>
+
 
           {/* Cards */}
           <section className="space-y-3">
@@ -601,6 +770,13 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                           placeholder="Prompt or question"
                           onChange={(doc) => setCardContent(card.key, "front", doc)}
                         />
+                        <FlashcardMediaEditor
+                          centerId={centerId}
+                          fieldId={`card-${card.key}-front-image`}
+                          label="Front image"
+                          value={card.frontImage}
+                          onChange={(p) => setCardImage(card.key, "front", p)}
+                        />
                       </div>
                       <div className="space-y-1.5 min-w-0">
                         <Label>Back</Label>
@@ -611,8 +787,28 @@ export function ClassFlashcardBuilder({ variant }: Props) {
                           placeholder="Answer or explanation"
                           onChange={(doc) => setCardContent(card.key, "back", doc)}
                         />
+                        <FlashcardMediaEditor
+                          centerId={centerId}
+                          fieldId={`card-${card.key}-back-image`}
+                          label="Back image"
+                          value={card.backImage}
+                          onChange={(p) => setCardImage(card.key, "back", p)}
+                        />
                       </div>
                     </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`card-${card.key}-tags`}>Tags (optional)</Label>
+                      <Input
+                        id={`card-${card.key}-tags`}
+                        value={card.tags.join(", ")}
+                        onChange={(e) => setCardTags(card.key, e.target.value)}
+                        placeholder="Comma separated, e.g. definitions, chapter 3"
+                        className="rounded-2xl"
+                      />
+                    </div>
+
+
 
                   </li>
                 ))}

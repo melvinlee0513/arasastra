@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Calendar,
+  Layers,
   User,
   ChevronLeft,
   ChevronRight,
@@ -10,7 +11,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureEnabled } from "@/hooks/useFeature";
 import owlMascot from "@/assets/owl-mascot.png";
+
 
 interface TutorSidebarProps {
   collapsed: boolean;
@@ -20,6 +23,7 @@ interface TutorSidebarProps {
 const navItems = [
   { path: "/tutor", icon: LayoutDashboard, label: "Dashboard", exact: true },
   { path: "/tutor/classes", icon: Calendar, label: "My Classes" },
+  { path: "/tutor/flashcards", icon: Layers, label: "Flashcards", feature: "flashcards" as const },
   { path: "/tutor/account", icon: User, label: "Account" },
 ];
 
@@ -28,6 +32,9 @@ export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, isAdmin } = useAuth();
+  const flashcardsOn = useFeatureEnabled("flashcards");
+  const items = navItems.filter((i) => i.feature !== "flashcards" || flashcardsOn);
+
 
 
   const isActive = (path: string, exact?: boolean) => {
@@ -56,7 +63,7 @@ export function TutorSidebar({ collapsed, onToggle }: TutorSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const active = isActive(item.path, item.exact);
           return (
             <NavLink
