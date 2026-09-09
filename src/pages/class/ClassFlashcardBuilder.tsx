@@ -314,22 +314,37 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   // ── Mutations ─────────────────────────────────────────────────────────
   const saveMut = useMutation({
     mutationFn: async (args: { publish: boolean }) => {
-      const definition = {
+      const definition: FlashcardDeckDefinition = {
         title: state.title,
         description: state.description,
+        cover_path: state.coverPath,
+        form_level: state.formLevel.trim() || null,
+        show_progress: state.showProgress,
+        award_xp: state.awardXp,
         cards: state.cards.map((c) => ({
           id: c.serverId,
           front: c.front,
           back: c.back,
           front_content: (c.frontDoc ?? null) as unknown as Json,
           back_content: (c.backDoc ?? null) as unknown as Json,
+          front_image_path: c.frontImage.image_path,
+          front_image_width: c.frontImage.image_width,
+          front_image_height: c.frontImage.image_height,
+          front_image_alt: c.frontImage.image_alt,
+          front_image_crop: c.frontImage.image_crop,
+          back_image_path: c.backImage.image_path,
+          back_image_width: c.backImage.image_width,
+          back_image_height: c.backImage.image_height,
+          back_image_alt: c.backImage.image_alt,
+          back_image_crop: c.backImage.image_crop,
+          tags: c.tags,
         })),
-
       };
       if (args.publish) {
-        const v = validateFlashcardDeck(definition);
+        const v = validateFlashcardDeck(validationInput);
         if (!v.canPublish) throw new Error(v.errors.join("\n"));
       }
+
       const res = await saveFlashcardDeck({
         classId: classId!,
         deckId: deckId ?? null,
