@@ -440,6 +440,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         back: src.back,
         frontDoc: src.frontDoc,
         backDoc: src.backDoc,
+        // Duplicated cards intentionally reference the same stored image.
+        frontImage: { ...src.frontImage },
+        backImage: { ...src.backImage },
+        tags: [...src.tags],
       };
 
       const cards = [...s.cards];
@@ -461,11 +465,48 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       return { ...s, cards };
     });
 
-  const validation = validateFlashcardDeck({
+  const setCardImage = (
+    key: string,
+    side: "front" | "back",
+    patchValue: Partial<FlashcardImageValue>,
+  ) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? side === "front"
+            ? { ...c, frontImage: { ...c.frontImage, ...patchValue } }
+            : { ...c, backImage: { ...c.backImage, ...patchValue } }
+          : c,
+      ),
+    }));
+
+  const setCardTags = (key: string, raw: string) =>
+    patch((s) => ({
+      ...s,
+      cards: s.cards.map((c) =>
+        c.key === key
+          ? { ...c, tags: raw.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 10) }
+          : c,
+      ),
+    }));
+
+  /**
+   * A side counts as filled when it has text OR an image, so picture-only
+   * cards can be published.
+   */
+  const validationInput = {
     title: state.title,
     description: state.description,
-    cards: state.cards.map((c) => ({ id: c.serverId, front: c.front, back: c.back })),
-  });
+    cards: state.cards.map((c) => ({
+      id: c.serverId,
+      front: c.front.trim() || (c.frontImage.image_path ? "Image" : ""),
+      back: c.back.trim() || (c.backImage.image_path ? "Image" : ""),
+    })),
+  };
+
+  const validation = validateFlashcardDeck(validationInput);
+
 
   const breadcrumbs = [
     { label: variant === "admin" ? "Admin" : "Tutor", to: variant === "admin" ? "/admin" : "/tutor" },
