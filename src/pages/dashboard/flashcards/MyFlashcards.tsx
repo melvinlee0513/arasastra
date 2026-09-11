@@ -5,17 +5,29 @@
  * resolves the caller's centre, active enrolments and the tenant `flashcards`
  * flag server-side. Per-card scheduling is per student: no shared mastery.
  */
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Flame, Layers, Sparkles, Target, ChevronRight, AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronRight, Play, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { cn } from "@/lib/utils";
+import { FLASHCARD_ART } from "@/lib/flashcardArt";
+import {
+  DeckTile,
+  FilterChips,
+  FlashcardEmptyState,
+  FlashcardHero,
+  FlashcardScreen,
+  HeroStat,
+  StatTile,
+} from "@/components/flashcards/FlashcardChrome";
 import {
   flashcardReviewKeys,
   getStudentFlashcardOverview,
@@ -23,10 +35,14 @@ import {
   type FlashcardOverviewDeck,
 } from "@/lib/flashcards";
 
+type DeckFilter = "all" | "due" | "mastered";
+
 export function MyFlashcards() {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const flashcardsOn = useFeatureEnabled("flashcards");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<DeckFilter>("all");
 
   const overview = useQuery({
     queryKey: flashcardReviewKeys.overview(currentTenantId, user?.id),
@@ -34,143 +50,175 @@ export function MyFlashcards() {
     queryFn: getStudentFlashcardOverview,
   });
 
+  const data = overview.data;
+  const allDecks = data?.decks ?? [];
+
+  const decks = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allDecks.filter((d) => {
+      const mastered = d.card_count > 0 && d.mastered_count >= d.card_count;
+      if (filter === "due" && d.due_count <= 0) return false;
+      if (filter === "mastered" && !mastered) return false;
+      if (!term) return true;
+      return (
+        d.title.toLowerCase().includes(term) ||
+        (d.subject_name ?? "").toLowerCase().includes(term) ||
+        (d.class_title ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [allDecks, filter, search]);
+
   if (!flashcardsOn) return <FeatureUnavailable feature="Flashcards" />;
 
-  const data = overview.data;
   const goal = data?.daily_goal ?? 20;
   const done = Math.min(data?.reviewed_today ?? 0, goal);
   const pct = goal > 0 ? Math.round((done / goal) * 100) : 0;
-  const newCount = (data?.decks ?? []).reduce((n, d) => n + (d.new_count ?? 0), 0);
+  const newCount = allDecks.reduce((n, d) => n + (d.new_count ?? 0), 0);
+  const dueCount = data?.due_count ?? 0;
+  const masteredDecks = allDecks.filter((d) => d.card_count > 0 && d.mastered_count >= d.card_count).length;
+  const dueDecks = allDecks.filter((d) => d.due_count > 0).length;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pb-24 pt-4 sm:px-6">
-      <header>
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          My Flashcards
-        </h1>
-        <p className="mt-1 text-[13.5px] text-slate-500">
-          Short daily reviews keep what you learn from slipping away.
-        </p>
-      </header>
-
-      {overview.isLoading ? (
-        <div className="mt-4 space-y-3">
-          <Skeleton className="h-36 rounded-3xl" />
-          <Skeleton className="h-24 rounded-3xl" />
-          <Skeleton className="h-24 rounded-3xl" />
-        </div>
-      ) : overview.isError ? (
-        <div className="mt-4 flex items-start gap-2.5 rounded-3xl border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-          <div>
-            <p className="text-[14px] font-bold text-slate-900">Couldn't load your flashcards</p>
-            <p className="mt-0.5 text-[13px] text-slate-600">{mapFlashcardError(overview.error)}</p>
-            <Button
-              variant="outline"
-              className="mt-3 rounded-full"
-              onClick={() => void overview.refetch()}
-            >
-              Try again
-            </Button>
+    <FlashcardScreen>
+      <div className="mx-auto w-full max-w-4xl px-4 pb-28 pt-4 sm:px-6">
+        {overview.isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-44 rounded-[28px]" />
+            <Skeleton className="h-24 rounded-3xl" />
+            <Skeleton className="h-24 rounded-3xl" />
           </div>
-        </div>
-      ) : (
-        <>
-          {/* Today's review hero */}
-          <section className="mt-4 rounded-3xl bg-gradient-to-br from-[hsl(214,90%,54%)] to-[hsl(258,80%,60%)] p-5 text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.7)]">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11.5px] font-black uppercase tracking-wide text-white/75">
-                  Today's review
-                </p>
-                <p className="mt-1 text-[30px] font-black leading-none">
-                  {data?.due_count ?? 0}
-                  <span className="ml-1.5 text-[14px] font-bold text-white/80">
-                    card{(data?.due_count ?? 0) === 1 ? "" : "s"} due
-                  </span>
-                </p>
-                <p className="mt-1 text-[13px] text-white/80">
-                  {newCount > 0
-                    ? "Plus new cards waiting to be learned."
-                    : "Keep your streak alive with a quick session."}
-                </p>
-              </div>
-              <Sparkles className="h-7 w-7 shrink-0 text-white/80" aria-hidden="true" />
+        ) : overview.isError ? (
+          <div className="flex items-start gap-2.5 rounded-[28px] border border-amber-200 bg-amber-50 p-4">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <div>
+              <p className="text-[14px] font-bold text-slate-900">Couldn't load your flashcards</p>
+              <p className="mt-0.5 text-[13px] text-slate-600">{mapFlashcardError(overview.error)}</p>
+              <Button variant="outline" className="mt-3 rounded-full" onClick={() => void overview.refetch()}>
+                Try again
+              </Button>
             </div>
-
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-[12px] font-semibold text-white/85">
-                <span>Daily goal</span>
-                <span className="tabular-nums">
-                  {done}/{goal}
-                </span>
-              </div>
-              <Progress value={pct} className="mt-1.5 h-2 bg-white/25" />
-            </div>
-
-            <Button
-              asChild
-              className="mt-4 h-12 w-full rounded-full bg-white text-[15px] font-extrabold text-[hsl(214,90%,44%)] hover:bg-white/90"
+          </div>
+        ) : (
+          <>
+            <FlashcardHero
+              eyebrow="My flashcards"
+              title={
+                dueCount > 0
+                  ? `${dueCount} card${dueCount === 1 ? "" : "s"} ready for you`
+                  : "You're all caught up"
+              }
+              subtitle={
+                dueCount + newCount > 0
+                  ? "A few minutes today keeps what you learn from slipping away."
+                  : "Practise any deck to keep your memory sharp."
+              }
+              art={FLASHCARD_ART.studentHero}
             >
-              <Link to="/dashboard/flashcards/review">
-                {(data?.due_count ?? 0) + newCount > 0
-                  ? "Start review"
-                  : "Practise anyway"}
-              </Link>
-            </Button>
-          </section>
-
-          {/* Stats */}
-          <section className="mt-3 grid grid-cols-3 gap-2.5">
-            <Stat icon={<Target className="h-4 w-4" />} label="Learning" value={data?.learning_count ?? 0} />
-            <Stat icon={<Layers className="h-4 w-4" />} label="Mastered" value={data?.mastered_count ?? 0} />
-            <Stat icon={<Flame className="h-4 w-4" />} label="Streak" value={data?.current_streak ?? 0} />
-          </section>
-
-          {/* Decks */}
-          <section className="mt-5">
-            <h2 className="text-[15px] font-extrabold text-slate-900">Your decks</h2>
-            {(data?.decks.length ?? 0) === 0 ? (
-              <div className="mt-3 rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-center">
-                <Layers className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="mt-2 text-[14px] font-bold text-slate-900">No flashcards yet</p>
-                <p className="mt-1 text-[13px] text-slate-500">
-                  When your teacher publishes a deck for one of your classes, it appears here.
-                </p>
+              <div className="grid grid-cols-3 gap-2">
+                <HeroStat label="Learning" value={data?.learning_count ?? 0} />
+                <HeroStat label="Mastered" value={data?.mastered_count ?? 0} />
+                <HeroStat label="Streak" value={data?.current_streak ?? 0} />
               </div>
-            ) : (
-              <ul className="mt-3 space-y-2.5">
-                {data!.decks.map((d) => (
-                  <li key={d.id}>
-                    <DeckRow deck={d} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      )}
-    </div>
-  );
-}
 
-function Stat({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-        {icon}
-      </span>
-      <p className="mt-2 text-[19px] font-black leading-none tabular-nums text-slate-900">{value}</p>
-      <p className="mt-0.5 text-[11.5px] font-semibold text-slate-500">{label}</p>
-    </div>
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-[12px] font-bold text-white/85">
+                  <span>Daily goal</span>
+                  <span className="tabular-nums">
+                    {done}/{goal}
+                  </span>
+                </div>
+                <Progress value={pct} className="mt-1.5 h-2 bg-white/25" aria-label={`${pct}% of today's goal`} />
+              </div>
+
+              <Button
+                asChild
+                className="mt-4 h-12 w-full rounded-full bg-white text-[15px] font-extrabold text-violet-700 shadow-[0_14px_28px_-16px_rgba(15,23,42,0.7)] hover:bg-white/90"
+              >
+                <Link to="/dashboard/flashcards/review">
+                  <Play className="mr-1.5 h-4 w-4" />
+                  {dueCount + newCount > 0 ? "Start review" : "Practise anyway"}
+                </Link>
+              </Button>
+            </FlashcardHero>
+
+            <section className="mt-3 grid grid-cols-3 gap-2.5">
+              <StatTile art={FLASHCARD_ART.deck} label="Decks" value={allDecks.length} />
+              <StatTile art={FLASHCARD_ART.target} label="Decks due" value={dueDecks} />
+              <StatTile art={FLASHCARD_ART.star} label="Decks done" value={masteredDecks} />
+            </section>
+
+            {allDecks.length > 0 && (
+              <div className="mt-5 space-y-2.5">
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search your decks…"
+                    aria-label="Search your flashcard decks"
+                    className="min-h-[46px] rounded-full border-violet-100 bg-white pl-10 text-[14.5px] shadow-[0_10px_26px_-20px_rgba(76,29,149,0.5)]"
+                  />
+                </div>
+                <FilterChips
+                  ariaLabel="Filter your decks"
+                  active={filter}
+                  onSelect={(k) => setFilter(k as DeckFilter)}
+                  options={[
+                    { key: "all", label: "All", count: allDecks.length },
+                    { key: "due", label: "Due", count: dueDecks },
+                    { key: "mastered", label: "Mastered", count: masteredDecks },
+                  ]}
+                />
+              </div>
+            )}
+
+            <section className="mt-4">
+              <h2 className="text-[15.5px] font-extrabold text-slate-900">Your decks</h2>
+              {allDecks.length === 0 ? (
+                <div className="mt-3">
+                  <FlashcardEmptyState
+                    art={FLASHCARD_ART.empty}
+                    title="No flashcards yet"
+                    description="When your teacher publishes a deck for one of your classes, it will appear here."
+                  />
+                </div>
+              ) : decks.length === 0 ? (
+                <div className="mt-3">
+                  <FlashcardEmptyState
+                    art={FLASHCARD_ART.empty}
+                    title="Nothing matches that"
+                    description="Try a different word, or switch back to All."
+                    action={
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => {
+                          setSearch("");
+                          setFilter("all");
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                <ul className="mt-3 space-y-2.5">
+                  {decks.map((d) => (
+                    <li key={d.id}>
+                      <DeckRow deck={d} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </FlashcardScreen>
   );
 }
 
@@ -180,14 +228,11 @@ function DeckRow({ deck }: { deck: FlashcardOverviewDeck }) {
   return (
     <Link
       to={`/dashboard/flashcards/${deck.id}`}
-      className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white p-3.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition active:scale-[0.99]"
+      className="flex items-center gap-3 rounded-[24px] border border-violet-100 bg-white p-3.5 shadow-[0_14px_34px_-24px_rgba(76,29,149,0.5)] transition hover:border-violet-200 hover:shadow-[0_18px_38px_-22px_rgba(76,29,149,0.55)] active:scale-[0.99]"
     >
-
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[hsl(214,90%,96%)] text-[hsl(214,90%,44%)]">
-        <Layers className="h-5 w-5" aria-hidden="true" />
-      </span>
+      <DeckTile />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14.5px] font-bold text-slate-900">{deck.title}</p>
+        <p className="truncate text-[14.5px] font-extrabold text-slate-900">{deck.title}</p>
         <p className="truncate text-[12px] text-slate-500">
           {deck.subject_name ? `${deck.subject_name} · ` : ""}
           {deck.class_title}
@@ -201,10 +246,8 @@ function DeckRow({ deck }: { deck: FlashcardOverviewDeck }) {
       </div>
       <span
         className={cn(
-          "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums",
-          deck.due_count > 0
-            ? "bg-[hsl(214,90%,95%)] text-[hsl(214,90%,42%)]"
-            : "bg-slate-100 text-slate-400",
+          "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums",
+          deck.due_count > 0 ? "bg-violet-100 text-violet-700" : "bg-emerald-50 text-emerald-600",
         )}
       >
         {deck.due_count > 0 ? `${deck.due_count} due` : "Up to date"}
