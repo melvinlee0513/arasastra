@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlipCard } from "@/components/flashcards/FlipCard";
+import {
+  DeckTile,
+  FlashcardEmptyState,
+  FlashcardScreen,
+} from "@/components/flashcards/FlashcardChrome";
+import { FLASHCARD_ART } from "@/lib/flashcardArt";
 
 import {
   flashcardStudentKeys,
