@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ArrowLeft, Check, Loader2, RotateCcw, Sparkles, Layers, CloudOff, RefreshCcw,
+  ArrowLeft, Check, Loader2, RotateCcw, Sparkles, CloudOff, RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
