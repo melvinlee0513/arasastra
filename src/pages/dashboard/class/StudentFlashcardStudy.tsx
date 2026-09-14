@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  ArrowLeft, Check, Loader2, RotateCcw, Sparkles, Layers, CloudOff, RefreshCcw,
+  ArrowLeft, Check, Loader2, RotateCcw, Sparkles, CloudOff, RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlipCard } from "@/components/flashcards/FlipCard";
+import {
+  DeckTile,
+  FlashcardEmptyState,
+  FlashcardScreen,
+} from "@/components/flashcards/FlashcardChrome";
+import { FLASHCARD_ART } from "@/lib/flashcardArt";
 
 import {
   flashcardStudentKeys,
@@ -234,8 +240,8 @@ export function StudentFlashcardStudy() {
     return (
       <Screen>
         <div className="flex flex-col items-center gap-3 text-slate-500">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm">Loading deck…</p>
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+          <p className="text-sm font-semibold">Loading deck…</p>
         </div>
       </Screen>
     );
@@ -244,12 +250,17 @@ export function StudentFlashcardStudy() {
   if (loadError || !session) {
     return (
       <Screen>
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 text-center max-w-md">
-          <h2 className="text-lg font-bold text-slate-900">Deck unavailable</h2>
-          <p className="text-slate-500 mt-2 text-sm">{loadError ?? "This deck isn't available right now."}</p>
-          <Button asChild className="rounded-full mt-5">
-            <Link to={libraryPath}>Back to flashcards</Link>
-          </Button>
+        <div className="w-full max-w-md">
+          <FlashcardEmptyState
+            art={FLASHCARD_ART.empty}
+            title="Deck unavailable"
+            description={loadError ?? "This deck isn't available right now."}
+            action={
+              <Button asChild className="rounded-full bg-violet-600 hover:bg-violet-700">
+                <Link to={libraryPath}>Back to flashcards</Link>
+              </Button>
+            }
+          />
         </div>
       </Screen>
     );
@@ -258,63 +269,113 @@ export function StudentFlashcardStudy() {
   if (total === 0) {
     return (
       <Screen>
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 text-center max-w-md">
-          <Layers className="w-8 h-8 text-slate-400 mx-auto" />
-          <h2 className="text-lg font-bold text-slate-900 mt-3">No cards in this deck yet</h2>
-          <p className="text-slate-500 mt-1 text-sm">Your tutor hasn't added any cards.</p>
-          <Button asChild className="rounded-full mt-5">
-            <Link to={libraryPath}>Back to flashcards</Link>
-          </Button>
+        <div className="w-full max-w-md">
+          <FlashcardEmptyState
+            art={FLASHCARD_ART.empty}
+            title="No cards in this deck yet"
+            description="Your tutor hasn't added any cards to this deck."
+            action={
+              <Button asChild className="rounded-full bg-violet-600 hover:bg-violet-700">
+                <Link to={libraryPath}>Back to flashcards</Link>
+              </Button>
+            }
+          />
         </div>
       </Screen>
     );
   }
 
   const pct = Math.round((doneCount / total) * 100);
-
   const showProgress = session.deck.show_progress ?? true;
+  const position = Math.min(doneCount + 1, total);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-violet-50">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-5">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="rounded-full -ml-2" onClick={() => navigate(libraryPath)}>
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Exit
+    <FlashcardScreen className="min-h-screen">
+      <div className="mx-auto max-w-2xl space-y-4 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-6">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2 rounded-full text-slate-600"
+            onClick={() => navigate(libraryPath)}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> Exit
           </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="font-semibold text-slate-900 truncate">{session.deck.title}</h1>
-          </div>
+          <span className="flex-1" />
           <SaveIndicator state={saveState} />
+        </div>
+
+        {/* Deck identity */}
+        <div className="flex items-center gap-3 rounded-[24px] border border-violet-100 bg-white/85 p-3.5 shadow-[0_14px_34px_-26px_rgba(76,29,149,0.5)] backdrop-blur">
+          <DeckTile />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-extrabold text-slate-900">{session.deck.title}</p>
+            <p className="text-[12px] font-semibold text-slate-500">
+              Card {position} of {total}
+            </p>
+          </div>
+          {(session.deck.award_xp ?? true) && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-600">
+              <img
+                src={FLASHCARD_ART.xp}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="h-3.5 w-3.5 select-none object-contain"
+              />
+              XP
+            </span>
+          )}
         </div>
 
         {showProgress && (
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>
-                {doneCount} of {total} mastered
+            <div className="flex items-center justify-between text-[12px] font-bold text-slate-500">
+              <span className="tabular-nums">
+                {doneCount} of {total} got it
               </span>
-              <span>{queue.length} left</span>
+              <span className="tabular-nums">{queue.length} left</span>
             </div>
-            <Progress value={pct} className="h-2" aria-label={`${pct}% mastered`} />
+            <Progress value={pct} className="h-2.5" aria-label={`${pct}% complete`} />
           </div>
         )}
 
-
         {finished ? (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900 mt-4">Deck complete</h2>
-            <p className="text-slate-500 mt-1 text-sm">
-              You mastered all {total} cards{awarded ? " and earned 25 XP" : ""}.
+          <div className="relative overflow-hidden rounded-[28px] border border-white/70 bg-gradient-to-br from-white via-violet-50 to-violet-100 p-8 text-center shadow-[0_22px_45px_-26px_rgba(76,29,149,0.6)]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-violet-300/30 blur-2xl"
+            />
+            <img
+              src={FLASHCARD_ART.trophy}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="relative mx-auto h-28 w-28 select-none object-contain drop-shadow-[0_12px_22px_rgba(76,29,149,0.3)]"
+            />
+            <h2 className="relative mt-3 text-[24px] font-black tracking-tight text-slate-900">Study complete</h2>
+            <p className="relative mt-1.5 text-[14px] text-slate-600">
+              You worked through all {total} card{total === 1 ? "" : "s"} in this deck.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center mt-6">
-              <Button onClick={restart} disabled={busy} className="rounded-full min-h-[44px]">
-                {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-1.5" />}
-                Restart deck
+            {awarded && (
+              <p className="relative mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[12.5px] font-black text-amber-600">
+                <Sparkles className="h-4 w-4" aria-hidden="true" /> +25 XP earned
+              </p>
+            )}
+            <div className="relative mt-6 flex flex-col gap-2.5">
+              <Button
+                onClick={restart}
+                disabled={busy}
+                className="h-12 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-[15px] font-extrabold shadow-[0_16px_32px_-16px_rgba(109,40,217,0.9)] hover:from-violet-700 hover:to-indigo-700"
+              >
+                {busy ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="mr-1.5 h-4 w-4" />
+                )}
+                Study again
               </Button>
-              <Button asChild variant="outline" className="rounded-full min-h-[44px]">
+              <Button asChild variant="outline" className="h-12 rounded-full text-[15px] font-bold">
                 <Link to={libraryPath}>Back to flashcards</Link>
               </Button>
             </div>
@@ -334,34 +395,42 @@ export function StudentFlashcardStudy() {
                     card={currentCard}
                     flipped={revealed}
                     onFlip={() => setRevealed((r) => !r)}
+                    hint={revealed ? "Tap to see the question" : "Tap to reveal the answer"}
                   />
                 </motion.div>
               </AnimatePresence>
 
-
-              {revealed ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => answer(false)}
-                    className="rounded-full min-h-[48px] border-slate-300"
-                  >
-                    <RefreshCcw className="w-4 h-4 mr-1.5" /> Review
-                  </Button>
-                  <Button onClick={() => answer(true)} className="rounded-full min-h-[48px]">
-                    <Check className="w-4 h-4 mr-1.5" /> Got it
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={() => setRevealed(true)} className="rounded-full w-full min-h-[48px]">
-                  Reveal answer
+              {/* Study navigation: review · flip · got it */}
+              <div className="flex items-center gap-2.5">
+                <Button
+                  variant="outline"
+                  onClick={() => answer(false)}
+                  disabled={!revealed}
+                  aria-label="Review this card again later"
+                  className="h-14 flex-1 rounded-full border-violet-200 bg-white text-[13.5px] font-bold text-slate-600"
+                >
+                  <RefreshCcw className="mr-1.5 h-4 w-4" /> Review
                 </Button>
-              )}
+                <Button
+                  onClick={() => setRevealed((r) => !r)}
+                  className="h-14 flex-[1.4] rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-[15px] font-extrabold text-white shadow-[0_16px_32px_-14px_rgba(109,40,217,0.95)] hover:from-violet-700 hover:to-indigo-700"
+                >
+                  {revealed ? "Show question" : "Flip card"}
+                </Button>
+                <Button
+                  onClick={() => answer(true)}
+                  disabled={!revealed}
+                  aria-label="I got this card right"
+                  className="h-14 flex-1 rounded-full bg-emerald-500 text-[13.5px] font-bold text-white hover:bg-emerald-600"
+                >
+                  <Check className="mr-1.5 h-4 w-4" /> Got it
+                </Button>
+              </div>
             </>
           )
         )}
       </div>
-    </div>
+    </FlashcardScreen>
   );
 }
 
