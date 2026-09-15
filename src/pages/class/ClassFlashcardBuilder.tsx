@@ -5,12 +5,16 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  ChevronRight,
   Copy,
+  Eye,
+  ImageIcon,
   Loader2,
   Plus,
   RefreshCcw,
   Save,
   Send,
+  Sigma,
   Trash2,
   X,
 } from "lucide-react";
@@ -21,7 +25,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FolderSelect } from "@/components/class/FolderSelect";
@@ -31,12 +34,8 @@ import {
   moveContentItem,
 } from "@/lib/contentFolders";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/richtext/RichTextEditor";
 import { parseRichValue, richDocToPlainText, type RichDoc } from "@/lib/richContent";
 import type { Json } from "@/integrations/supabase/types";
-
-
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,9 +52,24 @@ import {
   type FlashcardImageValue,
 } from "@/components/flashcards/FlashcardMediaEditor";
 import {
+  CardEditorSheet,
+  docHasMath,
+  type BuilderCard,
+} from "@/components/flashcards/CardEditorSheet";
+import {
+  FlashcardEmptyState,
+  FlashcardHero,
+  FlashcardScreen,
+  HeroStat,
+  StatTile,
+} from "@/components/flashcards/FlashcardChrome";
+import { FLASHCARD_ART } from "@/lib/flashcardArt";
+import {
   FLASHCARD_DRAFT_PREFIX,
   FLASHCARD_DRAFT_TTL_MS,
   FLASHCARD_STATUS_LABEL,
+  deleteFlashcardDeckSafe,
+  formatFlashcardDate,
   type FlashcardDeckDefinition,
   type FlashcardDeckManagerDetail,
   flashcardManagerKeys,
@@ -63,9 +77,9 @@ import {
   isFlashcardConflict,
   mapFlashcardError,
   saveFlashcardDeck,
+  setFlashcardDeckStatus,
   validateFlashcardDeck,
 } from "@/lib/flashcards";
-
 
 type Variant = "tutor" | "admin";
 
@@ -81,20 +95,7 @@ const emptyImage = (): FlashcardImageValue => ({
   image_crop: null,
 });
 
-/** Local card row. `serverId` is null for cards not yet persisted. */
-interface CardRow {
-  /** Stable React key that survives typing and reordering. */
-  key: string;
-  serverId: string | null;
-  front: string;
-  back: string;
-  /** Canonical rich content documents (null for untouched legacy cards). */
-  frontDoc: RichDoc | null;
-  backDoc: RichDoc | null;
-  frontImage: FlashcardImageValue;
-  backImage: FlashcardImageValue;
-  tags: string[];
-}
+type CardRow = BuilderCard;
 
 interface BuilderState {
   title: string;
@@ -172,7 +173,11 @@ function stateFromDetail(detail: FlashcardDeckManagerDetail): BuilderState {
   };
 }
 
-
+/** Short single-line preview of a card face for the builder list. */
+function facePreview(doc: RichDoc | null, fallback: string): string {
+  const text = (doc ? richDocToPlainText(doc) : fallback).replace(/\s+/g, " ").trim();
+  return text;
+}
 
 export function ClassFlashcardBuilder({ variant }: Props) {
   const { classId, deckId } = useParams<{ classId: string; deckId?: string }>();
@@ -191,7 +196,6 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const canManage = !!ctx.data?.canManage;
   /** Images are uploaded into the centre's private folder. */
   const centerId = ctx.data?.klass?.center_id ?? currentTenantId ?? null;
-
 
   const deckQ = useQuery({
     queryKey: flashcardManagerKeys.definition(currentTenantId, classId ?? "", deckId ?? "new", user?.id),
@@ -226,7 +230,10 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const [dirty, setDirty] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [tab, setTab] = useState<"cards" | "settings">("cards");
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const restoredRef = useRef(false);
 
   const status = deckQ.data?.status ?? "draft";
@@ -400,6 +407,41 @@ export function ClassFlashcardBuilder({ variant }: Props) {
     },
   });
 
+  const statusMut = useMutation({
+    mutationFn: (next: "draft" | "published") => setFlashcardDeckStatus(deckId!, next),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["flashcard-manager"] });
+      qc.invalidateQueries({ queryKey: ["flashcard-student"] });
+      qc.invalidateQueries({ queryKey: ["class-content"] });
+      toast({ title: res.status === "published" ? "Deck published" : "Deck moved to draft" });
+    },
+    onError: (err) =>
+      toast({ title: "Couldn't update", description: mapFlashcardError(err), variant: "destructive" }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: () => deleteFlashcardDeckSafe(deckId!),
+    onSuccess: (res) => {
+      setDeleteOpen(false);
+      if (!res.deleted) {
+        toast({
+          title: "Deck kept",
+          description:
+            "Students have already studied this deck, so it was archived instead of deleted.",
+        });
+      } else {
+        toast({ title: "Deck deleted" });
+      }
+      clearDraft();
+      qc.invalidateQueries({ queryKey: ["flashcard-manager"] });
+      qc.invalidateQueries({ queryKey: ["flashcard-student"] });
+      qc.invalidateQueries({ queryKey: ["class-content"] });
+      navigate(managerPath, { replace: true });
+    },
+    onError: (err) =>
+      toast({ title: "Delete failed", description: mapFlashcardError(err), variant: "destructive" }),
+  });
+
   const reloadLatest = useCallback(async () => {
     if (!deckId) return;
     try {
@@ -436,7 +478,12 @@ export function ClassFlashcardBuilder({ variant }: Props) {
       ),
     }));
 
-  const addCard = () => patch((s) => ({ ...s, cards: [...s.cards, newCard()] }));
+  const addCard = () => {
+    const card = newCard();
+    patch((s) => ({ ...s, cards: [...s.cards, card] }));
+    setTab("cards");
+    setEditingKey(card.key);
+  };
 
   const duplicateCard = (key: string) =>
     patch((s) => {
@@ -517,7 +564,6 @@ export function ClassFlashcardBuilder({ variant }: Props) {
 
   const validation = validateFlashcardDeck(validationInput);
 
-
   const breadcrumbs = [
     { label: variant === "admin" ? "Admin" : "Tutor", to: variant === "admin" ? "/admin" : "/tutor" },
     { label: "Classes", to: variant === "admin" ? "/admin/curriculum" : "/tutor/classes" },
@@ -530,6 +576,20 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const onCancel = () => (dirty ? setCancelOpen(true) : leave());
 
   const busy = saveMut.isPending;
+  const saveState: "saved" | "unsaved" | "saving" | "failed" = busy
+    ? "saving"
+    : saveMut.isError || conflict
+      ? "failed"
+      : dirty
+        ? "unsaved"
+        : "saved";
+
+  const editingIndex = state.cards.findIndex((c) => c.key === editingKey);
+  const editingCard = editingIndex >= 0 ? state.cards[editingIndex] : null;
+
+  const subjectLine = [ctx.data?.klass?.subject_name ?? null, state.formLevel.trim() || null]
+    .filter(Boolean)
+    .join(" • ");
 
   return (
     <ClassShell
@@ -553,307 +613,498 @@ export function ClassFlashcardBuilder({ variant }: Props) {
         />
       ) : !isNew && deckQ.isLoading ? (
         <div className="flex items-center justify-center py-16 text-slate-500">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading deck…
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading deck…
         </div>
       ) : !isNew && deckQ.error ? (
-        <div className="bg-white border border-red-200 rounded-3xl p-6 text-center">
-          <p className="text-sm text-red-600 mb-3">
+        <div className="rounded-3xl border border-red-200 bg-white p-6 text-center">
+          <p className="mb-3 text-sm text-red-600">
             Couldn't load this deck. {mapFlashcardError(deckQ.error)}
           </p>
           <Button variant="outline" onClick={() => deckQ.refetch()} className="rounded-full">
-            <RefreshCcw className="w-4 h-4 mr-1.5" /> Retry
+            <RefreshCcw className="mr-1.5 h-4 w-4" /> Retry
           </Button>
         </div>
       ) : (
-        <div className="space-y-4 pb-28">
-          {conflict && (
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-sm text-amber-800">
-                  This deck was updated by another manager. Reload the latest version before saving.
-                  Your unsaved edits stay here until you reload or discard them.
-                </p>
+        <FlashcardScreen className="-mx-4 px-4 pb-32 pt-1 sm:mx-0 sm:px-0">
+          <div className="space-y-4">
+            {conflict && (
+              <div className="flex flex-col gap-3 rounded-[24px] border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p className="text-[13px] text-amber-800">
+                    This deck was updated by another manager. Reload the latest version before saving.
+                    Your unsaved edits stay here until you reload or discard them.
+                  </p>
+                </div>
+                <Button variant="outline" className="shrink-0 rounded-full" onClick={reloadLatest}>
+                  <RefreshCcw className="mr-1.5 h-4 w-4" /> Reload latest
+                </Button>
               </div>
-              <Button variant="outline" className="rounded-full shrink-0" onClick={reloadLatest}>
-                <RefreshCcw className="w-4 h-4 mr-1.5" /> Reload latest
-              </Button>
-            </div>
-          )}
-
-          {/* Metadata */}
-          <section className="bg-white border border-slate-200 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-900">Deck details</h2>
-              {!isNew && (
-                <>
-                  <Badge variant="outline" className="rounded-full">
-                    {FLASHCARD_STATUS_LABEL[status]}
-                  </Badge>
-                  {state.definitionVersion !== null && (
-                    <Badge variant="secondary" className="rounded-full">
-                      v{state.definitionVersion}
-                    </Badge>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deck-title">Title</Label>
-              <Input
-                id="deck-title"
-                value={state.title}
-                onChange={(e) => patch((s) => ({ ...s, title: e.target.value }))}
-                placeholder="e.g. Form 4 Biology — Cell Structure"
-                className="rounded-2xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deck-folder">Folder</Label>
-              <FolderSelect
-                id="deck-folder"
-                folders={folders}
-                value={folderId}
-                onChange={(next) => {
-                  setFolderId(next);
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deck-desc">Description (optional)</Label>
-              <Textarea
-                id="deck-desc"
-                value={state.description}
-                onChange={(e) => patch((s) => ({ ...s, description: e.target.value }))}
-                placeholder="What should students revise with this deck?"
-                className="rounded-2xl min-h-[80px]"
-              />
-            </div>
-
-            <FlashcardMediaEditor
-              centerId={centerId}
-              fieldId="deck-cover"
-              folder="covers"
-              label="Deck cover (optional)"
-              hint="Shown on the deck card in the library. JPG, PNG or WebP up to 10 MB."
-              value={{
-                image_path: state.coverPath,
-                image_width: null,
-                image_height: null,
-                image_alt: null,
-                image_crop: null,
-              }}
-              onChange={(p) => {
-                if ("image_path" in p) patch((s) => ({ ...s, coverPath: p.image_path ?? null }));
-              }}
-            />
-
-            <div className="space-y-2">
-              <Label htmlFor="deck-form">Form level (optional)</Label>
-              <Input
-                id="deck-form"
-                value={state.formLevel}
-                onChange={(e) => patch((s) => ({ ...s, formLevel: e.target.value }))}
-                placeholder="e.g. Form 4"
-                className="rounded-2xl"
-              />
-            </div>
-
-            <div className="space-y-3 rounded-2xl bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-800">Study settings</p>
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="deck-show-progress" className="text-sm font-normal text-slate-600">
-                  Show progress while studying
-                </Label>
-                <Switch
-                  id="deck-show-progress"
-                  checked={state.showProgress}
-                  onCheckedChange={(v) => patch((s) => ({ ...s, showProgress: v }))}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="deck-award-xp" className="text-sm font-normal text-slate-600">
-                  Award XP for finishing this deck
-                </Label>
-                <Switch
-                  id="deck-award-xp"
-                  checked={state.awardXp}
-                  onCheckedChange={(v) => patch((s) => ({ ...s, awardXp: v }))}
-                />
-              </div>
-            </div>
-          </section>
-
-
-          {/* Cards */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3 px-1">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Cards <span className="text-slate-400 font-normal">({state.cards.length})</span>
-              </h2>
-              <Button type="button" variant="outline" className="rounded-full" onClick={addCard}>
-                <Plus className="w-4 h-4 mr-1.5" /> Add card
-              </Button>
-            </div>
-
-            {state.cards.length === 0 ? (
-              <div className="bg-white border border-dashed border-slate-300 rounded-3xl p-8 text-center">
-                <p className="text-sm text-slate-500">
-                  This deck has no cards yet. Drafts can be saved empty, but a deck needs at least
-                  one complete card before it can be published.
-                </p>
-              </div>
-            ) : (
-              <ol className="space-y-3">
-                {state.cards.map((card, i) => (
-                  <li
-                    key={card.key}
-                    className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-3"
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Card {i + 1}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="rounded-full h-8 w-8"
-                          onClick={() => moveCard(card.key, -1)}
-                          disabled={i === 0}
-                          aria-label={`Move card ${i + 1} up`}
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="rounded-full h-8 w-8"
-                          onClick={() => moveCard(card.key, 1)}
-                          disabled={i === state.cards.length - 1}
-                          aria-label={`Move card ${i + 1} down`}
-                        >
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="rounded-full h-8 w-8"
-                          onClick={() => duplicateCard(card.key)}
-                          aria-label={`Duplicate card ${i + 1}`}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="rounded-full h-8 w-8 text-red-600 hover:text-red-700"
-                          onClick={() => removeCard(card.key)}
-                          aria-label={`Remove card ${i + 1}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-1.5 min-w-0">
-                        <Label>Front</Label>
-                        <RichTextEditor
-                          value={card.frontDoc}
-                          fallbackText={card.front}
-                          ariaLabel={`Front of card ${i + 1}`}
-                          placeholder="Prompt or question"
-                          onChange={(doc) => setCardContent(card.key, "front", doc)}
-                        />
-                        <FlashcardMediaEditor
-                          centerId={centerId}
-                          fieldId={`card-${card.key}-front-image`}
-                          label="Front image"
-                          value={card.frontImage}
-                          onChange={(p) => setCardImage(card.key, "front", p)}
-                        />
-                      </div>
-                      <div className="space-y-1.5 min-w-0">
-                        <Label>Back</Label>
-                        <RichTextEditor
-                          value={card.backDoc}
-                          fallbackText={card.back}
-                          ariaLabel={`Back of card ${i + 1}`}
-                          placeholder="Answer or explanation"
-                          onChange={(doc) => setCardContent(card.key, "back", doc)}
-                        />
-                        <FlashcardMediaEditor
-                          centerId={centerId}
-                          fieldId={`card-${card.key}-back-image`}
-                          label="Back image"
-                          value={card.backImage}
-                          onChange={(p) => setCardImage(card.key, "back", p)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`card-${card.key}-tags`}>Tags (optional)</Label>
-                      <Input
-                        id={`card-${card.key}-tags`}
-                        value={card.tags.join(", ")}
-                        onChange={(e) => setCardTags(card.key, e.target.value)}
-                        placeholder="Comma separated, e.g. definitions, chapter 3"
-                        className="rounded-2xl"
-                      />
-                    </div>
-
-
-
-                  </li>
-                ))}
-              </ol>
             )}
-          </section>
 
-          {!validation.canPublish && (
-            <ul className="text-xs text-slate-500 list-disc pl-5 space-y-1">
-              {validation.errors.map((e) => (
-                <li key={e}>{e}</li>
-              ))}
-            </ul>
-          )}
+            {/* Deck hero */}
+            <FlashcardHero
+              eyebrow="Deck builder"
+              title={state.title.trim() || "Untitled deck"}
+              subtitle={subjectLine || "Add a title, then build the cards students will study."}
+              art={FLASHCARD_ART.libraryHero}
+            >
+              <div className="grid grid-cols-3 gap-2">
+                <HeroStat label="Cards" value={state.cards.length} />
+                <HeroStat label="Ready" value={validation.canPublish ? "Yes" : "No"} />
+                <HeroStat label="Status" value={FLASHCARD_STATUS_LABEL[status]} />
+              </div>
+            </FlashcardHero>
+
+            {/* Workspace tabs + save state */}
+            <div className="flex items-center gap-2">
+              <div
+                role="tablist"
+                aria-label="Deck builder sections"
+                className="flex flex-1 gap-1 rounded-full border border-violet-100 bg-white p-1"
+              >
+                {(["cards", "settings"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === t}
+                    onClick={() => setTab(t)}
+                    className={
+                      tab === t
+                        ? "min-h-[40px] flex-1 rounded-full bg-violet-600 text-[13.5px] font-bold text-white"
+                        : "min-h-[40px] flex-1 rounded-full text-[13.5px] font-bold text-slate-500"
+                    }
+                  >
+                    {t === "cards" ? `Cards (${state.cards.length})` : "Settings"}
+                  </button>
+                ))}
+              </div>
+              <span
+                className={
+                  saveState === "failed"
+                    ? "shrink-0 rounded-full bg-rose-50 px-3 py-2 text-[12px] font-bold text-rose-600"
+                    : saveState === "saved"
+                      ? "shrink-0 rounded-full bg-emerald-50 px-3 py-2 text-[12px] font-bold text-emerald-600"
+                      : "shrink-0 rounded-full bg-amber-50 px-3 py-2 text-[12px] font-bold text-amber-600"
+                }
+              >
+                {saveState === "saving"
+                  ? "Saving…"
+                  : saveState === "failed"
+                    ? "Save failed"
+                    : saveState === "unsaved"
+                      ? "Unsaved"
+                      : "Saved"}
+              </span>
+            </div>
+
+            {tab === "cards" ? (
+              <section className="space-y-3">
+                {state.cards.length === 0 ? (
+                  <FlashcardEmptyState
+                    art={FLASHCARD_ART.empty}
+                    title="No flashcards yet"
+                    description="Create your first card to start building this deck."
+                    action={
+                      <Button
+                        type="button"
+                        onClick={addCard}
+                        className="min-h-[46px] rounded-full bg-violet-600 px-6 font-bold hover:bg-violet-700"
+                      >
+                        <Plus className="mr-1.5 h-4 w-4" /> Add card
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <ol className="space-y-2.5">
+                    {state.cards.map((card, i) => {
+                      const front = facePreview(card.frontDoc, card.front);
+                      const back = facePreview(card.backDoc, card.back);
+                      const hasImage = !!(card.frontImage.image_path || card.backImage.image_path);
+                      const hasMath = docHasMath(card.frontDoc) || docHasMath(card.backDoc);
+                      return (
+                        <li
+                          key={card.key}
+                          className="rounded-[24px] border border-violet-100 bg-white p-3.5 shadow-[0_12px_30px_-24px_rgba(76,29,149,0.5)]"
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-sky-100 text-[13px] font-black tabular-nums text-violet-700">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingKey(card.key)}
+                              className="min-w-0 flex-1 text-left"
+                              aria-label={`Edit card ${i + 1}`}
+                            >
+                              <p className="line-clamp-2 text-[14.5px] font-semibold leading-snug text-slate-900">
+                                {front || "Empty front — tap to add content"}
+                              </p>
+                              {back && (
+                                <p className="mt-1 line-clamp-1 text-[13px] text-slate-500">{back}</p>
+                              )}
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {hasImage && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-[11.5px] font-bold text-violet-600">
+                                    <ImageIcon className="h-3 w-3" /> Image
+                                  </span>
+                                )}
+                                {hasMath && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[11.5px] font-bold text-sky-600">
+                                    <Sigma className="h-3 w-3" /> Equation
+                                  </span>
+                                )}
+                                {card.tags.slice(0, 2).map((t) => (
+                                  <span
+                                    key={t}
+                                    className="rounded-full bg-slate-100 px-2 py-1 text-[11.5px] font-semibold text-slate-500"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            </button>
+                            <ChevronRight className="mt-2 h-5 w-5 shrink-0 text-slate-300" aria-hidden="true" />
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-end gap-1 border-t border-violet-50 pt-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-full"
+                              onClick={() => moveCard(card.key, -1)}
+                              disabled={i === 0}
+                              aria-label={`Move card ${i + 1} up`}
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-full"
+                              onClick={() => moveCard(card.key, 1)}
+                              disabled={i === state.cards.length - 1}
+                              aria-label={`Move card ${i + 1} down`}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-full"
+                              onClick={() => duplicateCard(card.key)}
+                              aria-label={`Duplicate card ${i + 1}`}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-9 w-9 rounded-full text-rose-600 hover:text-rose-700"
+                              onClick={() => removeCard(card.key)}
+                              aria-label={`Remove card ${i + 1}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="ml-1 min-h-[38px] rounded-full text-[13px]"
+                              onClick={() => setEditingKey(card.key)}
+                            >
+                              <Eye className="mr-1.5 h-3.5 w-3.5" /> Edit
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+
+                {state.cards.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addCard}
+                    className="min-h-[48px] w-full rounded-full border-dashed border-violet-300 bg-white text-[14.5px] font-bold text-violet-700"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" /> Add card
+                  </Button>
+                )}
+
+                {!validation.canPublish && (
+                  <ul className="list-disc space-y-1 pl-5 text-[12px] text-slate-500">
+                    {validation.errors.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ) : (
+              <section className="space-y-4">
+                {/* General */}
+                <div className="space-y-4 rounded-[24px] border border-violet-100 bg-white p-4 shadow-[0_12px_30px_-24px_rgba(76,29,149,0.5)]">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-violet-500">General</p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deck-title" className="text-[12.5px] font-semibold text-slate-700">
+                      Deck title
+                    </Label>
+                    <Input
+                      id="deck-title"
+                      value={state.title}
+                      onChange={(e) => patch((s) => ({ ...s, title: e.target.value }))}
+                      placeholder="e.g. Form 4 Biology — Cell Structure"
+                      className="min-h-[46px] rounded-2xl border-slate-200 text-[15px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deck-desc" className="text-[12.5px] font-semibold text-slate-700">
+                      Description (optional)
+                    </Label>
+                    <Textarea
+                      id="deck-desc"
+                      value={state.description}
+                      onChange={(e) => patch((s) => ({ ...s, description: e.target.value }))}
+                      placeholder="What should students revise with this deck?"
+                      className="min-h-[88px] rounded-2xl border-slate-200 text-[15px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deck-form" className="text-[12.5px] font-semibold text-slate-700">
+                      Form / year (optional)
+                    </Label>
+                    <Input
+                      id="deck-form"
+                      value={state.formLevel}
+                      onChange={(e) => patch((s) => ({ ...s, formLevel: e.target.value }))}
+                      placeholder="e.g. Form 4"
+                      className="min-h-[46px] rounded-2xl border-slate-200 text-[15px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deck-folder" className="text-[12.5px] font-semibold text-slate-700">
+                      Folder
+                    </Label>
+                    <FolderSelect
+                      id="deck-folder"
+                      folders={folders}
+                      value={folderId}
+                      onChange={(next) => {
+                        setFolderId(next);
+                        setDirty(true);
+                      }}
+                    />
+                  </div>
+                  <p className="text-[12px] text-slate-500">
+                    This deck belongs to {ctx.data?.klass?.title ?? "this class"}. Enrolled students in
+                    that class can study it once it is published.
+                  </p>
+                </div>
+
+                {/* Cover */}
+                <div className="rounded-[24px] border border-violet-100 bg-white p-4 shadow-[0_12px_30px_-24px_rgba(76,29,149,0.5)]">
+                  <p className="mb-3 text-[11px] font-black uppercase tracking-[0.14em] text-violet-500">
+                    Deck cover
+                  </p>
+                  <FlashcardMediaEditor
+                    centerId={centerId}
+                    fieldId="deck-cover"
+                    folder="covers"
+                    label="Cover image (optional)"
+                    hint="Shown on the deck card in the library. JPG, PNG or WebP up to 10 MB."
+                    value={{
+                      image_path: state.coverPath,
+                      image_width: null,
+                      image_height: null,
+                      image_alt: null,
+                      image_crop: null,
+                    }}
+                    onChange={(p) => {
+                      if ("image_path" in p) patch((s) => ({ ...s, coverPath: p.image_path ?? null }));
+                    }}
+                  />
+                </div>
+
+                {/* Publication */}
+                <div className="rounded-[24px] border border-violet-100 bg-white p-4 shadow-[0_12px_30px_-24px_rgba(76,29,149,0.5)]">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-violet-500">
+                    Publication
+                  </p>
+                  {isNew ? (
+                    <p className="mt-2 text-[13px] text-slate-500">
+                      Save this deck first. You can then publish it for students.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="mt-3 flex gap-1 rounded-full border border-violet-100 bg-violet-50/60 p-1">
+                        {(["draft", "published"] as const).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => status !== s && statusMut.mutate(s)}
+                            disabled={statusMut.isPending}
+                            aria-pressed={status === s}
+                            className={
+                              status === s
+                                ? "min-h-[42px] flex-1 rounded-full bg-violet-600 text-[13.5px] font-bold text-white"
+                                : "min-h-[42px] flex-1 rounded-full text-[13.5px] font-bold text-slate-500"
+                            }
+                          >
+                            {FLASHCARD_STATUS_LABEL[s]}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[12.5px] text-slate-500">
+                        {status === "published"
+                          ? "Published — enrolled students in this class can study this deck."
+                          : status === "archived"
+                            ? "Archived — students cannot study this deck."
+                            : "Draft — students cannot study this deck yet."}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Study options */}
+                <div className="space-y-3 rounded-[24px] border border-violet-100 bg-white p-4 shadow-[0_12px_30px_-24px_rgba(76,29,149,0.5)]">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-violet-500">
+                    Study options
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="deck-show-progress" className="text-[13.5px] font-normal text-slate-600">
+                      Show progress while studying
+                    </Label>
+                    <Switch
+                      id="deck-show-progress"
+                      checked={state.showProgress}
+                      onCheckedChange={(v) => patch((s) => ({ ...s, showProgress: v }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="deck-award-xp" className="text-[13.5px] font-normal text-slate-600">
+                      Award XP for finishing this deck
+                    </Label>
+                    <Switch
+                      id="deck-award-xp"
+                      checked={state.awardXp}
+                      onCheckedChange={(v) => patch((s) => ({ ...s, awardXp: v }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats */}
+                {!isNew && deckQ.data && (
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                    <StatTile label="Cards" value={state.cards.length} />
+                    <StatTile label="Status" value={FLASHCARD_STATUS_LABEL[status]} />
+                    <StatTile label="Created" value={formatFlashcardDate(deckQ.data.created_at)} />
+                    <StatTile label="Updated" value={formatFlashcardDate(deckQ.data.updated_at)} />
+                  </div>
+                )}
+
+                {/* Danger zone */}
+                {!isNew && (
+                  <div className="rounded-[24px] border border-rose-100 bg-rose-50/50 p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-rose-500">
+                      Danger zone
+                    </p>
+                    <p className="mt-1.5 text-[13px] text-slate-600">
+                      Deleting a deck removes it and its cards from this class. If students have already
+                      studied it, the deck is archived instead so their history stays intact.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDeleteOpen(true)}
+                      className="mt-3 min-h-[46px] rounded-full border-rose-200 text-[14px] font-bold text-rose-600 hover:text-rose-700"
+                    >
+                      <Trash2 className="mr-1.5 h-4 w-4" /> Delete deck
+                    </Button>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
 
           {/* Sticky action bar */}
-          <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur-sm px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-end gap-2">
-              {dirty && <span className="text-xs text-slate-500 mr-auto">Unsaved changes</span>}
-              <Button type="button" variant="ghost" className="rounded-full" onClick={onCancel} disabled={busy}>
-                <X className="w-4 h-4 mr-1.5" /> Cancel
+          <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-violet-100 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+            <div className="mx-auto flex max-w-6xl items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-[46px] shrink-0 rounded-full px-3"
+                onClick={onCancel}
+                disabled={busy}
+                aria-label="Cancel"
+              >
+                <X className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="min-h-[46px] flex-1 rounded-full text-[14px] font-bold"
                 onClick={() => saveMut.mutate({ publish: false })}
                 disabled={busy}
               >
-                {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
+                {busy ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-1.5 h-4 w-4" />
+                )}
                 {isNew || status === "draft" ? "Save draft" : "Save changes"}
               </Button>
               <Button
                 type="button"
-                className="rounded-full"
+                className="min-h-[46px] flex-1 rounded-full bg-violet-600 text-[14px] font-bold hover:bg-violet-700"
                 onClick={() => saveMut.mutate({ publish: true })}
                 disabled={busy || !validation.canPublish}
                 title={validation.canPublish ? undefined : validation.errors.join(" ")}
               >
-                <Send className="w-4 h-4 mr-1.5" /> Publish now
+                <Send className="mr-1.5 h-4 w-4" /> Publish
               </Button>
             </div>
           </div>
-        </div>
+        </FlashcardScreen>
       )}
+
+      {/* Card editor */}
+      <CardEditorSheet
+        open={!!editingCard}
+        onOpenChange={(o) => !o && setEditingKey(null)}
+        card={editingCard}
+        index={editingIndex < 0 ? 0 : editingIndex}
+        total={state.cards.length}
+        deckTitle={state.title.trim()}
+        centerId={centerId}
+        saveState={saveState}
+        onContent={(side, doc) => editingCard && setCardContent(editingCard.key, side, doc)}
+        onImage={(side, p) => editingCard && setCardImage(editingCard.key, side, p)}
+        onTags={(raw) => editingCard && setCardTags(editingCard.key, raw)}
+        onDuplicate={() => {
+          if (!editingCard) return;
+          duplicateCard(editingCard.key);
+          setEditingKey(null);
+        }}
+        onDelete={() => {
+          if (!editingCard) return;
+          removeCard(editingCard.key);
+          setEditingKey(null);
+        }}
+        onPrev={() => {
+          const prev = state.cards[editingIndex - 1];
+          if (prev) setEditingKey(prev.key);
+        }}
+        onNext={() => {
+          const next = state.cards[editingIndex + 1];
+          if (next) setEditingKey(next.key);
+        }}
+        onSave={() => saveMut.mutate({ publish: false })}
+      />
 
       {/* Cancel with unsaved changes */}
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
@@ -874,6 +1125,32 @@ export function ClassFlashcardBuilder({ variant }: Props) {
               }}
             >
               Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete deck */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this deck?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {state.title.trim() || "This deck"} and its cards will be removed from this class. If
+              students have already studied it, it is archived instead so their history stays intact.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep deck</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                deleteMut.mutate();
+              }}
+            >
+              {deleteMut.isPending ? "Deleting…" : "Delete deck"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
