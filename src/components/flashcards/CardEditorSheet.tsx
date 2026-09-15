@@ -119,8 +119,7 @@ export function CardEditorSheet({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        hideClose
-        className="left-0 top-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none border-0 bg-gradient-to-b from-[hsl(258,80%,97%)] via-white to-[hsl(258,70%,97%)] p-0 sm:left-1/2 sm:top-1/2 sm:h-[92vh] sm:max-h-[92vh] sm:w-[min(1100px,94vw)] sm:max-w-none sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px]"
+        className="left-0 top-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 bg-gradient-to-b from-[hsl(258,80%,97%)] via-white to-[hsl(258,70%,97%)] p-0 [&>button.absolute]:hidden sm:left-1/2 sm:top-1/2 sm:h-[92vh] sm:max-h-[92vh] sm:w-[min(1100px,94vw)] sm:max-w-none sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px]"
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-violet-100 bg-white/80 px-4 py-3 backdrop-blur">
