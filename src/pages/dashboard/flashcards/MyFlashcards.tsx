@@ -30,6 +30,7 @@ import {
 } from "@/components/flashcards/FlashcardChrome";
 import {
   flashcardReviewKeys,
+  formatFlashcardRelative,
   getStudentFlashcardOverview,
   mapFlashcardError,
   type FlashcardOverviewDeck,
@@ -236,6 +237,10 @@ function DeckRow({ deck }: { deck: FlashcardOverviewDeck }) {
         <p className="truncate text-[12px] text-slate-500">
           {deck.subject_name ? `${deck.subject_name} · ` : ""}
           {deck.class_title}
+        </p>
+        <p className="truncate text-[11.5px] font-semibold text-slate-400">
+          {total} card{total === 1 ? "" : "s"}
+          {deck.last_reviewed_at ? ` · studied ${formatFlashcardRelative(deck.last_reviewed_at)}` : ""}
         </p>
         <div className="mt-1.5 flex items-center gap-2">
           <Progress value={pct} className="h-1.5 flex-1" />
