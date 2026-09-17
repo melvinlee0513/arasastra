@@ -82,7 +82,7 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
         <FlashcardHero
           eyebrow="Flashcard library"
           title="Your flashcard decks"
-          subtitle="Every deck across your classes. Open a class to create a new one."
+          subtitle="Create and manage engaging study decks for your students."
           art={FLASHCARD_ART.libraryHero}
         >
           <div className="grid grid-cols-3 gap-2">
