@@ -587,7 +587,7 @@ export function ClassFlashcardBuilder({ variant }: Props) {
   const editingIndex = state.cards.findIndex((c) => c.key === editingKey);
   const editingCard = editingIndex >= 0 ? state.cards[editingIndex] : null;
 
-  const subjectLine = [ctx.data?.klass?.subject_name ?? null, state.formLevel.trim() || null]
+  const subjectLine = [ctx.data?.klass?.subject?.name ?? null, state.formLevel.trim() || null]
     .filter(Boolean)
     .join(" • ");
 
