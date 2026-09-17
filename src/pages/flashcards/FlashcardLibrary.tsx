@@ -3,18 +3,57 @@
  * across all of their classes in the current centre.
  *
  * `list_flashcard_decks_for_manager` resolves centre, role and class assignment
- * server-side, so this page never filters tenant data in the browser.
+ * server-side, so this page never filters tenant data in the browser. Deck
+ * actions go through the existing RPC wrappers, which re-check authorisation.
  */
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Eye, Layers, Pencil, Plus, Search, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  Copy,
+  Eye,
+  Layers,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureEnabled } from "@/hooks/useFeature";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlashcardMedia } from "@/components/flashcards/FlashcardMedia";
 import {
@@ -29,36 +68,88 @@ import { FLASHCARD_ART } from "@/lib/flashcardArt";
 import { cn } from "@/lib/utils";
 import {
   FLASHCARD_STATUS_LABEL,
+  deleteFlashcardDeckSafe,
+  duplicateFlashcardDeckAsDraft,
   flashcardLibraryKeys,
+  formatFlashcardRelative,
   listFlashcardDecksForManager,
   mapFlashcardError,
+  setFlashcardDeckStatus,
   type FlashcardDeckManagerRow,
 } from "@/lib/flashcards";
 
 type Variant = "tutor" | "admin";
-type Filter = "all" | "published" | "draft";
+type Filter = "all" | "published" | "draft" | "mine";
+const ALL_SUBJECTS = "__all__";
 
 export function FlashcardLibrary({ variant }: { variant: Variant }) {
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const flashcardsOn = useFeatureEnabled("flashcards");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [subject, setSubject] = useState<string>(ALL_SUBJECTS);
+  const [pendingDelete, setPendingDelete] = useState<FlashcardDeckManagerRow | null>(null);
+
+  const listKey = flashcardLibraryKeys.manager(currentTenantId, user?.id);
 
   const decksQ = useQuery({
-    queryKey: flashcardLibraryKeys.manager(currentTenantId, user?.id),
+    queryKey: listKey,
     enabled: !!user && flashcardsOn,
     queryFn: listFlashcardDecksForManager,
     staleTime: 15_000,
   });
 
+  const refresh = () => queryClient.invalidateQueries({ queryKey: listKey });
+
+  const duplicateM = useMutation({
+    mutationFn: (deckId: string) => duplicateFlashcardDeckAsDraft(deckId),
+    onSuccess: async () => {
+      await refresh();
+      toast.success("Deck duplicated as a draft.");
+    },
+    onError: (err) => toast.error(mapFlashcardError(err, "Couldn't duplicate this deck.")),
+  });
+
+  const statusM = useMutation({
+    mutationFn: ({ deckId, publish }: { deckId: string; publish: boolean }) =>
+      setFlashcardDeckStatus(deckId, publish ? "published" : "draft"),
+    onSuccess: async (_res, vars) => {
+      await refresh();
+      toast.success(vars.publish ? "Deck published for students." : "Deck moved back to draft.");
+    },
+    onError: (err) => toast.error(mapFlashcardError(err, "Couldn't update this deck.")),
+  });
+
+  const deleteM = useMutation({
+    mutationFn: (deckId: string) => deleteFlashcardDeckSafe(deckId),
+    onSuccess: async () => {
+      setPendingDelete(null);
+      await refresh();
+      toast.success("Deck deleted.");
+    },
+    onError: (err) => toast.error(mapFlashcardError(err, "Couldn't delete this deck.")),
+  });
+
   const allDecks = decksQ.data ?? [];
+
+  const subjects = useMemo(
+    () =>
+      Array.from(
+        new Set(allDecks.map((d) => d.subject_name).filter((s): s is string => !!s && s.length > 0)),
+      ).sort((a, b) => a.localeCompare(b)),
+    [allDecks],
+  );
 
   const decks = useMemo(() => {
     const term = search.trim().toLowerCase();
     return allDecks.filter((d) => {
       if (filter === "published" && d.status !== "published") return false;
       if (filter === "draft" && d.status === "published") return false;
+      if (filter === "mine" && d.created_by !== user?.id) return false;
+      if (subject !== ALL_SUBJECTS && d.subject_name !== subject) return false;
       if (!term) return true;
       return (
         d.title.toLowerCase().includes(term) ||
@@ -66,7 +157,7 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
         (d.subject_name ?? "").toLowerCase().includes(term)
       );
     });
-  }, [allDecks, filter, search]);
+  }, [allDecks, filter, search, subject, user?.id]);
 
   if (!flashcardsOn) return <FeatureUnavailable feature="Flashcards" />;
 
@@ -74,7 +165,12 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
   const classesPath = variant === "admin" ? "/admin/curriculum" : "/tutor/classes";
   const publishedCount = allDecks.filter((d) => d.status === "published").length;
   const draftCount = allDecks.length - publishedCount;
+  const mineCount = allDecks.filter((d) => d.created_by === user?.id).length;
   const totalCards = allDecks.reduce((n, d) => n + (d.card_count ?? 0), 0);
+  const busyDeckId =
+    duplicateM.isPending || statusM.isPending
+      ? (statusM.variables?.deckId ?? duplicateM.variables ?? null)
+      : null;
 
   return (
     <FlashcardScreen>
@@ -92,28 +188,49 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
           </div>
         </FlashcardHero>
 
-        <div className="mt-4 space-y-2.5 sm:flex sm:items-center sm:gap-3 sm:space-y-0">
-          <div className="relative flex-1">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-              aria-hidden="true"
-            />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search decks…"
-              aria-label="Search flashcard decks"
-              className="min-h-[46px] rounded-full border-violet-100 bg-white pl-10 text-[14.5px] shadow-[0_10px_26px_-20px_rgba(76,29,149,0.5)]"
-            />
+        <div className="mt-4 space-y-2.5">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by deck, subject or class…"
+                aria-label="Search flashcard decks"
+                className="min-h-[46px] rounded-full border-violet-100 bg-white pl-10 text-[14.5px] shadow-[0_10px_26px_-20px_rgba(76,29,149,0.5)]"
+              />
+            </div>
+            {subjects.length > 1 && (
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger
+                  aria-label="Filter decks by subject"
+                  className="min-h-[46px] rounded-full border-violet-100 bg-white text-[14px] font-semibold sm:w-56"
+                >
+                  <SelectValue placeholder="All subjects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_SUBJECTS}>All subjects</SelectItem>
+                  {subjects.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <FilterChips
-            ariaLabel="Filter decks by status"
+            ariaLabel="Filter decks"
             active={filter}
             onSelect={(k) => setFilter(k as Filter)}
             options={[
               { key: "all", label: "All", count: allDecks.length },
               { key: "published", label: "Published", count: publishedCount },
               { key: "draft", label: "Draft", count: draftCount },
+              { key: "mine", label: "My decks", count: mineCount },
             ]}
           />
         </div>
@@ -139,11 +256,11 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
           <div className="mt-4">
             <FlashcardEmptyState
               art={FLASHCARD_ART.empty}
-              title={allDecks.length === 0 ? "No flashcard decks yet" : "No decks match that search"}
+              title={allDecks.length === 0 ? "No flashcard decks yet" : "No decks match those filters"}
               description={
                 allDecks.length === 0
                   ? "Open one of your classes and add a flashcard deck to get started."
-                  : "Try a different word, or switch back to All."
+                  : "Try a different word, subject or status."
               }
               action={
                 allDecks.length === 0 ? (
@@ -159,6 +276,7 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
                     onClick={() => {
                       setSearch("");
                       setFilter("all");
+                      setSubject(ALL_SUBJECTS);
                     }}
                   >
                     Clear filters
@@ -171,7 +289,17 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {decks.map((deck) => (
               <li key={deck.id}>
-                <DeckCard deck={deck} basePath={basePath} />
+                <DeckCard
+                  deck={deck}
+                  basePath={basePath}
+                  busy={busyDeckId === deck.id}
+                  onDuplicate={() => duplicateM.mutate(deck.id)}
+                  onToggleStatus={() =>
+                    statusM.mutate({ deckId: deck.id, publish: deck.status !== "published" })
+                  }
+                  onDelete={() => setPendingDelete(deck)}
+                  onPreview={() => navigate(`${basePath}/classes/${deck.class_id}/flashcards/${deck.id}/edit`)}
+                />
               </li>
             ))}
           </ul>
@@ -190,13 +318,55 @@ export function FlashcardLibrary({ variant }: { variant: Variant }) {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-[28px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this deck?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingDelete?.title}” and its {pendingDelete?.card_count ?? 0} card
+              {pendingDelete?.card_count === 1 ? "" : "s"} will be removed for your students. This can't be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Keep deck</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-rose-600 hover:bg-rose-700"
+              disabled={deleteM.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (pendingDelete) deleteM.mutate(pendingDelete.id);
+              }}
+            >
+              {deleteM.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Delete deck
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FlashcardScreen>
   );
 }
 
-function DeckCard({ deck, basePath }: { deck: FlashcardDeckManagerRow; basePath: string }) {
+function DeckCard({
+  deck,
+  basePath,
+  busy,
+  onDuplicate,
+  onToggleStatus,
+  onDelete,
+  onPreview,
+}: {
+  deck: FlashcardDeckManagerRow;
+  basePath: string;
+  busy: boolean;
+  onDuplicate: () => void;
+  onToggleStatus: () => void;
+  onDelete: () => void;
+  onPreview: () => void;
+}) {
   const editPath = `${basePath}/classes/${deck.class_id}/flashcards/${deck.id}/edit`;
-  const managerPath = `${basePath}/classes/${deck.class_id}/flashcards`;
   const published = deck.status === "published";
   return (
     <div className="flex h-full flex-col rounded-[28px] border border-violet-100 bg-white p-4 shadow-[0_16px_36px_-26px_rgba(76,29,149,0.5)] transition hover:border-violet-200 hover:shadow-[0_20px_40px_-22px_rgba(76,29,149,0.55)]">
@@ -239,19 +409,54 @@ function DeckCard({ deck, basePath }: { deck: FlashcardDeckManagerRow; basePath:
             {deck.students_accessed} studying
           </span>
         )}
+        <span>Updated {formatFlashcardRelative(deck.updated_at)}</span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button asChild className="min-h-[44px] rounded-full bg-violet-600 text-[13.5px] font-bold hover:bg-violet-700">
+      <div className="mt-4 flex items-center gap-2">
+        <Button
+          asChild
+          className="min-h-[44px] flex-1 rounded-full bg-violet-600 text-[13.5px] font-bold hover:bg-violet-700"
+        >
           <Link to={editPath}>
             <Pencil className="mr-1.5 h-4 w-4" /> Edit
           </Link>
         </Button>
-        <Button asChild variant="outline" className="min-h-[44px] rounded-full text-[13.5px] font-bold">
-          <Link to={managerPath}>
-            <Eye className="mr-1.5 h-4 w-4" /> Preview
-          </Link>
+        <Button
+          variant="outline"
+          onClick={onPreview}
+          className="min-h-[44px] flex-1 rounded-full text-[13.5px] font-bold"
+        >
+          <Eye className="mr-1.5 h-4 w-4" /> Preview
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={`More actions for ${deck.title}`}
+              disabled={busy}
+              className="h-11 w-11 shrink-0 rounded-full"
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MoreVertical className="h-4 w-4" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-2xl">
+            <DropdownMenuItem onSelect={onDuplicate}>
+              <Copy className="mr-2 h-4 w-4" /> Duplicate as draft
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onToggleStatus}>
+              <Upload className="mr-2 h-4 w-4" /> {published ? "Unpublish" : "Publish"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-rose-600 focus:text-rose-700" onSelect={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" /> Delete deck
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import {
 import { FLASHCARD_ART } from "@/lib/flashcardArt";
 import {
   flashcardLibraryKeys,
+  formatFlashcardRelative,
   listStudentFlashcardDecks,
   mapFlashcardError,
 } from "@/lib/flashcards";
@@ -141,11 +142,18 @@ export function StudentFlashcardDeck() {
                 </div>
               )}
 
-              {deck.completed && (
-                <p className="relative mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-emerald-600">
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Deck completed
-                </p>
-              )}
+              <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {(deck.completed || deck.run_completed_at) && (
+                  <p className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Deck completed
+                  </p>
+                )}
+                {deck.last_studied_at && (
+                  <p className="text-[12.5px] font-semibold text-slate-500">
+                    Last studied {formatFlashcardRelative(deck.last_studied_at)}
+                  </p>
+                )}
+              </div>
 
               <Button
                 asChild
@@ -153,7 +161,11 @@ export function StudentFlashcardDeck() {
               >
                 <Link to={`/dashboard/flashcards/${deck.id}/study`}>
                   <Play className="mr-1.5 h-4 w-4" />
-                  {deck.started ? "Continue studying" : "Start studying"}
+                  {deck.run_completed_at
+                    ? "Study again"
+                    : deck.started
+                      ? "Continue studying"
+                      : "Start studying"}
                 </Link>
               </Button>
             </section>
