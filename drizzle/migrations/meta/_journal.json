@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789868121179,
+      "tag": "0000_flashcards_3_spaced_repetition_history_and_mastery",
+      "breakpoints": true
+    }
+  ]
+}

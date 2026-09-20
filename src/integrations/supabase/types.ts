@@ -1198,6 +1198,69 @@ export type Database = {
           },
         ]
       }
+      flashcard_review_log: {
+        Row: {
+          card_id: string
+          center_id: string
+          class_id: string | null
+          client_token: string | null
+          deck_id: string
+          id: string
+          new_ease: number | null
+          new_interval_days: number | null
+          new_mastery: string | null
+          prev_ease: number | null
+          prev_interval_days: number | null
+          prev_mastery: string | null
+          rating: string
+          result: Json | null
+          reviewed_at: string
+          student_user_id: string
+          was_due: boolean
+          xp_awarded: number
+        }
+        Insert: {
+          card_id: string
+          center_id: string
+          class_id?: string | null
+          client_token?: string | null
+          deck_id: string
+          id?: string
+          new_ease?: number | null
+          new_interval_days?: number | null
+          new_mastery?: string | null
+          prev_ease?: number | null
+          prev_interval_days?: number | null
+          prev_mastery?: string | null
+          rating: string
+          result?: Json | null
+          reviewed_at?: string
+          student_user_id: string
+          was_due?: boolean
+          xp_awarded?: number
+        }
+        Update: {
+          card_id?: string
+          center_id?: string
+          class_id?: string | null
+          client_token?: string | null
+          deck_id?: string
+          id?: string
+          new_ease?: number | null
+          new_interval_days?: number | null
+          new_mastery?: string | null
+          prev_ease?: number | null
+          prev_interval_days?: number | null
+          prev_mastery?: string | null
+          rating?: string
+          result?: Json | null
+          reviewed_at?: string
+          student_user_id?: string
+          was_due?: boolean
+          xp_awarded?: number
+        }
+        Relationships: []
+      }
       flashcard_review_rewards: {
         Row: {
           card_id: string | null
@@ -3724,6 +3787,10 @@ export type Database = {
         Args: { _deck_id: string }
         Returns: Json
       }
+      get_flashcard_deck_mastery_overview: {
+        Args: { _deck_id: string }
+        Returns: Json
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
@@ -3800,6 +3867,10 @@ export type Database = {
           destination: string
           subdomain_slug: string
         }[]
+      }
+      get_student_flashcard_deck_review: {
+        Args: { _deck_id: string; _limit?: number }
+        Returns: Json
       }
       get_student_flashcard_overview: { Args: never; Returns: Json }
       get_student_flashcard_review_queue: {
@@ -4206,7 +4277,7 @@ export type Database = {
       }
       start_quiz_attempt: { Args: { _quiz_id: string }; Returns: string }
       submit_flashcard_review: {
-        Args: { _card_id: string; _rating: string }
+        Args: { _card_id: string; _client_token?: string; _rating: string }
         Returns: Json
       }
       submit_live_quiz_answer: {
