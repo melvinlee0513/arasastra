@@ -286,7 +286,7 @@ export function FlashcardReviewComplete({
   return (
     <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
       <motion.img
-        src={FLASHCARD_ART.complete ?? FLASHCARD_ART.star}
+        src={FLASHCARD_ART.trophy}
         alt=""
         aria-hidden="true"
         draggable={false}
