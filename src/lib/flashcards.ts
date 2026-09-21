@@ -524,9 +524,11 @@ export interface FlashcardOverviewDeck {
   subject_name: string | null;
   card_count: number;
   mastered_count: number;
+  learning_count: number;
   due_count: number;
   new_count: number;
   last_reviewed_at: string | null;
+  next_due_at: string | null;
 }
 
 export interface FlashcardOverview {
@@ -535,6 +537,7 @@ export interface FlashcardOverview {
   mastered_count: number;
   learning_count: number;
   due_count: number;
+  next_due_at: string | null;
   reviewed_today: number;
   daily_goal: number;
   current_streak: number;
@@ -567,15 +570,56 @@ export interface FlashcardReviewQueue {
 
 export interface FlashcardReviewResult {
   card_id: string;
+  deck_id?: string;
   rating: FlashcardRating;
   due_at: string;
   interval_days: number;
   mastery: FlashcardMastery;
+  previous_mastery?: FlashcardMastery;
   newly_mastered: boolean;
   xp_awarded: number;
   reviewed_today: number;
   daily_goal: number;
   daily_goal_reached: boolean;
+  /** True when the server replayed an earlier identical submission. */
+  replayed?: boolean;
+}
+
+/** One deck's per-student review state, used by deck detail and deck review. */
+export interface FlashcardDeckReview {
+  deck_id: string;
+  deck_title: string;
+  card_count: number;
+  new_count: number;
+  learning_count: number;
+  mastered_count: number;
+  due_count: number;
+  last_reviewed_at: string | null;
+  next_due_at: string | null;
+  daily_goal: number;
+  cards: FlashcardReviewCard[];
+}
+
+/** Tutor/admin mastery snapshot for one deck. */
+export interface FlashcardDeckMastery {
+  deck_id: string;
+  deck_title: string;
+  class_id: string;
+  enrolled_students: number;
+  participants: number;
+  tracked_cards: number;
+  mastered_cards: number;
+  learning_cards: number;
+  average_mastery_pct: number;
+  last_activity_at: string | null;
+  attention_cards: {
+    card_id: string;
+    front_text: string;
+    reviewers: number;
+    lapses: number;
+    mastered: number;
+    difficulty_score: number;
+  }[];
 }
 
 export const flashcardReviewKeys = {
@@ -583,6 +627,13 @@ export const flashcardReviewKeys = {
     ["flashcard-review", "overview", tenantId ?? "no-tenant", userId ?? "anon"] as const,
   queue: (tenantId: string | null | undefined, userId: string | null | undefined) =>
     ["flashcard-review", "queue", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+  deck: (
+    tenantId: string | null | undefined,
+    userId: string | null | undefined,
+    deckId: string | null | undefined,
+  ) => ["flashcard-review", "deck", tenantId ?? "no-tenant", userId ?? "anon", deckId ?? "none"] as const,
+  mastery: (tenantId: string | null | undefined, deckId: string | null | undefined) =>
+    ["flashcard-review", "mastery", tenantId ?? "no-tenant", deckId ?? "none"] as const,
 };
 
 export async function getStudentFlashcardOverview(): Promise<FlashcardOverview> {
@@ -599,16 +650,60 @@ export async function getStudentFlashcardReviewQueue(limit = 40): Promise<Flashc
   return data as unknown as FlashcardReviewQueue;
 }
 
+/**
+ * Submit one rating. `clientToken` makes the call idempotent: a retry after a
+ * flaky network replays the original server outcome instead of double-rating.
+ */
 export async function submitFlashcardReview(
   cardId: string,
   rating: FlashcardRating,
+  clientToken?: string,
 ): Promise<FlashcardReviewResult> {
   const { data, error } = await supabase.rpc("submit_flashcard_review" as never, {
     _card_id: cardId,
     _rating: rating,
+    _client_token: clientToken ?? null,
   } as never);
   if (error) throw error;
   return data as unknown as FlashcardReviewResult;
+}
+
+/** Per-student review state + card list for one deck. */
+export async function getStudentFlashcardDeckReview(
+  deckId: string,
+  limit = 60,
+): Promise<FlashcardDeckReview> {
+  const { data, error } = await supabase.rpc("get_student_flashcard_deck_review" as never, {
+    _deck_id: deckId,
+    _limit: limit,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardDeckReview;
+}
+
+/** Tutor/admin mastery overview for one deck (authorisation is server-side). */
+export async function getFlashcardDeckMasteryOverview(deckId: string): Promise<FlashcardDeckMastery> {
+  const { data, error } = await supabase.rpc("get_flashcard_deck_mastery_overview" as never, {
+    _deck_id: deckId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardDeckMastery;
+}
+
+/** Friendly wording for the next scheduled review. */
+export function formatFlashcardNextDue(iso: string | null | undefined): string {
+  if (!iso) return "No cards scheduled yet";
+  const due = new Date(iso).getTime();
+  const diffMin = Math.round((due - Date.now()) / 60000);
+  if (diffMin <= 1) return "Now";
+  if (diffMin < 60) return `In ${diffMin} min`;
+  const hours = Math.round(diffMin / 60);
+  if (hours < 24) return `In ${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "Tomorrow";
+  if (days < 7) return `In ${days} days`;
+  const weeks = Math.round(days / 7);
+  return weeks === 1 ? "In a week" : `In ${weeks} weeks`;
 }
 
 /** Human label for a card's mastery stage. */
