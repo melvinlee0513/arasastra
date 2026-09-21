@@ -570,15 +570,56 @@ export interface FlashcardReviewQueue {
 
 export interface FlashcardReviewResult {
   card_id: string;
+  deck_id?: string;
   rating: FlashcardRating;
   due_at: string;
   interval_days: number;
   mastery: FlashcardMastery;
+  previous_mastery?: FlashcardMastery;
   newly_mastered: boolean;
   xp_awarded: number;
   reviewed_today: number;
   daily_goal: number;
   daily_goal_reached: boolean;
+  /** True when the server replayed an earlier identical submission. */
+  replayed?: boolean;
+}
+
+/** One deck's per-student review state, used by deck detail and deck review. */
+export interface FlashcardDeckReview {
+  deck_id: string;
+  deck_title: string;
+  card_count: number;
+  new_count: number;
+  learning_count: number;
+  mastered_count: number;
+  due_count: number;
+  last_reviewed_at: string | null;
+  next_due_at: string | null;
+  daily_goal: number;
+  cards: FlashcardReviewCard[];
+}
+
+/** Tutor/admin mastery snapshot for one deck. */
+export interface FlashcardDeckMastery {
+  deck_id: string;
+  deck_title: string;
+  class_id: string;
+  enrolled_students: number;
+  participants: number;
+  tracked_cards: number;
+  mastered_cards: number;
+  learning_cards: number;
+  average_mastery_pct: number;
+  last_activity_at: string | null;
+  attention_cards: {
+    card_id: string;
+    front_text: string;
+    reviewers: number;
+    lapses: number;
+    mastered: number;
+    difficulty_score: number;
+  }[];
 }
 
 export const flashcardReviewKeys = {
@@ -586,6 +627,13 @@ export const flashcardReviewKeys = {
     ["flashcard-review", "overview", tenantId ?? "no-tenant", userId ?? "anon"] as const,
   queue: (tenantId: string | null | undefined, userId: string | null | undefined) =>
     ["flashcard-review", "queue", tenantId ?? "no-tenant", userId ?? "anon"] as const,
+  deck: (
+    tenantId: string | null | undefined,
+    userId: string | null | undefined,
+    deckId: string | null | undefined,
+  ) => ["flashcard-review", "deck", tenantId ?? "no-tenant", userId ?? "anon", deckId ?? "none"] as const,
+  mastery: (tenantId: string | null | undefined, deckId: string | null | undefined) =>
+    ["flashcard-review", "mastery", tenantId ?? "no-tenant", deckId ?? "none"] as const,
 };
 
 export async function getStudentFlashcardOverview(): Promise<FlashcardOverview> {
