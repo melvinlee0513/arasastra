@@ -650,16 +650,60 @@ export async function getStudentFlashcardReviewQueue(limit = 40): Promise<Flashc
   return data as unknown as FlashcardReviewQueue;
 }
 
+/**
+ * Submit one rating. `clientToken` makes the call idempotent: a retry after a
+ * flaky network replays the original server outcome instead of double-rating.
+ */
 export async function submitFlashcardReview(
   cardId: string,
   rating: FlashcardRating,
+  clientToken?: string,
 ): Promise<FlashcardReviewResult> {
   const { data, error } = await supabase.rpc("submit_flashcard_review" as never, {
     _card_id: cardId,
     _rating: rating,
+    _client_token: clientToken ?? null,
   } as never);
   if (error) throw error;
   return data as unknown as FlashcardReviewResult;
+}
+
+/** Per-student review state + card list for one deck. */
+export async function getStudentFlashcardDeckReview(
+  deckId: string,
+  limit = 60,
+): Promise<FlashcardDeckReview> {
+  const { data, error } = await supabase.rpc("get_student_flashcard_deck_review" as never, {
+    _deck_id: deckId,
+    _limit: limit,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardDeckReview;
+}
+
+/** Tutor/admin mastery overview for one deck (authorisation is server-side). */
+export async function getFlashcardDeckMasteryOverview(deckId: string): Promise<FlashcardDeckMastery> {
+  const { data, error } = await supabase.rpc("get_flashcard_deck_mastery_overview" as never, {
+    _deck_id: deckId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as FlashcardDeckMastery;
+}
+
+/** Friendly wording for the next scheduled review. */
+export function formatFlashcardNextDue(iso: string | null | undefined): string {
+  if (!iso) return "No cards scheduled yet";
+  const due = new Date(iso).getTime();
+  const diffMin = Math.round((due - Date.now()) / 60000);
+  if (diffMin <= 1) return "Now";
+  if (diffMin < 60) return `In ${diffMin} min`;
+  const hours = Math.round(diffMin / 60);
+  if (hours < 24) return `In ${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "Tomorrow";
+  if (days < 7) return `In ${days} days`;
+  const weeks = Math.round(days / 7);
+  return weeks === 1 ? "In a week" : `In ${weeks} weeks`;
 }
 
 /** Human label for a card's mastery stage. */
