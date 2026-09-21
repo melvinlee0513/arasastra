@@ -524,9 +524,11 @@ export interface FlashcardOverviewDeck {
   subject_name: string | null;
   card_count: number;
   mastered_count: number;
+  learning_count: number;
   due_count: number;
   new_count: number;
   last_reviewed_at: string | null;
+  next_due_at: string | null;
 }
 
 export interface FlashcardOverview {
@@ -535,6 +537,7 @@ export interface FlashcardOverview {
   mastered_count: number;
   learning_count: number;
   due_count: number;
+  next_due_at: string | null;
   reviewed_today: number;
   daily_goal: number;
   current_streak: number;
