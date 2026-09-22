@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  BarChart3,
   Copy,
   Eye,
   Layers,
@@ -54,6 +55,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlashcardMedia } from "@/components/flashcards/FlashcardMedia";
 import {
@@ -68,6 +76,8 @@ import { FLASHCARD_ART } from "@/lib/flashcardArt";
 import { cn } from "@/lib/utils";
 import {
   FLASHCARD_STATUS_LABEL,
+  flashcardReviewKeys,
+  getFlashcardDeckMasteryOverview,
   deleteFlashcardDeckSafe,
   duplicateFlashcardDeckAsDraft,
   flashcardLibraryKeys,
@@ -368,6 +378,7 @@ function DeckCard({
 }) {
   const editPath = `${basePath}/classes/${deck.class_id}/flashcards/${deck.id}/edit`;
   const published = deck.status === "published";
+  const [masteryOpen, setMasteryOpen] = useState(false);
   return (
     <div className="flex h-full flex-col rounded-[28px] border border-violet-100 bg-white p-4 shadow-[0_16px_36px_-26px_rgba(76,29,149,0.5)] transition hover:border-violet-200 hover:shadow-[0_20px_40px_-22px_rgba(76,29,149,0.55)]">
       {deck.cover_path ? (
@@ -445,6 +456,9 @@ function DeckCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-2xl">
+            <DropdownMenuItem onSelect={() => setMasteryOpen(true)}>
+              <BarChart3 className="mr-2 h-4 w-4" /> Mastery overview
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onDuplicate}>
               <Copy className="mr-2 h-4 w-4" /> Duplicate as draft
             </DropdownMenuItem>
@@ -458,7 +472,102 @@ function DeckCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <MasteryDialog
+        deckId={deck.id}
+        deckTitle={deck.title}
+        open={masteryOpen}
+        onOpenChange={setMasteryOpen}
+      />
     </div>
+  );
+}
+
+/**
+ * Lightweight deck mastery snapshot for tutors/admins. Read-only: mastery is
+ * student-owned and can never be edited from here.
+ */
+function MasteryDialog({
+  deckId,
+  deckTitle,
+  open,
+  onOpenChange,
+}: {
+  deckId: string;
+  deckTitle: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { currentTenantId } = useTenant();
+  const q = useQuery({
+    queryKey: flashcardReviewKeys.mastery(currentTenantId, deckId),
+    enabled: open,
+    queryFn: () => getFlashcardDeckMasteryOverview(deckId),
+  });
+
+  const d = q.data;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto rounded-[28px] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-[17px] font-black">{deckTitle}</DialogTitle>
+          <DialogDescription>How your students are progressing with this deck.</DialogDescription>
+        </DialogHeader>
+
+        {q.isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-20 rounded-2xl" />
+            <Skeleton className="h-28 rounded-2xl" />
+          </div>
+        ) : q.isError || !d ? (
+          <p className="text-[13px] text-slate-600">{mapFlashcardError(q.error)}</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {[
+                { label: "Students", value: d.enrolled_students },
+                { label: "Reviewing", value: d.participants },
+                { label: "Avg mastery", value: `${d.average_mastery_pct}%` },
+                { label: "Need attention", value: d.attention_cards?.length ?? 0 },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-2xl border border-violet-100 bg-white p-3 text-center"
+                >
+                  <p className="text-[18px] font-black tabular-nums text-slate-900">{s.value}</p>
+                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <p className="text-[13px] font-extrabold text-slate-900">Cards needing attention</p>
+              {(d.attention_cards ?? []).length === 0 ? (
+                <p className="mt-1 text-[12.5px] text-slate-500">
+                  No cards stand out yet — students need more reviews first.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {d.attention_cards.map((c) => (
+                    <li
+                      key={c.card_id}
+                      className="flex items-center gap-2.5 rounded-2xl border border-violet-100 bg-white p-3"
+                    >
+                      <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-slate-800">
+                        {c.front_text || "Card"}
+                      </p>
+                      <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-black text-rose-600">
+                        {c.difficulty_score >= 0.85 ? "High" : "Medium"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
