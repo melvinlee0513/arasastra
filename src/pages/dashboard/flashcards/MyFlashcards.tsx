@@ -6,7 +6,7 @@
  * flag server-side. Per-card scheduling is per student: no shared mastery.
  */
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ChevronRight, Play, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,7 @@ import {
   HeroStat,
   StatTile,
 } from "@/components/flashcards/FlashcardChrome";
+import { FlashcardDueSummary } from "@/components/flashcards/FlashcardReview";
 import {
   flashcardReviewKeys,
   formatFlashcardRelative,
@@ -39,6 +40,7 @@ import {
 type DeckFilter = "all" | "due" | "mastered";
 
 export function MyFlashcards() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { currentTenantId } = useTenant();
   const flashcardsOn = useFeatureEnabled("flashcards");
