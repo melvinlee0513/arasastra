@@ -177,6 +177,8 @@ export function StudentFlashcardDeck() {
                 <StatTile art={FLASHCARD_ART.target} label="Left" value={Math.max(total - done, 0)} />
               </section>
             )}
+
+            <DeckReviewPanel deckId={deck.id} />
           </>
         )}
       </div>
