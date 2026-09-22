@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  BarChart3,
   Copy,
   Eye,
   Layers,
@@ -54,6 +55,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlashcardMedia } from "@/components/flashcards/FlashcardMedia";
 import {
@@ -68,6 +76,8 @@ import { FLASHCARD_ART } from "@/lib/flashcardArt";
 import { cn } from "@/lib/utils";
 import {
   FLASHCARD_STATUS_LABEL,
+  flashcardReviewKeys,
+  getFlashcardDeckMasteryOverview,
   deleteFlashcardDeckSafe,
   duplicateFlashcardDeckAsDraft,
   flashcardLibraryKeys,
