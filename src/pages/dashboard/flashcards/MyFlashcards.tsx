@@ -142,6 +142,17 @@ export function MyFlashcards() {
               </Button>
             </FlashcardHero>
 
+            <div className="mt-3">
+              <FlashcardDueSummary
+                dueCount={dueCount}
+                newCount={newCount}
+                nextDueAt={data?.next_due_at ?? null}
+                goalDone={done}
+                goal={goal}
+                onStart={() => navigate("/dashboard/flashcards/review")}
+              />
+            </div>
+
             <section className="mt-3 grid grid-cols-3 gap-2.5">
               <StatTile art={FLASHCARD_ART.deck} label="Decks" value={allDecks.length} />
               <StatTile art={FLASHCARD_ART.target} label="Decks due" value={dueDecks} />
