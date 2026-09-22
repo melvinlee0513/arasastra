@@ -10,6 +10,7 @@ import { StudentHomeContinueLearning } from "./StudentHomeContinueLearning";
 import { StudentHomeQuickPractice } from "./StudentHomeQuickPractice";
 import { StudentHomeComingUp } from "./StudentHomeComingUp";
 import { StudentHomeLeaderboard } from "./StudentHomeLeaderboard";
+import { StudentHomeFlashcards } from "./StudentHomeFlashcards";
 import { HomePageDecor } from "./StudentHomeShared";
 
 /**
@@ -75,6 +76,8 @@ export function StudentHomeMobile() {
           items={feed.data?.continue_learning ?? []}
           isLoading={feed.isLoading}
         />
+
+        <StudentHomeFlashcards />
 
         <StudentHomeComingUp
           items={feed.data?.coming_up ?? []}
