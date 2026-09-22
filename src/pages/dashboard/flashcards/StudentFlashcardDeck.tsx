@@ -6,6 +6,7 @@
  * `list_student_flashcard_decks`, which enforces centre, active enrolment,
  * published status and the tenant `flashcards` flag server-side.
  */
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Layers, Play } from "lucide-react";
@@ -19,14 +20,22 @@ import { FeatureUnavailable } from "@/pages/FeatureUnavailable";
 import { FlashcardMedia } from "@/components/flashcards/FlashcardMedia";
 import {
   DeckTile,
+  FilterChips,
   FlashcardEmptyState,
   FlashcardScreen,
   StatTile,
 } from "@/components/flashcards/FlashcardChrome";
+import {
+  FlashcardDueSummary,
+  FlashcardMasteryBadge,
+  FlashcardMasterySummary,
+} from "@/components/flashcards/FlashcardReview";
 import { FLASHCARD_ART } from "@/lib/flashcardArt";
 import {
   flashcardLibraryKeys,
+  flashcardReviewKeys,
   formatFlashcardRelative,
+  getStudentFlashcardDeckReview,
   listStudentFlashcardDecks,
   mapFlashcardError,
 } from "@/lib/flashcards";
@@ -183,6 +192,89 @@ export function StudentFlashcardDeck() {
         )}
       </div>
     </FlashcardScreen>
+  );
+}
+
+/**
+ * Per-student spaced-repetition state for this deck, with lightweight filters
+ * over the cards the server queued for review. Counts come from
+ * `get_student_flashcard_deck_review` — never computed in the browser.
+ */
+function DeckReviewPanel({ deckId }: { deckId: string }) {
+  const { user } = useAuth();
+  const { currentTenantId } = useTenant();
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState<"all" | "due" | "learning" | "mastered">("all");
+
+  const q = useQuery({
+    queryKey: flashcardReviewKeys.deck(currentTenantId, user?.id, deckId),
+    enabled: !!user && !!deckId,
+    queryFn: () => getStudentFlashcardDeckReview(deckId, 60),
+  });
+
+  if (q.isLoading) return <Skeleton className="mt-3 h-40 rounded-[28px]" />;
+  if (q.isError || !q.data) return null;
+
+  const d = q.data;
+  const now = Date.now();
+  const cards = (d.cards ?? []).filter((c) => {
+    if (filter === "due") return !c.due_at || new Date(c.due_at).getTime() <= now;
+    if (filter === "learning") return c.mastery === "learning" || c.mastery === "review";
+    if (filter === "mastered") return c.mastery === "mastered";
+    return true;
+  });
+
+  return (
+    <section className="mt-3 space-y-3">
+      <FlashcardDueSummary
+        dueCount={d.due_count}
+        newCount={d.new_count}
+        nextDueAt={d.next_due_at}
+        goal={d.daily_goal}
+        onStart={() => navigate(`/dashboard/flashcards/review?deck=${deckId}`)}
+      />
+
+      <FlashcardMasterySummary
+        mastered={d.mastered_count}
+        learning={d.learning_count}
+        newCount={d.new_count}
+        due={d.due_count}
+      />
+
+      {(d.cards ?? []).length > 0 && (
+        <>
+          <FilterChips
+            ariaLabel="Filter cards in this deck"
+            active={filter}
+            onSelect={(k) => setFilter(k as typeof filter)}
+            options={[
+              { key: "all", label: "All", count: d.cards.length },
+              { key: "due", label: "Due", count: d.due_count },
+              { key: "learning", label: "Learning", count: d.learning_count },
+              { key: "mastered", label: "Mastered", count: d.mastered_count },
+            ]}
+          />
+          <ul className="space-y-2">
+            {cards.map((c) => (
+              <li
+                key={c.card_id}
+                className="flex items-center gap-2.5 rounded-2xl border border-violet-100 bg-white p-3 shadow-[0_10px_28px_-22px_rgba(76,29,149,0.45)]"
+              >
+                <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-slate-800">
+                  {c.front_text || "Card"}
+                </p>
+                <FlashcardMasteryBadge mastery={c.mastery} />
+              </li>
+            ))}
+            {cards.length === 0 && (
+              <li className="rounded-2xl border border-violet-100 bg-white p-4 text-center text-[13px] text-slate-500">
+                Nothing in this group yet.
+              </li>
+            )}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
 
