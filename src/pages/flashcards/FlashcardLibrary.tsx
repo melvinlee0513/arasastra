@@ -368,6 +368,7 @@ function DeckCard({
 }) {
   const editPath = `${basePath}/classes/${deck.class_id}/flashcards/${deck.id}/edit`;
   const published = deck.status === "published";
+  const [masteryOpen, setMasteryOpen] = useState(false);
   return (
     <div className="flex h-full flex-col rounded-[28px] border border-violet-100 bg-white p-4 shadow-[0_16px_36px_-26px_rgba(76,29,149,0.5)] transition hover:border-violet-200 hover:shadow-[0_20px_40px_-22px_rgba(76,29,149,0.55)]">
       {deck.cover_path ? (
@@ -445,6 +446,9 @@ function DeckCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-2xl">
+            <DropdownMenuItem onSelect={() => setMasteryOpen(true)}>
+              <BarChart3 className="mr-2 h-4 w-4" /> Mastery overview
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onDuplicate}>
               <Copy className="mr-2 h-4 w-4" /> Duplicate as draft
             </DropdownMenuItem>
