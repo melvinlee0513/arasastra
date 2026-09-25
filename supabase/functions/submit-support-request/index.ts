@@ -18,6 +18,8 @@ const CATEGORIES = [
   'Learning Materials',
   'Timetable',
   'Technical Issue',
+  'Feature Feedback',
+  'Improvement Suggestion',
   'Privacy / Data',
   'Other',
 ]

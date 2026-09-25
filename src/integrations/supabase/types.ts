@@ -3057,8 +3057,56 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_events: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          center_id: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          message: string | null
+          ticket_id: string
+          to_status: string | null
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          center_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          message?: string | null
+          ticket_id: string
+          to_status?: string | null
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          center_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          message?: string | null
+          ticket_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
+          admin_response: string | null
           attachment_path: string | null
           category: string
           center_id: string | null
@@ -3066,6 +3114,10 @@ export type Database = {
           description: string
           id: string
           requester_email: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          responded_at: string | null
+          responded_by: string | null
           role_snapshot: string | null
           source_page_url: string | null
           status: string
@@ -3074,6 +3126,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          admin_response?: string | null
           attachment_path?: string | null
           category: string
           center_id?: string | null
@@ -3081,6 +3134,10 @@ export type Database = {
           description: string
           id?: string
           requester_email?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
           role_snapshot?: string | null
           source_page_url?: string | null
           status?: string
@@ -3089,6 +3146,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          admin_response?: string | null
           attachment_path?: string | null
           category?: string
           center_id?: string | null
@@ -3096,6 +3154,10 @@ export type Database = {
           description?: string
           id?: string
           requester_email?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
           role_snapshot?: string | null
           source_page_url?: string | null
           status?: string
@@ -3705,6 +3767,7 @@ export type Database = {
       can_manage_class: { Args: { _class_id: string }; Returns: boolean }
       can_read_flashcard_media: { Args: { _name: string }; Returns: boolean }
       can_read_quiz_media: { Args: { _name: string }; Returns: boolean }
+      can_read_support_attachment: { Args: { _name: string }; Returns: boolean }
       can_write_flashcard_media: { Args: { _name: string }; Returns: boolean }
       can_write_quiz_media: { Args: { _name: string }; Returns: boolean }
       claim_invitation_for_signup: {
@@ -4301,6 +4364,10 @@ export type Database = {
       tutor_can_teach: {
         Args: { _standard_id: string; _subject_id: string; _user_id: string }
         Returns: boolean
+      }
+      update_support_ticket: {
+        Args: { _response?: string; _status?: string; _ticket_id: string }
+        Returns: Json
       }
     }
     Enums: {

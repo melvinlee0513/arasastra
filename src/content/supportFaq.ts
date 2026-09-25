@@ -13,6 +13,8 @@ export const SUPPORT_CATEGORIES = [
   "Learning Materials",
   "Timetable",
   "Technical Issue",
+  "Feature Feedback",
+  "Improvement Suggestion",
   "Privacy / Data",
   "Other",
 ] as const;
